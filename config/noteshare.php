@@ -19,4 +19,16 @@ return [
     'telegram_bot_token' => env('TELEGRAM_BOT_TOKEN'),
     'telegram_chat_id' => env('TELEGRAM_CHAT_ID'),
 
+    /*
+    | Storage limits. The per-workspace cap is the primary control; the
+    | global disk-free check is a safety net so the host machine itself
+    | never runs out of room.
+    |
+    |   WORKSPACE_STORAGE_BYTES  — soft cap per workspace (default 500 MB)
+    |   MIN_FREE_DISK_BYTES      — refuse uploads when host free space drops
+    |                              below this (default 1 GB)
+    */
+    'workspace_storage_bytes' => (int) env('WORKSPACE_STORAGE_BYTES', 500 * 1024 * 1024),
+    'min_free_disk_bytes' => (int) env('MIN_FREE_DISK_BYTES', 1024 * 1024 * 1024),
+
 ];

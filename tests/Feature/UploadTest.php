@@ -75,6 +75,44 @@ class UploadTest extends TestCase
         $this->assertSame(0, Material::count());
     }
 
+    public function test_it_records_file_size_on_upload(): void
+    {
+        // 100 KB file → 102400 bytes (UploadedFile::fake sizes are in KB)
+        $file = UploadedFile::fake()->create('notes.pdf', 100, 'application/pdf');
+
+        Livewire::test('course-page', ['slug' => $this->course->slug])
+            ->set('file', $file)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(102400, Material::first()->file_size);
+        $this->assertSame(102400, $this->workspace->storageBytes());
+    }
+
+    public function test_it_rejects_upload_that_would_exceed_workspace_cap(): void
+    {
+        // Tighten the cap to 1 MB for this test so a normal-sized file trips it.
+        config(['noteshare.workspace_storage_bytes' => 1024 * 1024]);
+
+        // Pre-fill 900 KB of existing material so the next upload pushes over.
+        $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'old.pdf',
+            'stored_path' => 'materials/old.pdf',
+            'file_size' => 900 * 1024,
+        ]);
+
+        $file = UploadedFile::fake()->create('big.pdf', 200, 'application/pdf'); // 200 KB → over cap
+
+        Livewire::test('course-page', ['slug' => $this->course->slug])
+            ->set('file', $file)
+            ->call('save')
+            ->assertHasErrors(['file']);
+
+        // Only the pre-seeded row exists; the new upload was rejected.
+        $this->assertSame(1, Material::count());
+    }
+
     public function test_it_saves_an_optional_title_with_html_stripped(): void
     {
         $file = UploadedFile::fake()->create('wk7.pdf', 50, 'application/pdf');

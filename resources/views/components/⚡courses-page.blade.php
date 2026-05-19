@@ -68,31 +68,31 @@ new #[Layout('components.layouts.app')] class extends Component
      */
     public function unlockOwner(): void
     {
-        $key = ‘unlock_owner:’.$this->workspace->id;
+        $key = 'unlock_owner:'.$this->workspace->id;
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
-            $this->addError(‘ownerInput’, ‘Too many attempts. Try again in a few minutes.’);
+            $this->addError('ownerInput', 'Too many attempts. Try again in a few minutes.');
             return;
         }
 
         $given = trim($this->ownerInput);
 
         // Accept a pasted full owner URL: pull the ?owner= value out of it.
-        if (str_contains($given, ‘owner=’)) {
+        if (str_contains($given, 'owner=')) {
             parse_str((string) parse_url($given, PHP_URL_QUERY), $q);
-            $given = $q[‘owner’] ?? $given;
+            $given = $q['owner'] ?? $given;
         }
 
-        if ($this->workspace->verifyOwner($given !== ‘’ ? $given : null)) {
+        if ($this->workspace->verifyOwner($given !== '' ? $given : null)) {
             RateLimiter::clear($key);
             session([$this->workspace->ownerSessionKey() => true]);
-            $this->reset(‘ownerInput’);
+            $this->reset('ownerInput');
 
             return;
         }
 
         RateLimiter::hit($key, 600);
-        $this->addError(‘ownerInput’, ‘That owner secret or link isn’t right for this workspace.’);
+        $this->addError('ownerInput', "That owner secret or link isn't right for this workspace.");
     }
 
     // Opt-in recovery email (owner-only). Empty clears it.
@@ -193,9 +193,15 @@ new #[Layout('components.layouts.app')] class extends Component
             default => $query->orderByRaw('COALESCE(materials_max_created_at, courses.created_at) desc'),
         };
 
+        $used = $this->workspace->storageBytes();
+        $cap = (int) config('noteshare.workspace_storage_bytes');
+
         return [
             'courses' => $query->get(),
             'totalCourses' => Course::count(),
+            'storageUsed' => $used,
+            'storageCap' => $cap,
+            'storagePct' => $cap > 0 ? min(100, (int) round($used / $cap * 100)) : 0,
         ];
     }
 };
@@ -464,6 +470,22 @@ new #[Layout('components.layouts.app')] class extends Component
             </div>
         </div>
     @endunless
+
+    {{-- Storage indicator: quiet at first, redder as the board fills up so
+         owners notice before uploads start failing. Hidden when empty. --}}
+    @if ($storageUsed > 0)
+        @php
+            $mbUsed = number_format($storageUsed / 1048576, $storageUsed >= 10485760 ? 0 : 1);
+            $mbCap = (int) round($storageCap / 1048576);
+            $tone = $storagePct >= 90 ? 'text-red-600' : ($storagePct >= 75 ? 'text-neon' : 'text-muted');
+        @endphp
+        <p class="mx-auto mt-8 max-w-sm text-center text-[11px] {{ $tone }}">
+            Storage: {{ $mbUsed }} of {{ $mbCap }} MB used ({{ $storagePct }}%)
+            @if ($storagePct >= 90)
+                · delete old files to free space
+            @endif
+        </p>
+    @endif
 </div>
 
 <footer class="mt-auto border-t border-sky/60 py-8">

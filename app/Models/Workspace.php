@@ -149,4 +149,27 @@ class Workspace extends Model
     {
         return "ws_upload_ok_{$this->id}";
     }
+
+    /**
+     * Total bytes used by this workspace's materials. Sums file_size across
+     * every material in every course; trusts the column rather than touching
+     * disk per request (the column is set at upload time + backfilled).
+     */
+    public function storageBytes(): int
+    {
+        return (int) Material::query()
+            ->whereIn('course_id', $this->courses()->select('id'))
+            ->sum('file_size');
+    }
+
+    /** Bytes remaining before this workspace hits its soft cap (>= 0). */
+    public function storageRemaining(): int
+    {
+        return max(0, (int) config('noteshare.workspace_storage_bytes') - $this->storageBytes());
+    }
+
+    public function storageFull(): bool
+    {
+        return $this->storageRemaining() <= 0;
+    }
 }

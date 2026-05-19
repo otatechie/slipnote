@@ -48,8 +48,9 @@ class DemoMaterialsSeeder extends Seeder
 
                 $filename = Str::slug($title).'.'.$ext;
                 $storedPath = 'materials/'.Str::random(40).'.'.$ext;
+                $contents = "demo file: {$title}";
 
-                Storage::disk('public')->put($storedPath, "demo file: {$title}");
+                Storage::disk('public')->put($storedPath, $contents);
 
                 $material = $course->materials()->create([
                     'section' => $section,
@@ -57,6 +58,7 @@ class DemoMaterialsSeeder extends Seeder
                     'original_filename' => $filename,
                     'stored_path' => $storedPath,
                     'uploader_name' => $uploaders[array_rand($uploaders)],
+                    'file_size' => strlen($contents),
                 ]);
 
                 // Spread created_at across a ~15-week semester, newest first.

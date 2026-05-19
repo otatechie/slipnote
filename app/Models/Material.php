@@ -26,6 +26,11 @@ class Material extends Model
         'stored_path',
         'uploader_name',
         'manage_token',
+        'file_size',
+    ];
+
+    protected $casts = [
+        'file_size' => 'integer',
     ];
 
     /**

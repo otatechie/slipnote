@@ -53,7 +53,7 @@ new #[Layout('components.layouts.app')] class extends Component
             'section' => 'required|in:' . implode(',', array_keys(Material::SECTIONS)),
             'title' => 'nullable|string|max:120',
             'uploaderName' => 'nullable|string|max:60',
-            'file' => 'required|file|max:10240|mimes:pdf,ppt,pptx,doc,docx,png,jpg,jpeg',
+            'file' => 'required|file|max:10240|mimes:pdf,docx,pptx,png,jpg,jpeg',
         ];
     }
 
@@ -116,6 +116,21 @@ new #[Layout('components.layouts.app')] class extends Component
     {
         $this->validate();
 
+        // Global disk-free safety net: refuse uploads when the host machine
+        // is running low, regardless of per-workspace cap. Protects the box.
+        $free = @disk_free_space(storage_path('app/public')) ?: PHP_INT_MAX;
+        if ($free < (int) config('noteshare.min_free_disk_bytes')) {
+            $this->addError('file', 'The site is at capacity — please try again later.');
+            return;
+        }
+
+        // Per-workspace soft cap: would this upload push the board over?
+        $incoming = (int) $this->file->getSize();
+        if ($this->workspace->storageBytes() + $incoming > (int) config('noteshare.workspace_storage_bytes')) {
+            $this->addError('file', 'This board is full — ask the owner to delete old files.');
+            return;
+        }
+
         // Gate uploads behind the shared passphrase, if one is configured.
         // Once correct, the session is unlocked so it isn't asked again.
         if ($this->passphraseNeeded()) {
@@ -137,6 +152,7 @@ new #[Layout('components.layouts.app')] class extends Component
             'stored_path' => $storedPath,
             'uploader_name' => $this->uploaderName ? strip_tags($this->uploaderName) : null,
             'manage_token' => \Illuminate\Support\Str::random(40),
+            'file_size' => $incoming,
         ]);
 
         $this->reset('file', 'title', 'uploaderName');
@@ -346,6 +362,16 @@ new #[Layout('components.layouts.app')] class extends Component
     <section id="add-file" class="mt-7 scroll-mt-6"
              x-data="{ open: window.location.hash === '#add-file' || @js($errors->isNotEmpty()) }"
              @hashchange.window="if (window.location.hash === '#add-file') open = true">
+        @if ($workspace->storageFull())
+            {{-- Board over its storage cap: hide upload entirely with a clear
+                 message instead of letting users prep an upload that'll fail. --}}
+            <div class="rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-center">
+                <p class="text-[14px] font-semibold text-red-700">This board is full</p>
+                <p class="mt-1 text-[13px] text-red-600">
+                    Ask the owner to delete old files before new uploads can go up.
+                </p>
+            </div>
+        @else
         {{-- Quick-create FAB: always reachable without scrolling to the bottom --}}
         <button type="button" x-show="!open"
                 @click="open = true; $nextTick(() => $root.scrollIntoView({ behavior: 'smooth', block: 'start' }))"
@@ -420,6 +446,7 @@ new #[Layout('components.layouts.app')] class extends Component
             </button>
             </form>
         </div>
+        @endif
     </section>
 </div>
 
