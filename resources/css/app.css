@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* SlipNote cream/lavender/purple light palette */
+    --color-base: #f7efe5;      /* page background — warm cream */
+    --color-surface: #fffbf5;   /* cards / panels — lightest cream, lifts off the base */
+    --color-teal: #674188;      /* headings, accent, link/button text — deep purple, ~6.5:1 on cream (AA) */
+    --color-neon: #674188;      /* primary accent, links, buttons — AA-compliant deep purple */
+    --color-sky: #c3acd0;       /* pale fills, subtle surfaces — lavender */
+    --color-ink: #2d2336;       /* body text — ~13:1 on cream */
+    --color-muted: #574a63;     /* secondary text — WCAG AA (~5.5:1) on cream */
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-base: #130e1a;       /* near-black purple page background */
+        --color-surface: #1f1729;   /* card surface — clearly lifted off base */
+        --color-teal: #d4bfe8;      /* bright lavender headings — ~8:1 on surface */
+        --color-neon: #a07cc5;      /* medium purple buttons — white text ~4.6:1 AA */
+        --color-sky: #3a2850;       /* border/fill — visible against both base and surface */
+        --color-ink: #f0eaf8;       /* near-white body text — ~13:1 on surface */
+        --color-muted: #b8a8cc;     /* secondary text — ~5.5:1 on surface */
+    }
+}
+
+/* In dark mode, text-base on a neon button becomes near-black on medium purple.
+   Override: any .text-base child of a .bg-neon element uses white instead. */
+@media (prefers-color-scheme: dark) {
+    .bg-neon .text-base, .bg-neon.text-base {
+        color: #fff;
+    }
+}
+
+/* Hide x-cloak elements until Alpine initializes (prevents collapse-form flash) */
+[x-cloak] { display: none !important; }
