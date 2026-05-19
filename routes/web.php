@@ -12,6 +12,11 @@ Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrF
 // Root: pick or create a workspace. No tenant resolved here.
 Route::livewire('/', 'workspaces-landing')->name('home');
 
+// Static legal pages. Declared BEFORE the /{workspace} catch-all so the
+// slugs "privacy" and "terms" aren't read as workspace names.
+Route::view('/privacy', 'legal.privacy')->name('privacy');
+Route::view('/terms', 'legal.terms')->name('terms');
+
 // Material download. By global id (decision a): these are shared files and
 // downloads are anonymous by design (see README). Declared BEFORE the
 // /{workspace} catch-all so "download" isn't read as a workspace slug.

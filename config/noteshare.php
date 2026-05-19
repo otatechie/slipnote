@@ -31,4 +31,8 @@ return [
     'workspace_storage_bytes' => (int) env('WORKSPACE_STORAGE_BYTES', 500 * 1024 * 1024),
     'min_free_disk_bytes' => (int) env('MIN_FREE_DISK_BYTES', 1024 * 1024 * 1024),
 
+    // Date shown at the top of the Privacy and Terms pages. Bump when the
+    // wording materially changes.
+    'legal_updated' => '2026-05-19',
+
 ];
