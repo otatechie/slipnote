@@ -48,7 +48,7 @@ Built with Laravel 13 + Livewire 4 (single-file components), Tailwind v4, SQLite
 
 ## Requirements
 
-- PHP 8.2+, Composer
+- PHP 8.3+, Composer
 - Node 18+ / npm
 - SQLite (default; no DB server needed)
 
@@ -79,18 +79,29 @@ php artisan serve
 php artisan db:seed --class=DemoMaterialsSeeder
 ```
 
-Generates a full semester's worth of materials (~61 files: 30 notes, 20 slides,
+Generates a full semester's worth of materials (61 files: 30 notes, 20 slides,
 8 past papers, 3 announcements) with real files on disk so downloads work.
 Idempotent — re-running wipes and regenerates the demo course's materials.
 
 ## Workspaces & courses
 
-The site root (`/`) is the workspace landing: **create** a workspace (you’re
+The site root (`/`) is the workspace landing: **create** a workspace (you're
 shown a one-time owner link — save it) or **open** an existing one by name.
 Inside a workspace (`/<workspace>`) is its course list. Create courses in
 **owner mode** — open `/<workspace>?owner=SECRET` and use "New course".
 Course slugs are unique *within a workspace* (two workspaces may both have
 `phys-201`). There is no workspace/course edit or delete UI.
+
+### Owner recovery (opt-in)
+
+Lose the owner link and the board is unrecoverable — unless the owner has
+opted into recovery by setting a **recovery email** (owner-mode only). The
+email is encrypted at rest. Visit `/<workspace>/recover`, enter that email,
+and the workspace's owner secret is rotated and a fresh owner link is
+emailed back; the previous link stops working. The recovery page renders
+identical responses whether the email matches or not (no enumeration), and
+is rate-limited to prevent guessing. Hidden entirely when the mail driver
+is `log` or `array` — don't promise recovery the install can't deliver.
 
 ## Tests
 
@@ -102,8 +113,33 @@ Covers upload (valid / oversized / wrong-type), HTML-stripping of user input,
 optional title, file-type bucketing, and search/sort behavior.
 
 `WorkspaceIsolationTest.php` is the security crux — it proves workspace A
-cannot read, reach, or mutate workspace B's data. The existing suites run
-*inside* a workspace via the `InteractsWithWorkspace` trait.
+cannot read, reach, or mutate workspace B's data. `OwnerRecoveryTest.php`
+covers the no-enumeration recovery flow. The existing suites run *inside*
+a workspace via the `InteractsWithWorkspace` trait.
+
+## Security
+
+- **Owner secret** stored only as a bcrypt hash; plaintext is shown once at
+  workspace creation and never persisted. Owner-unlock and `?owner=` checks
+  are timing-safe via `Hash::check`.
+- **Owner-unlock rate limit:** the "paste your owner secret" form is capped
+  at 5 attempts per 10 minutes per workspace to defeat brute force.
+- **Owner-link rotation** on recovery: `rotateOwnerSecret()` issues a new
+  secret and stores a fresh hash; the prior owner link stops working.
+- **Recovery email encrypted at rest** via Laravel's `encrypted` cast — a
+  leaked DB/backup must not expose emails. Recovery responses are identical
+  whether the email matches or not (no enumeration).
+- **HTTP security headers** applied globally via `SecureHeaders` middleware:
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`,
+  `Referrer-Policy: strict-origin-when-cross-origin`, restrictive
+  `Permissions-Policy`.
+- **Per-workspace session keys** (`ws_owner_{id}`, `ws_upload_ok_{id}`) so
+  unlocking one workspace never leaks into another in the same browser.
+- **Workspace isolation** enforced at the query layer by the
+  `WorkspaceScope` global scope; `workspace_id` is never mass-assignable.
+
+For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
+`SESSION_SECURE_COOKIE=true`, and serve over HTTPS.
 
 ## Architecture notes
 
