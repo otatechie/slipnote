@@ -6,10 +6,14 @@ use App\Models\Workspace;
 use App\Services\TelegramNotifier;
 use App\Tenancy\Tenancy;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-new #[Layout('components.layouts.app')] class extends Component
+new
+#[Layout('components.layouts.app')]
+#[Title('Course')]
+class extends Component
 {
     use WithFileUploads;
 

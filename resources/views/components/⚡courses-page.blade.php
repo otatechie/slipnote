@@ -6,9 +6,13 @@ use App\Tenancy\Tenancy;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('components.layouts.app')] class extends Component
+new
+#[Layout('components.layouts.app')]
+#[Title('Courses')]
+class extends Component
 {
     public Workspace $workspace;
 

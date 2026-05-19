@@ -3,9 +3,13 @@
 use App\Models\Workspace;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Layout('components.layouts.app')] class extends Component
+new
+#[Layout('components.layouts.app')]
+#[Title('Create your course board')]
+class extends Component
 {
     // Create a workspace (the primary action)
     public string $name = '';

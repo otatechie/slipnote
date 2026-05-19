@@ -1,2 +1,6 @@
+# Workspaces are private-by-link by design — the URL is the credential.
+# Allow only the public landing; everything else is per-workspace and
+# kept out of search engines.
 User-agent: *
-Disallow:
+Allow: /$
+Disallow: /
