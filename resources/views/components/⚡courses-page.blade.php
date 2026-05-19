@@ -3,6 +3,7 @@
 use App\Models\Course;
 use App\Models\Workspace;
 use App\Tenancy\Tenancy;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -67,22 +68,31 @@ new #[Layout('components.layouts.app')] class extends Component
      */
     public function unlockOwner(): void
     {
+        $key = ‘unlock_owner:’.$this->workspace->id;
+
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            $this->addError(‘ownerInput’, ‘Too many attempts. Try again in a few minutes.’);
+            return;
+        }
+
         $given = trim($this->ownerInput);
 
         // Accept a pasted full owner URL: pull the ?owner= value out of it.
-        if (str_contains($given, 'owner=')) {
+        if (str_contains($given, ‘owner=’)) {
             parse_str((string) parse_url($given, PHP_URL_QUERY), $q);
-            $given = $q['owner'] ?? $given;
+            $given = $q[‘owner’] ?? $given;
         }
 
-        if ($this->workspace->verifyOwner($given !== '' ? $given : null)) {
+        if ($this->workspace->verifyOwner($given !== ‘’ ? $given : null)) {
+            RateLimiter::clear($key);
             session([$this->workspace->ownerSessionKey() => true]);
-            $this->reset('ownerInput');
+            $this->reset(‘ownerInput’);
 
             return;
         }
 
-        $this->addError('ownerInput', 'That owner secret or link isn’t right for this workspace.');
+        RateLimiter::hit($key, 600);
+        $this->addError(‘ownerInput’, ‘That owner secret or link isn’t right for this workspace.’);
     }
 
     // Opt-in recovery email (owner-only). Empty clears it.
