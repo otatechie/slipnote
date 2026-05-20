@@ -29,7 +29,7 @@ RUN composer install \
     --optimize-autoloader
 
 # ---- Stage 3: Runtime image (nginx + php-fpm) ----
-FROM serversideup/php:8.3-fpm-nginx AS runtime
+FROM serversideup/php:8.4-fpm-nginx AS runtime
 
 # Dokploy notes (set as env vars on the service):
 #   APP_ENV=production, APP_DEBUG=false, APP_KEY=base64:...
