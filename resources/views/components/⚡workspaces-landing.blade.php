@@ -108,7 +108,7 @@ class extends Component
 
 <div class="mx-auto w-full max-w-md flex-1 px-5 pt-20 pb-12">
     <header class="mb-7 text-center">
-        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-neon">SlipNote</p>
+        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
         @if ($ownerUrl)
             <h1 class="text-3xl font-bold tracking-tight text-ink">Save your owner link</h1>
             <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
@@ -158,7 +158,7 @@ class extends Component
             {{-- Full link, wrapped (not truncated): the one unrecoverable
                  string in the app — the user must see all of it. --}}
             <p onclick="window.getSelection().selectAllChildren(this)"
-               class="mt-4 w-full cursor-text break-all rounded-lg border border-sky bg-base px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all">{{ $ownerUrl }}</p>
+               class="mt-4 w-full cursor-text break-all rounded-lg bg-sky/50 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all">{{ $ownerUrl }}</p>
 
             <div class="mt-2.5 flex gap-2">
                 <button type="button" @click="copy()"
@@ -194,11 +194,11 @@ class extends Component
     @else
         {{-- PRIMARY: create. The single focus of this screen. --}}
         <form wire:submit="create"
-              class="rounded-2xl border border-sky bg-surface p-6 shadow-sm">
+              class="rounded-2xl border border-sky/30 bg-surface p-6 shadow-sm">
             <label for="name" class="mb-1.5 block text-[13px] font-semibold text-ink">Workspace name</label>
             <input id="name" type="text" wire:model.live.debounce.300ms="name"
                    placeholder="e.g. CS Masters 2026" autofocus
-                   class="w-full rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                   class="w-full rounded-lg border border-sky/30 bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
 
             <div class="mt-2 min-h-5 text-[12px]">
                 @error('name')
@@ -214,22 +214,23 @@ class extends Component
                     class="mt-3 w-full cursor-pointer rounded-lg bg-neon py-3.5 text-[15px] font-bold text-base transition hover:brightness-125">
                 Create workspace
             </button>
-            <p class="mt-3 text-center text-[12px] text-muted/80">
+            <p class="mt-3 text-center text-[12px] text-muted">
                 You’ll get a link to share — and a private owner link to keep.
             </p>
         </form>
 
         {{-- SECONDARY: recovery only — most return via their saved link.
-             Deliberately quiet: no card, just an inline affordance. --}}
-        <div class="mt-7 text-center">
-            <p class="text-[13px] text-muted">Already made one? Your saved link is the fastest way back — or find it by name:</p>
+             Sits in a quiet mint panel so it reads as a distinct second
+             region (not a stray input floating on the page). --}}
+        <div class="mt-7 rounded-2xl border border-sky/60 bg-surface/60 px-6 py-5 text-center">
+            <p class="text-[13px] text-ink">Already made one? Your saved link is the fastest way back — or find it by name:</p>
             <form wire:submit="open" class="mx-auto mt-2.5 flex max-w-sm gap-2">
                 <input id="openName" type="text" wire:model.blur="openName"
                        aria-label="Workspace name"
                        placeholder="CS Masters 2026"
-                       class="h-10 flex-1 rounded-lg border border-sky bg-base px-3.5 text-[14px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                       class="h-10 flex-1 rounded-lg border border-sky/30 bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 <button type="submit"
-                        class="h-10 shrink-0 cursor-pointer rounded-lg border border-sky px-5 text-[14px] font-semibold text-muted transition hover:border-neon hover:text-neon">
+                        class="h-10 shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-base transition hover:brightness-125">
                     Open
                 </button>
             </form>

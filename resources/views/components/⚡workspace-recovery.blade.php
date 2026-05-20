@@ -67,7 +67,7 @@ class extends Component
 
 <div class="mx-auto w-full max-w-md flex-1 px-5 pt-20 pb-12">
     <header class="mb-7 text-center">
-        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-neon">SlipNote</p>
+        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
         <h1 class="text-3xl font-bold tracking-tight text-ink">Recover owner access</h1>
         <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
             For <span class="font-semibold text-ink">{{ $workspace->name }}</span>.
@@ -77,7 +77,7 @@ class extends Component
     </header>
 
     @if ($done)
-        <div class="rounded-2xl border border-sky bg-surface p-6 text-center shadow-sm">
+        <div class="rounded-2xl border border-sky/30 bg-surface p-6 text-center shadow-sm">
             <p class="text-[15px] font-semibold text-ink">Check that inbox</p>
             <p class="mx-auto mt-2 max-w-sm text-[14px] text-muted">
                 If that email is on file for this board, a new owner link is
@@ -92,14 +92,14 @@ class extends Component
         </div>
     @else
         <form wire:submit="requestRecovery"
-              class="rounded-2xl border border-sky bg-surface p-6 shadow-sm">
+              class="rounded-2xl border border-sky/30 bg-surface p-6 shadow-sm">
             <label for="email" class="mb-1.5 block text-[13px] font-semibold text-ink">
                 Recovery email
             </label>
             <input id="email" type="email" wire:model="email"
                    autocomplete="off"
                    placeholder="the email you set for this board"
-                   class="w-full rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                   class="w-full rounded-lg border border-sky/30 bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
             @error('email')
                 <p role="alert" class="mt-2 text-[12px] text-muted">{{ $message }}</p>
             @enderror

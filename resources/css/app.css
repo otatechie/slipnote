@@ -6,36 +6,51 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Finlandica Text', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* SlipNote cream/forest light palette */
-    --color-base: #faf1e6;       /* page background — warm cream */
-    --color-surface: #fdfaf6;    /* cards / panels — lightest cream, lifts off base */
-    --color-teal: #064420;       /* headings — deep forest (~11.5:1 on cream, AAA) */
-    --color-neon: #064420;       /* primary accent, links, buttons — same forest */
-    --color-sky: #e4efe7;        /* pale fills, borders — soft mint */
-    --color-ink: #064420;        /* body text — deep forest, AAA contrast */
-    --color-muted: #3f5e47;      /* secondary text — mid-green (~5.8:1 AA) */
+    /* SlipNote warm-cream + indigo palette — Notion-ish library calm:
+       #FAF6F0 warm cream   → page background
+       #F0EAD6 light beige  → cards, panels, surface
+       #D9D2C3 taupe        → input fills, borders, quiet panels (sky)
+       #4F46E5 indigo       → buttons & links (primary accent)
+       #1E1B4B deep indigo  → headings (heavier brand tone)
+       Body and muted text are warm greys so the indigo accent leads. */
+    --color-base: #fafafa;       /* page background — clean near-white (lifts beige cards clearly) */
+    --color-surface: #f3ecd9;    /* cards / panels — warm beige */
+    --color-teal: #1e1b4b;       /* headings — deep indigo */
+    --color-neon: #4f46e5;       /* buttons & links — indigo */
+    --color-sky: #e6dfd0;        /* light taupe — soft input borders, quiet panels */
+    --color-ink: #1f1f23;        /* body text — near-black (~16:1 AAA on base) */
+    --color-muted: #6b6b6b;      /* secondary text — mid grey (~5.5:1 AA) */
 }
 
+/* Dark mode — neutral near-black chrome with indigo used only as the
+   accent (buttons, links, headings). Same Notion-ish library calm,
+   after-hours temperature. */
 @media (prefers-color-scheme: dark) {
     :root {
-        --color-base: #0a2e18;       /* deep forest page background */
-        --color-surface: #0f3e22;    /* card surface — clearly lifted off base */
-        --color-teal: #e4efe7;       /* light mint headings — ~13:1 on base */
-        --color-neon: #a8d5b5;       /* light mint buttons */
-        --color-sky: #1f5234;        /* border/fill — visible against base and surface */
-        --color-ink: #faf1e6;        /* cream body text — ~13:1 on base */
-        --color-muted: #a8c9b3;      /* pale mint secondary — ~7:1 (AA pass) */
+        --color-base: #121215;       /* near-black with faint indigo tint — page background */
+        --color-surface: #1c1c22;    /* lifted neutral — cards/panels */
+        --color-teal: #c7c4f0;       /* pale indigo — headings (brand accent) */
+        --color-neon: #818cf8;       /* light indigo — buttons & links (vibrant against dark) */
+        --color-sky: #2e2e36;        /* warm neutral — borders, fills */
+        --color-ink: #ededee;        /* near-white — body text (~13:1 AAA) */
+        --color-muted: #a3a3aa;      /* muted grey — secondary text (~6.5:1 AA) */
     }
-}
 
-/* In dark mode, .text-base on a .bg-neon button is light-mint-on-light-mint.
-   Force a deep-forest text on these buttons for legibility. */
-@media (prefers-color-scheme: dark) {
+    /* `.text-base` on `.bg-neon` is light-indigo-on-light-indigo. Force the
+       page background on CTA text for legibility. */
     .bg-neon .text-base, .bg-neon.text-base {
-        color: #064420;
+        color: #121215;
+    }
+
+    /* Inputs use `bg-base` to pop against cream cards in light mode. In dark
+       mode that's near-black-on-near-black inside cards; lift the field to
+       a slightly brighter neutral so the input is visible without per-input
+       overrides everywhere. */
+    input.bg-base, select.bg-base, textarea.bg-base {
+        background-color: #26262e;
     }
 }
 

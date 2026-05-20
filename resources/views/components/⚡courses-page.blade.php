@@ -210,7 +210,7 @@ class extends Component
                           }).catch(() => {});
                       } }">
         <div>
-            <p class="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-neon">SlipNote</p>
+            <p class="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
             <h1 class="text-3xl font-bold tracking-tight text-ink">Courses</h1>
             <p class="mt-1.5 text-[15px] text-muted">
                 @if ($totalCourses > 0)
@@ -225,7 +225,7 @@ class extends Component
                  nobody hand-copies their owner URL by mistake. For everyone,
                  not just the owner — classmates pass it on too. --}}
             <button type="button" @click="share()"
-                    class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-sky px-4 py-2.5 text-[14px] font-semibold text-muted transition hover:border-neon hover:text-neon">
+                    class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-semibold text-base shadow-sm transition hover:brightness-110">
                 <span x-show="!shareCopied">Share with classmates</span>
                 <span x-show="shareCopied" x-cloak class="text-neon">Link copied ✓</span>
             </button>
@@ -248,7 +248,7 @@ class extends Component
     @endif
 
     @if ($totalCourses === 0)
-        <div class="rounded-2xl border border-sky bg-surface px-6 py-10 text-center shadow-sm">
+        <div class="rounded-2xl border border-sky/30 bg-surface px-6 py-10 text-center shadow-sm">
             <p class="text-[15px] font-semibold text-ink">No courses yet</p>
             @if ($this->isOwner())
                 <p class="mt-1.5 text-[14px] text-muted">Add the first one to get this board started.</p>
@@ -271,9 +271,9 @@ class extends Component
                 <input type="search" wire:model.live.debounce.250ms="search"
                        placeholder="Search {{ $totalCourses }} courses…"
                        aria-label="Search courses"
-                       class="h-11 flex-1 rounded-lg border border-sky bg-surface px-3.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                       class="h-11 flex-1 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 <select wire:model.live="sort" aria-label="Sort courses"
-                        class="h-11 rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-2 focus:outline-neon">
+                        class="h-11 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     <option value="active">Most recently active</option>
                     <option value="az">A–Z</option>
                 </select>
@@ -281,16 +281,16 @@ class extends Component
         @endif
 
         @if ($courses->isEmpty())
-            <p class="rounded-2xl border border-sky bg-surface px-6 py-8 text-center text-[15px] text-muted shadow-sm">
+            <p class="rounded-2xl border border-sky/30 bg-surface px-6 py-8 text-center text-[15px] text-muted shadow-sm">
                 No courses match “<span class="font-semibold text-ink">{{ trim($search) }}</span>”.
             </p>
         @else
             <div class="space-y-2.5">
                 @foreach ($courses as $course)
                     <a href="{{ route('course.show', ['workspace' => $workspace->slug, 'slug' => $course->slug]) }}" wire:navigate
-                       class="group flex items-center justify-between gap-4 rounded-2xl border border-sky bg-surface px-6 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md">
+                       class="group flex items-center justify-between gap-4 rounded-2xl border border-sky/30 bg-surface px-6 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md">
                         <div class="min-w-0">
-                            <p class="flex items-center gap-1.5 text-[15px] font-bold tracking-tight text-neon">
+                            <p class="flex items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
                                 {{ $course->code }}
                                 <span aria-hidden="true" class="opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100">→</span>
                             </p>
@@ -306,7 +306,7 @@ class extends Component
                                 {{ $course->materials_count }} {{ Str::plural('file', $course->materials_count) }}
                             </span>
                         @else
-                            <span class="shrink-0 rounded-full border border-dashed border-sky px-2.5 py-0.5 text-xs font-medium text-muted/80">
+                            <span class="shrink-0 rounded-full border border-dashed border-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted">
                                 No files yet — be the first
                             </span>
                         @endif
@@ -343,14 +343,14 @@ class extends Component
                         <input id="code" type="text" wire:model="code" placeholder="e.g. PHYS 101"
                                x-ref="codeField"
                                @error('code') aria-invalid="true" aria-describedby="code-error" @enderror
-                               class="w-full rounded-lg border border-sky bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                               class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         @error('code') <span id="code-error" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label for="title" class="mb-1.5 block text-[13px] font-semibold text-ink">Title</label>
                         <input id="title" type="text" wire:model="title" placeholder="e.g. Introductory Physics"
                                @error('title') aria-invalid="true" aria-describedby="title-error" @enderror
-                               class="w-full rounded-lg border border-sky bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                               class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         @error('title') <span id="title-error" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ $message }}</span> @enderror
                     </div>
                     <button type="submit"
@@ -392,7 +392,7 @@ class extends Component
                 <input type="email" wire:model="recoveryEmail"
                        aria-label="Recovery email"
                        placeholder="{{ $this->needsRecoveryEmail() ? 'you@example.com' : 'new email, or blank to remove' }}"
-                       class="h-9 flex-1 rounded-lg border border-sky bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                       class="h-9 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 <button type="submit"
                         class="h-9 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-base transition hover:brightness-125">
                     Save
@@ -412,16 +412,17 @@ class extends Component
              card whose header is the toggle and whose body reveals in place.
              Quiet by default (collapsed) so the classmate view stays clean;
              reads as a deliberate "owner area", not a stray button. --}}
-        <div class="mx-auto mt-10 max-w-sm overflow-hidden rounded-xl border border-sky bg-surface/50"
+        <div class="mt-10 overflow-hidden rounded-xl border border-sky transition-colors"
+             :class="open ? 'bg-sky/30' : ''"
              x-data="{ open: @js($errors->has('ownerInput')) }">
             <button type="button" @click="open = !open"
-                    class="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-surface"
+                    class="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/30"
                     :aria-expanded="open">
                 <span class="text-[13px] font-semibold text-ink">Manage this board</span>
                 <span class="text-[12px] text-muted" x-text="open ? 'Close' : 'I’m the owner'"></span>
             </button>
 
-            <div x-show="open" x-cloak class="border-t border-sky px-4 pb-4 pt-3.5">
+            <div x-show="open" x-cloak class="border-t border-sky/60 px-4 pb-4 pt-3.5">
                 <label for="ownerInput" class="block text-[12px] text-muted">
                     Paste the owner secret or link you saved when you created it.
                 </label>
@@ -431,8 +432,8 @@ class extends Component
                 <form wire:submit="unlockOwner" class="mt-2 flex gap-1.5">
                     <input id="ownerInput" type="text" wire:model="ownerInput"
                            autocomplete="off" autocapitalize="off" spellcheck="false"
-                           placeholder="owner secret or link"
-                           class="h-9 flex-1 rounded-lg border border-sky bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                           placeholder="Owner secret or link"
+                           class="h-9 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     <button type="submit"
                             class="h-9 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-base transition hover:brightness-125">
                         Unlock

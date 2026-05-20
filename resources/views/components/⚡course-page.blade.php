@@ -232,9 +232,9 @@ class extends Component
             <input type="search" wire:model.live.debounce.250ms="search"
                    placeholder="Search {{ $resultCount }} files by name…"
                    aria-label="Search files"
-                   class="h-11 flex-1 rounded-lg border border-sky bg-white px-3.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                   class="h-11 flex-1 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
             <select wire:model.live="sort" aria-label="Sort files"
-                    class="h-11 rounded-lg border border-sky bg-white px-3.5 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-2 focus:outline-neon">
+                    class="h-11 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
                 <option value="az">A–Z</option>
@@ -252,9 +252,9 @@ class extends Component
                         @disabled(! $count && ! $active)
                         aria-pressed="{{ $active ? 'true' : 'false' }}"
                         class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-semibold transition
-                               {{ $active ? 'bg-neon text-base' : ($count ? 'bg-sky/50 text-neon hover:bg-sky' : 'cursor-not-allowed bg-sky/20 text-muted') }}">
+                               {{ $active ? 'bg-neon text-base' : ($count ? 'bg-sky text-neon hover:brightness-95' : 'cursor-not-allowed bg-surface text-muted') }}">
                     {{ $label }}
-                    <span class="rounded-full px-1.5 text-xs tabular-nums {{ $active ? 'bg-white/25 text-base' : ($count ? 'bg-white/70 text-neon' : 'bg-white/40 text-muted/70') }}">{{ $count }}</span>
+                    <span class="rounded-full px-1.5 text-xs tabular-nums {{ $active ? 'bg-base/25 text-base' : ($count ? 'bg-base text-neon' : 'bg-sky/40 text-muted') }}">{{ $count }}</span>
                 </button>
             @endforeach
             @if ($activeSection !== '')
@@ -271,7 +271,7 @@ class extends Component
         $isFiltered = $isSearching || $activeSection !== '';
     @endphp
     @if ($isFiltered && $materialsBySection->flatten()->isEmpty())
-        <p class="rounded-2xl border border-sky bg-surface px-6 py-8 text-center text-[15px] text-muted shadow-sm">
+        <p class="rounded-2xl border border-sky/30 bg-surface px-6 py-8 text-center text-[15px] text-muted shadow-sm">
             @if ($isSearching)
                 No files match “<span class="font-semibold text-ink">{{ $search }}</span>”@if ($activeSection !== '') in <span class="font-semibold text-ink">{{ $sections[$activeSection] }}</span>@endif.
             @else
@@ -289,16 +289,16 @@ class extends Component
             @unless ($isFiltered)
                 {{-- Compact empty state: present but low-emphasis so files lead the page --}}
                 <section id="sec-{{ $key }}"
-                         class="mb-3 flex scroll-mt-20 items-baseline justify-between gap-3 rounded-xl border border-sky/60 px-5 py-3">
+                         class="mb-3 flex scroll-mt-20 items-baseline justify-between gap-3 rounded-xl border border-sky/30 bg-surface/50 px-5 py-3">
                     <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">{{ $label }}</h2>
                     <p class="text-[13px] text-muted">
                         Empty —
-                        <a href="#add-file" class="font-semibold text-neon hover:underline">be the first to upload</a>
+                        <a href="#add-file" class="font-medium text-neon hover:underline">be the first to upload</a>
                     </p>
                 </section>
             @endunless
         @else
-            <section id="sec-{{ $key }}" class="mb-4 scroll-mt-20 rounded-2xl border border-sky bg-surface px-6 py-5 shadow-md ring-1 ring-black/3">
+            <section id="sec-{{ $key }}" class="mb-4 scroll-mt-20 rounded-2xl border border-sky/30 bg-surface px-6 py-5 shadow-md ring-1 ring-black/3">
                 <h2 class="mb-3.5 flex items-baseline justify-between text-xs font-bold uppercase tracking-[0.06em] text-muted">
                     <span>{{ $label }}</span>
                     <span class="rounded-full border border-sky bg-sky/40 px-2.5 py-0.5 text-xs font-semibold normal-case tracking-normal text-teal">{{ $items->count() }}</span>
@@ -388,7 +388,7 @@ class extends Component
                     <label for="passphrase" class="mb-1.5 block text-[13px] font-semibold text-ink">Course passphrase</label>
                     <input id="passphrase" type="password" wire:model="passphrase" placeholder="Ask your course rep"
                            @error('passphrase') aria-invalid="true" aria-describedby="passphrase-error" @enderror
-                           class="w-full rounded-lg border border-sky bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                           class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     @error('passphrase') <span id="passphrase-error" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ $message }}</span> @enderror
                 </div>
             @endif
@@ -396,14 +396,14 @@ class extends Component
                 <label for="title" class="mb-1.5 block text-[13px] font-semibold text-ink">What is this? (optional)</label>
                 <input id="title" type="text" wire:model="title" placeholder="e.g. Week 7 quiz solutions"
                        @error('title') aria-invalid="true" aria-describedby="title-error" @enderror
-                       class="w-full rounded-lg border border-sky bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                       class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 @error('title') <span id="title-error" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ $message }}</span> @enderror
             </div>
 
             <div>
                 <label for="section" class="mb-1.5 block text-[13px] font-semibold text-ink">Section</label>
                 <select id="section" wire:model="section"
-                        class="w-full rounded-lg border border-sky bg-base px-3 py-2.5 text-[15px] text-ink focus:border-neon focus:outline-2 focus:outline-neon">
+                        class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     @foreach ($sections as $key => $label)
                         <option value="{{ $key }}">{{ $label }}</option>
                     @endforeach
@@ -414,7 +414,7 @@ class extends Component
                 <label for="uploaderName" class="mb-1.5 block text-[13px] font-semibold text-ink">Your name (optional)</label>
                 <input id="uploaderName" type="text" wire:model="uploaderName" placeholder="e.g. Alex"
                        @error('uploaderName') aria-invalid="true" aria-describedby="uploaderName-error" @enderror
-                       class="w-full rounded-lg border border-sky bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-2 focus:outline-neon">
+                       class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 @error('uploaderName') <span id="uploaderName-error" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ $message }}</span> @enderror
             </div>
 
