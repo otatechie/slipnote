@@ -2,9 +2,8 @@
 
 use App\Models\Course;
 use App\Models\Material;
-use App\Models\Workspace;
 use App\Services\TelegramNotifier;
-use App\Tenancy\Tenancy;
+use App\Tenancy\ResolvesWorkspaceTenant;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -15,9 +14,9 @@ new
 #[Title('Course')]
 class extends Component
 {
+    use ResolvesWorkspaceTenant;
     use WithFileUploads;
 
-    public Workspace $workspace;
     public Course $course;
 
     // Browse state
@@ -61,24 +60,11 @@ class extends Component
         ];
     }
 
-    /**
-     * Re-establish the tenant on every Livewire request: the POST
-     * /livewire/update endpoint bypasses the {workspace} route + middleware,
-     * so without this any wire:model/action here would hit a scoped query
-     * with no resolved workspace and 500. (See courses-page for full note.)
-     */
-    public function hydrate(): void
-    {
-        if (isset($this->workspace)) {
-            app(Tenancy::class)->set($this->workspace);
-        }
-    }
-
     public function mount(string $slug, ?string $workspace = null): void
     {
         // $workspace route segment accepted but unused — the resolved tenant
         // is the source of truth (see courses-page mount for rationale).
-        $this->workspace = app(Tenancy::class)->current();
+        $this->resolveWorkspaceTenant();
 
         // Auto-scoped by the WorkspaceScope global scope: a slug that lives
         // only in another workspace 404s here, as required for isolation.
@@ -130,7 +116,7 @@ class extends Component
 
         // Per-workspace soft cap: would this upload push the board over?
         $incoming = (int) $this->file->getSize();
-        if ($this->workspace->storageBytes() + $incoming > (int) config('noteshare.workspace_storage_bytes')) {
+        if ($incoming > $this->workspace->storageRemaining()) {
             $this->addError('file', 'This board is full — ask the owner to delete old files.');
             return;
         }
@@ -206,7 +192,6 @@ class extends Component
 };
 ?>
 
-<div class="flex min-h-screen flex-col">
 <div class="mx-auto w-full max-w-3xl flex-1 px-5 pb-10 pt-10">
     <header class="mb-7">
         <a href="{{ route('courses.index', ['workspace' => $workspace->slug]) }}" wire:navigate
@@ -452,18 +437,4 @@ class extends Component
         </div>
         @endif
     </section>
-</div>
-
-<footer class="mt-auto border-t border-sky/60 py-8">
-    <div class="mx-auto max-w-3xl px-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p class="text-[13px] font-semibold text-neon">SlipNote</p>
-        <p class="text-[13px] text-muted">
-            <a href="{{ route('privacy') }}" class="hover:text-neon">Privacy</a>
-            &middot;
-            <a href="{{ route('terms') }}" class="hover:text-neon">Terms</a>
-            &middot;
-            {{ date('Y') }}
-        </p>
-    </div>
-</footer>
 </div>

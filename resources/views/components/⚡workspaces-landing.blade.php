@@ -106,7 +106,6 @@ class extends Component
 };
 ?>
 
-<div class="flex min-h-screen flex-col">
 <div class="mx-auto w-full max-w-md flex-1 px-5 pt-20 pb-12">
     <header class="mb-7 text-center">
         <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-neon">SlipNote</p>
@@ -130,28 +129,10 @@ class extends Component
              download to make saving frictionless (option 2). --}}
         <div x-data="{ saved: false, copied: false,
                        copy() {
-                           const text = @js($ownerUrl);
-                           const done = () => {
+                           window.copyText(@js($ownerUrl)).then(() => {
                                this.copied = true; this.saved = true;
                                setTimeout(() => this.copied = false, 2000);
-                           };
-                           // navigator.clipboard is undefined on insecure
-                           // origins (plain HTTP). Fall back to execCommand.
-                           if (navigator.clipboard && window.isSecureContext) {
-                               navigator.clipboard.writeText(text).then(done).catch(() => this.legacyCopy(text, done));
-                           } else {
-                               this.legacyCopy(text, done);
-                           }
-                       },
-                       legacyCopy(text, done) {
-                           const ta = document.createElement('textarea');
-                           ta.value = text;
-                           ta.style.position = 'fixed'; ta.style.opacity = '0';
-                           document.body.appendChild(ta);
-                           ta.select();
-                           try { document.execCommand('copy'); done(); }
-                           catch (e) { /* user can still select the link manually */ }
-                           document.body.removeChild(ta);
+                           }).catch(() => { /* user can still select the link manually */ });
                        },
                        download() {
                            const workspaceName = @js($createdName);
@@ -257,18 +238,4 @@ class extends Component
             @error('openName') <span role="alert" class="mt-2 block text-[13px] text-muted">{{ $message }}</span> @enderror
         </div>
     @endif
-</div>
-
-<footer class="mt-auto border-t border-sky/60 py-8">
-    <div class="mx-auto max-w-xl px-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p class="text-[13px] font-semibold text-neon">SlipNote</p>
-        <p class="text-[13px] text-muted">
-            <a href="{{ route('privacy') }}" class="hover:text-neon">Privacy</a>
-            &middot;
-            <a href="{{ route('terms') }}" class="hover:text-neon">Terms</a>
-            &middot;
-            {{ date('Y') }}
-        </p>
-    </div>
-</footer>
 </div>

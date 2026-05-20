@@ -1,5 +1,4 @@
 <x-layouts.app title="Terms">
-<div class="flex min-h-screen flex-col">
 <div class="mx-auto w-full max-w-2xl flex-1 px-5 pb-10 pt-10">
     <header class="mb-7">
         <a href="{{ route('home') }}" wire:navigate
@@ -45,19 +44,5 @@
             <p class="text-[14px] text-ink/90">These terms may change. The "Last updated" date at the top reflects the most recent revision. Continued use after a change means you accept the new terms.</p>
         </section>
     </div>
-</div>
-
-<footer class="mt-auto border-t border-sky/60 py-8">
-    <div class="mx-auto max-w-2xl px-5 flex items-center justify-between gap-4">
-        <p class="text-[13px] font-semibold text-neon">SlipNote</p>
-        <p class="text-[13px] text-muted">
-            <a href="{{ route('privacy') }}" class="hover:text-neon">Privacy</a>
-            &middot;
-            <a href="{{ route('terms') }}" class="hover:text-neon">Terms</a>
-            &middot;
-            {{ date('Y') }}
-        </p>
-    </div>
-</footer>
 </div>
 </x-layouts.app>

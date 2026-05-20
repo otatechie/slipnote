@@ -1,8 +1,7 @@
 <?php
 
 use App\Models\Course;
-use App\Models\Workspace;
-use App\Tenancy\Tenancy;
+use App\Tenancy\ResolvesWorkspaceTenant;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -14,7 +13,7 @@ new
 #[Title('Courses')]
 class extends Component
 {
-    public Workspace $workspace;
+    use ResolvesWorkspaceTenant;
 
     public string $search = '';
     public string $sort = 'active'; // active | az
@@ -23,27 +22,13 @@ class extends Component
     public string $code = '';
     public string $title = '';
 
-    /**
-     * Livewire's update endpoint (POST /livewire/update) does NOT pass
-     * through the {workspace} route, so ResolveWorkspace middleware never
-     * runs and no tenant is set — yet the component re-renders and hits
-     * workspace-scoped queries. Re-establish the resolver from the persisted
-     * $workspace on every subsequent Livewire request.
-     */
-    public function hydrate(): void
-    {
-        if (isset($this->workspace)) {
-            app(Tenancy::class)->set($this->workspace);
-        }
-    }
-
     public function mount(?string $workspace = null): void
     {
         // The $workspace route segment is accepted but intentionally unused:
         // the resolved tenant (set by middleware, or by the test harness) is
         // the single source of truth. Binding to it directly would inject the
         // raw slug string into the typed Workspace property.
-        $this->workspace = app(Tenancy::class)->current();
+        $this->resolveWorkspaceTenant();
 
         // Owner mode: ?owner=SECRET (timing-safe, per-workspace) unlocks
         // course creation for this workspace only.
@@ -211,7 +196,6 @@ class extends Component
 };
 ?>
 
-<div class="flex min-h-screen flex-col">
 <div class="mx-auto w-full max-w-3xl flex-1 px-5 pb-10 pt-10"
      x-data="{ sheet: false }"
      x-init="$watch('sheet', v => { if (v) $nextTick(() => $refs.codeField?.focus()) })"
@@ -220,18 +204,10 @@ class extends Component
             x-data="{ shareCopied: false,
                       share() {
                           // The PLAIN workspace link — never the ?owner= one.
-                          const text = @js(route('courses.index', ['workspace' => $workspace->slug]));
-                          const done = () => { this.shareCopied = true; setTimeout(() => this.shareCopied = false, 2000); };
-                          if (navigator.clipboard && window.isSecureContext) {
-                              navigator.clipboard.writeText(text).then(done).catch(() => this.legacy(text, done));
-                          } else { this.legacy(text, done); }
-                      },
-                      legacy(text, done) {
-                          const ta = document.createElement('textarea');
-                          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-                          document.body.appendChild(ta); ta.select();
-                          try { document.execCommand('copy'); done(); } catch (e) {}
-                          document.body.removeChild(ta);
+                          window.copyText(@js(route('courses.index', ['workspace' => $workspace->slug]))).then(() => {
+                              this.shareCopied = true;
+                              setTimeout(() => this.shareCopied = false, 2000);
+                          }).catch(() => {});
                       } }">
         <div>
             <p class="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-neon">SlipNote</p>
@@ -490,18 +466,4 @@ class extends Component
             @endif
         </p>
     @endif
-</div>
-
-<footer class="mt-auto border-t border-sky/60 py-8">
-    <div class="mx-auto max-w-3xl px-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p class="text-[13px] font-semibold text-neon">SlipNote</p>
-        <p class="text-[13px] text-muted">
-            <a href="{{ route('privacy') }}" class="hover:text-neon">Privacy</a>
-            &middot;
-            <a href="{{ route('terms') }}" class="hover:text-neon">Terms</a>
-            &middot;
-            {{ date('Y') }}
-        </p>
-    </div>
-</footer>
 </div>

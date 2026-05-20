@@ -1,8 +1,7 @@
 <?php
 
 use App\Mail\OwnerLinkRecovery;
-use App\Models\Workspace;
-use App\Tenancy\Tenancy;
+use App\Tenancy\ResolvesWorkspaceTenant;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Layout;
@@ -14,7 +13,7 @@ new
 #[Title('Recover owner link')]
 class extends Component
 {
-    public Workspace $workspace;
+    use ResolvesWorkspaceTenant;
 
     public string $email = '';
 
@@ -22,21 +21,12 @@ class extends Component
      *  same whether or not the email matched (no enumeration oracle). */
     public bool $done = false;
 
-    public function hydrate(): void
-    {
-        // POST /livewire/update bypasses the {workspace} route + middleware;
-        // re-establish the tenant from the persisted workspace.
-        if (isset($this->workspace)) {
-            app(Tenancy::class)->set($this->workspace);
-        }
-    }
-
     public function mount(?string $workspace = null): void
     {
         // $workspace route segment accepted but unused — the resolved tenant
         // is the source of truth (binding it would inject the raw slug
         // string into the typed Workspace property).
-        $this->workspace = app(Tenancy::class)->current();
+        $this->resolveWorkspaceTenant();
     }
 
     public function requestRecovery(): void
@@ -75,7 +65,6 @@ class extends Component
 };
 ?>
 
-<div class="flex min-h-screen flex-col">
 <div class="mx-auto w-full max-w-md flex-1 px-5 pt-20 pb-12">
     <header class="mb-7 text-center">
         <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-neon">SlipNote</p>
@@ -124,18 +113,4 @@ class extends Component
             </p>
         </form>
     @endif
-</div>
-
-<footer class="mt-auto border-t border-sky/60 py-8">
-    <div class="mx-auto max-w-md px-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p class="text-[13px] font-semibold text-neon">SlipNote</p>
-        <p class="text-[13px] text-muted">
-            <a href="{{ route('privacy') }}" class="hover:text-neon">Privacy</a>
-            &middot;
-            <a href="{{ route('terms') }}" class="hover:text-neon">Terms</a>
-            &middot;
-            {{ date('Y') }}
-        </p>
-    </div>
-</footer>
 </div>
