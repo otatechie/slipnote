@@ -9,33 +9,33 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* SlipNote cream/lavender/purple light palette */
-    --color-base: #f7efe5;      /* page background — warm cream */
-    --color-surface: #fffbf5;   /* cards / panels — lightest cream, lifts off the base */
-    --color-teal: #674188;      /* headings, accent, link/button text — deep purple, ~6.5:1 on cream (AA) */
-    --color-neon: #674188;      /* primary accent, links, buttons — AA-compliant deep purple */
-    --color-sky: #c3acd0;       /* pale fills, subtle surfaces — lavender */
-    --color-ink: #2d2336;       /* body text — ~13:1 on cream */
-    --color-muted: #574a63;     /* secondary text — WCAG AA (~5.5:1) on cream */
+    /* SlipNote cream/forest light palette */
+    --color-base: #faf1e6;       /* page background — warm cream */
+    --color-surface: #fdfaf6;    /* cards / panels — lightest cream, lifts off base */
+    --color-teal: #064420;       /* headings — deep forest (~11.5:1 on cream, AAA) */
+    --color-neon: #064420;       /* primary accent, links, buttons — same forest */
+    --color-sky: #e4efe7;        /* pale fills, borders — soft mint */
+    --color-ink: #064420;        /* body text — deep forest, AAA contrast */
+    --color-muted: #3f5e47;      /* secondary text — mid-green (~5.8:1 AA) */
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --color-base: #130e1a;       /* near-black purple page background */
-        --color-surface: #1f1729;   /* card surface — clearly lifted off base */
-        --color-teal: #d4bfe8;      /* bright lavender headings — ~8:1 on surface */
-        --color-neon: #a07cc5;      /* medium purple buttons — white text ~4.6:1 AA */
-        --color-sky: #3a2850;       /* border/fill — visible against both base and surface */
-        --color-ink: #f0eaf8;       /* near-white body text — ~13:1 on surface */
-        --color-muted: #b8a8cc;     /* secondary text — ~5.5:1 on surface */
+        --color-base: #0a2e18;       /* deep forest page background */
+        --color-surface: #0f3e22;    /* card surface — clearly lifted off base */
+        --color-teal: #e4efe7;       /* light mint headings — ~13:1 on base */
+        --color-neon: #a8d5b5;       /* light mint buttons */
+        --color-sky: #1f5234;        /* border/fill — visible against base and surface */
+        --color-ink: #faf1e6;        /* cream body text — ~13:1 on base */
+        --color-muted: #a8c9b3;      /* pale mint secondary — ~7:1 (AA pass) */
     }
 }
 
-/* In dark mode, text-base on a neon button becomes near-black on medium purple.
-   Override: any .text-base child of a .bg-neon element uses white instead. */
+/* In dark mode, .text-base on a .bg-neon button is light-mint-on-light-mint.
+   Force a deep-forest text on these buttons for legibility. */
 @media (prefers-color-scheme: dark) {
     .bg-neon .text-base, .bg-neon.text-base {
-        color: #fff;
+        color: #064420;
     }
 }
 
