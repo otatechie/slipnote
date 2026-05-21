@@ -14,12 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Behind Cloudflare, the origin sees http:// and a private IP as the
-        // client. Without this, Livewire signed-URL uploads 401 (signatures
-        // computed for https:// don't match the http:// URL Laravel
-        // reconstructs from the request).
+        // client. Without this, uploads 401 (signatures computed for https://
+        // don't match the http:// URL Laravel reconstructs from the request).
         $middleware->trustProxies(at: '*');
 
         $middleware->append(SecureHeaders::class);
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
         $middleware->alias([
             'workspace' => ResolveWorkspace::class,
         ]);

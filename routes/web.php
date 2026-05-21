@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Storage;
 Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrFail());
 
 // Root: pick or create a workspace. No tenant resolved here.
-Route::livewire('/', 'workspaces-landing')->name('home');
+Route::get('/', [App\Http\Controllers\WorkspacesController::class, 'index'])->name('home');
+Route::post('/workspaces', [App\Http\Controllers\WorkspacesController::class, 'store'])->name('workspaces.store');
+Route::post('/workspaces/open', [App\Http\Controllers\WorkspacesController::class, 'open'])->name('workspaces.open');
 
 // Static legal pages. Declared BEFORE the /{workspace} catch-all so the
 // slugs "privacy" and "terms" aren't read as workspace names.
@@ -18,8 +20,8 @@ Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::view('/terms', 'legal.terms')->name('terms');
 
 // Material download. By global id (decision a): these are shared files and
-// downloads are anonymous by design (see README). Declared BEFORE the
-// /{workspace} catch-all so "download" isn't read as a workspace slug.
+// downloads are anonymous by design. Declared BEFORE the /{workspace}
+// catch-all so "download" isn't read as a workspace slug.
 Route::get('/download/{material}', function (Material $material) {
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('public')->exists($material->stored_path), 404);
@@ -59,9 +61,15 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 // from the {workspace} slug (unknown slug → 404) before any scoped query.
 // Declared last so the static routes above win.
 Route::middleware('workspace')->group(function () {
-    Route::livewire('/{workspace}', 'courses-page')->name('courses.index');
-    Route::livewire('/{workspace}/c/{slug}', 'course-page')->name('course.show');
-    // Public: a locked-out owner is NOT in owner mode, so this must be
-    // reachable without the owner secret.
-    Route::livewire('/{workspace}/recover', 'workspace-recovery')->name('workspace.recover');
+    Route::get('/{workspace}', [App\Http\Controllers\CoursesController::class, 'index'])->name('courses.index');
+    Route::post('/{workspace}/courses', [App\Http\Controllers\CoursesController::class, 'store'])->name('courses.store');
+    Route::post('/{workspace}/unlock', [App\Http\Controllers\CoursesController::class, 'unlock'])->name('courses.unlock');
+    Route::post('/{workspace}/recovery-email', [App\Http\Controllers\CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
+
+    Route::get('/{workspace}/c/{slug}', [App\Http\Controllers\CourseController::class, 'show'])->name('course.show');
+    Route::post('/{workspace}/c/{slug}/upload', [App\Http\Controllers\CourseController::class, 'upload'])->name('course.upload');
+    Route::post('/{workspace}/c/{slug}/exit-owner', [App\Http\Controllers\CourseController::class, 'exitOwner'])->name('course.exit-owner');
+
+    Route::get('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
+    Route::post('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');
 });
