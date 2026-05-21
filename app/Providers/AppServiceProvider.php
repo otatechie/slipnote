@@ -27,7 +27,10 @@ class AppServiceProvider extends ServiceProvider
         // request arrives as http://. Force generated URLs to https so
         // Livewire AJAX, assets, and route() calls don't trigger
         // mixed-content blocks in the browser.
-        if ($this->app->environment('production')) {
+        //
+        // Gate on the APP_URL scheme rather than APP_ENV so this works
+        // regardless of whether the env var is set or named "production".
+        if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }
     }
