@@ -30,6 +30,12 @@ class WorkspacesController extends Controller
 
         [$workspace, $secret] = Workspace::provision($clean);
 
+        // The creator just proved ownership by being the one to create it —
+        // unlock the owner session now so they don't have to re-paste the
+        // secret after clicking "Continue". The plaintext secret is still
+        // shown exactly once for them to save.
+        session([$workspace->ownerSessionKey() => true]);
+
         return back()->with([
             'createdName' => $workspace->name,
             'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),
