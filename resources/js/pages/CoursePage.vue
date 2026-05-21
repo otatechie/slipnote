@@ -104,12 +104,6 @@ function upload() {
     })
 }
 
-function exitOwner() {
-    router.post('/' + props.workspace.slug + '/c/' + props.course.slug + '/exit-owner', {}, {
-        preserveScroll: true,
-    })
-}
-
 // Delete: POST with _method=DELETE using a plain form submit for simplicity
 // (Inertia router.delete works but needs confirmation modal — keep it native)
 function confirmDelete(e) {
@@ -123,6 +117,47 @@ function confirmDelete(e) {
 function courseListUrl() {
     return '/' + props.workspace.slug
 }
+
+// Bulk delete (owner only)
+const selected = ref([])
+const selectedCount = computed(() => selected.value.length)
+const allSelected = computed(() => selectedCount.value > 0 && selectedCount.value === props.materials.length)
+
+function isSelected(id) {
+    return selected.value.includes(id)
+}
+
+function toggleSelect(id) {
+    const idx = selected.value.indexOf(id)
+    if (idx === -1) selected.value.push(id)
+    else selected.value.splice(idx, 1)
+}
+
+function toggleSelectAll() {
+    if (allSelected.value) {
+        selected.value = []
+    } else {
+        selected.value = props.materials.map(m => m.id)
+    }
+}
+
+const bulkForm = useForm({})
+
+function bulkDelete() {
+    if (!selectedCount.value) return
+    const count = selectedCount.value
+    const label = count === 1 ? '1 file' : `${count} files`
+    if (!confirm(`Remove ${label}? This can't be undone.`)) return
+
+    bulkForm.transform(() => ({ ids: selected.value }))
+        .delete('/' + props.workspace.slug + '/c/' + props.course.slug + '/materials', {
+            preserveScroll: true,
+            onSuccess: () => { selected.value = [] },
+        })
+}
+
+// Clear selection when materials list changes (after delete / filter)
+watch(() => props.materials, () => { selected.value = [] })
 </script>
 
 <template>
@@ -141,26 +176,14 @@ function courseListUrl() {
 
             <!-- Owner mode banner -->
             <div v-if="isOwner"
-                 class="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-neon/40 bg-neon/10 px-4 py-3 text-sm font-medium text-neon">
-                <span>Owner mode — you can remove any file.</span>
-                <button type="button" @click="exitOwner"
-                        class="cursor-pointer font-semibold underline-offset-2 hover:underline">Exit</button>
+                 class="mb-5 rounded-lg border border-neon/40 bg-neon/10 px-4 py-3 text-sm font-medium text-neon">
+                Owner mode — you can remove any file.
             </div>
 
             <!-- Upload receipt -->
             <div v-if="flash.uploaded"
-                 class="mb-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
-                <span>{{ flash.uploaded }}</span>
-                <template v-if="flash.manageUrl">
-                    <form :action="flash.manageUrl" method="POST"
-                          @submit.prevent="e => { if(confirm('Remove this file? This can\'t be undone.')) { e.target.submit() } }">
-                        <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="cursor-pointer font-semibold text-neon underline-offset-2 hover:underline">
-                            Uploaded the wrong file? Remove it
-                        </button>
-                    </form>
-                </template>
+                 class="mb-5 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
+                {{ flash.uploaded }}
             </div>
 
             <!-- Sticky filter bar -->
@@ -169,10 +192,10 @@ function courseListUrl() {
                     <input type="search" v-model="localSearch"
                            :placeholder="`Search ${resultCount} ${resultCount === 1 ? 'file' : 'files'} by name…`"
                            aria-label="Search files"
-                           class="box-border h-12 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                    <div class="relative">
+                           class="box-border w-full flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 py-3 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                    <div class="relative w-full sm:w-auto">
                         <select v-model="localSort" aria-label="Sort files"
-                                class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                                class="box-border w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 py-3 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                             <option value="newest">Newest first</option>
                             <option value="oldest">Oldest first</option>
                             <option value="az">A–Z</option>
@@ -236,6 +259,31 @@ function courseListUrl() {
                 </button>
             </div>
 
+            <!-- Bulk action bar (owner, selection active) -->
+            <div v-if="isOwner && selectedCount > 0"
+                 class="sticky top-[116px] z-20 mb-4 flex items-center justify-between gap-3 rounded-xl border border-sky bg-surface px-4 py-2.5 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox"
+                           :checked="allSelected"
+                           :indeterminate="selectedCount > 0 && !allSelected"
+                           @change="toggleSelectAll"
+                           class="size-4 cursor-pointer accent-teal">
+                    <span class="text-xs font-medium text-muted">
+                        {{ selectedCount }} {{ selectedCount === 1 ? 'file' : 'files' }} selected
+                    </span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button type="button" @click="selected = []"
+                            class="cursor-pointer text-[13px] font-medium text-muted hover:text-ink">
+                        Cancel
+                    </button>
+                    <button type="button" @click="bulkDelete" :disabled="bulkForm.processing"
+                            class="cursor-pointer rounded-lg bg-red-600/90 px-3.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-red-600 disabled:opacity-60">
+                        Delete {{ selectedCount === 1 ? '1 file' : selectedCount + ' files' }}
+                    </button>
+                </div>
+            </div>
+
             <!-- Materials grouped by section (only render once files exist) -->
             <template v-for="(label, key) in sections" :key="key">
                 <template v-if="materialsBySection[key]?.length === 0">
@@ -261,8 +309,14 @@ function courseListUrl() {
                             </span>
                         </h2>
                         <div v-for="material in materialsBySection[key]" :key="material.id"
-                             class="flex items-center justify-between gap-3 border-b border-sky/60 py-3 first:pt-0 last:border-0 last:pb-0">
+                             class="flex items-center justify-between gap-3 border-b border-sky/60 py-3 first:pt-0 last:border-0 last:pb-0"
+                             :class="isSelected(material.id) ? 'bg-teal/5 -mx-4 px-4 sm:-mx-6 sm:px-6' : ''">
                             <div class="flex min-w-0 items-start gap-3">
+                                <!-- Bulk select checkbox (owner only) -->
+                                <input v-if="isOwner" type="checkbox"
+                                       :checked="isSelected(material.id)"
+                                       @change="toggleSelect(material.id)"
+                                       class="mt-1 size-4 shrink-0 cursor-pointer accent-teal">
                                 <span class="mt-0.5 shrink-0 rounded border border-muted/40 bg-sky px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-ink"
                                       :title="material.fileTypeLabel + ' file'">
                                     {{ material.fileTypeLabel }}
@@ -278,7 +332,7 @@ function courseListUrl() {
                                 </div>
                             </div>
                             <div class="flex shrink-0 items-center gap-1">
-                                <template v-if="isOwner">
+                                <template v-if="isOwner && !selectedCount">
                                     <form :action="material.delete_url" method="POST"
                                           :data-name="material.displayName"
                                           @submit="confirmDelete">
@@ -292,7 +346,7 @@ function courseListUrl() {
                                         </button>
                                     </form>
                                 </template>
-                                <a :href="material.download_url"
+                                <a v-if="!selectedCount" :href="material.download_url"
                                    class="rounded-full bg-neon px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
                                     Download
                                 </a>

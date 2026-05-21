@@ -15,7 +15,7 @@ class Course extends Model
     // BelongsToWorkspace trait from the resolved tenant, never from request
     // input. This prevents a crafted request from planting a course in
     // another workspace.
-    protected $fillable = ['code', 'title', 'slug'];
+    protected $fillable = ['code', 'title', 'slug', 'position'];
 
     public function workspace(): BelongsTo
     {

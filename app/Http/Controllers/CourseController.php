@@ -95,6 +95,27 @@ class CourseController extends Controller
         ]);
     }
 
+    public function bulkDelete(Request $request, string $workspaceSlug, string $slug)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+
+        $ids = $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer'])['ids'];
+
+        $materials = $course->materials()->whereIn('id', $ids)->get();
+
+        foreach ($materials as $material) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($material->stored_path);
+            $material->delete();
+        }
+
+        $count = $materials->count();
+
+        return back()->with('uploaded', $count === 1 ? '1 file removed.' : "{$count} files removed.");
+    }
+
     public function exitOwner(Request $request)
     {
         $workspace = $this->workspace();

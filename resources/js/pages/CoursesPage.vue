@@ -128,6 +128,36 @@ function plural(n, word) {
 function courseUrl(slug) {
     return '/' + props.workspace.slug + '/c/' + slug
 }
+
+// Drag-to-reorder (owner only, manual sort only when not searching/filtering)
+const draggable = computed(() => props.isOwner && !localSearch.value && localSort.value === 'manual')
+const dragList = ref([...props.courses])
+watch(() => props.courses, (v) => { dragList.value = [...v] })
+
+let dragSrcId = null
+
+function onDragStart(e, id) {
+    dragSrcId = id
+    e.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(e, id) {
+    if (dragSrcId === id) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    const srcIdx = dragList.value.findIndex(c => c.id === dragSrcId)
+    const dstIdx = dragList.value.findIndex(c => c.id === id)
+    if (srcIdx === -1 || dstIdx === -1) return
+    const reordered = [...dragList.value]
+    reordered.splice(dstIdx, 0, reordered.splice(srcIdx, 1)[0])
+    dragList.value = reordered
+}
+
+function onDrop() {
+    router.post('/' + props.workspace.slug + '/courses/reorder', {
+        ids: dragList.value.map(c => c.id),
+    }, { preserveScroll: true })
+}
 </script>
 
 <template>
@@ -199,6 +229,7 @@ function courseUrl(slug) {
                     <div class="relative">
                         <select v-model="localSort" aria-label="Sort courses"
                                 class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                            <option value="manual">Custom order</option>
                             <option value="active">Most recently active</option>
                             <option value="az">A–Z</option>
                         </select>
@@ -216,10 +247,28 @@ function courseUrl(slug) {
 
                 <!-- Course list -->
                 <div v-else class="space-y-2.5">
-                    <Link v-for="course in courses" :key="course.id"
-                          :href="courseUrl(course.slug)"
-                          class="group flex items-center justify-between gap-4 rounded-2xl border border-sky/30 bg-surface px-6 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md">
-                        <div class="min-w-0">
+                    <div v-for="course in (draggable ? dragList : courses)" :key="course.id"
+                         :draggable="draggable"
+                         @dragstart="draggable && onDragStart($event, course.id)"
+                         @dragover="draggable && onDragOver($event, course.id)"
+                         @drop="draggable && onDrop()"
+                         :class="draggable ? 'cursor-grab active:cursor-grabbing' : ''"
+                         class="group flex items-center gap-4 rounded-2xl border border-sky/30 bg-surface px-6 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md">
+
+                        <!-- Drag handle (owner + manual sort only) -->
+                        <svg v-if="draggable" aria-hidden="true"
+                             class="size-4 shrink-0 text-muted/50"
+                             viewBox="0 0 16 16" fill="currentColor">
+                            <rect x="4" y="3" width="2" height="2" rx="1"/>
+                            <rect x="10" y="3" width="2" height="2" rx="1"/>
+                            <rect x="4" y="7" width="2" height="2" rx="1"/>
+                            <rect x="10" y="7" width="2" height="2" rx="1"/>
+                            <rect x="4" y="11" width="2" height="2" rx="1"/>
+                            <rect x="10" y="11" width="2" height="2" rx="1"/>
+                        </svg>
+
+                        <Link :href="courseUrl(course.slug)" class="min-w-0 flex-1"
+                              @click.stop>
                             <p class="flex items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
                                 {{ course.code }}
                                 <span aria-hidden="true" class="opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100">→</span>
@@ -228,7 +277,8 @@ function courseUrl(slug) {
                             <p v-if="course.materials_max_created_at" class="mt-0.5 text-[12px] text-muted/80">
                                 Updated {{ timeAgo(course.materials_max_created_at) }}
                             </p>
-                        </div>
+                        </Link>
+
                         <span v-if="course.materials_count > 0"
                               class="shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-xs font-medium tabular-nums text-teal">
                             {{ plural(course.materials_count, 'file') }}
@@ -237,8 +287,13 @@ function courseUrl(slug) {
                               class="shrink-0 rounded-full border border-dashed border-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted">
                             No files yet — be the first
                         </span>
-                    </Link>
+                    </div>
                 </div>
+
+                <!-- Drag hint -->
+                <p v-if="draggable" class="mt-2 text-center text-[12px] text-muted/60">
+                    Drag courses to reorder — saved automatically
+                </p>
             </template>
 
             <!-- Owner: create-course slide-in panel -->
