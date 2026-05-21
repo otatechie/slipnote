@@ -71,7 +71,7 @@ function forget(slug) {
 <template>
     <Head title="Create your course board" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-md flex-1 px-5 pt-20 pb-12">
+        <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-12">
             <header class="mb-7 text-center">
                 <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
                 <template v-if="flash.ownerUrl">
@@ -163,9 +163,9 @@ function forget(slug) {
                         <input id="openName" type="text" v-model="openForm.openName"
                                aria-label="Workspace name"
                                placeholder="CS Masters 2026"
-                               class="h-10 flex-1 rounded-lg border border-sky/30 bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                               class="h-11 flex-1 rounded-lg border border-sky/30 bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="openForm.processing"
-                                class="h-10 shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
+                                class="h-11 shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
                             Open
                         </button>
                     </form>

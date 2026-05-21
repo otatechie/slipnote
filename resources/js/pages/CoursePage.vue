@@ -167,15 +167,20 @@ function courseListUrl() {
             <div class="sticky top-0 z-30 -mx-5 mb-5 space-y-3 bg-base/95 px-5 py-3 backdrop-blur">
                 <div class="flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch"
-                           :placeholder="`Search ${resultCount} files by name…`"
+                           :placeholder="`Search ${resultCount} ${resultCount === 1 ? 'file' : 'files'} by name…`"
                            aria-label="Search files"
-                           class="h-11 flex-1 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                    <select v-model="localSort" aria-label="Sort files"
-                            class="h-11 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                        <option value="newest">Newest first</option>
-                        <option value="oldest">Oldest first</option>
-                        <option value="az">A–Z</option>
-                    </select>
+                           class="box-border h-12 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                    <div class="relative">
+                        <select v-model="localSort" aria-label="Sort files"
+                                class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                            <option value="newest">Newest first</option>
+                            <option value="oldest">Oldest first</option>
+                            <option value="az">A–Z</option>
+                        </select>
+                        <svg class="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
                 </div>
 
                 <!-- Section filter pills -->
@@ -186,19 +191,19 @@ function courseListUrl() {
                                 :aria-pressed="localSection === key ? 'true' : 'false'"
                                 class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-semibold transition"
                                 :class="localSection === key
-                                    ? 'bg-neon text-white'
-                                    : (sectionCounts[key] ? 'bg-sky text-neon hover:brightness-95' : 'cursor-not-allowed bg-surface text-muted')">
+                                    ? 'bg-teal text-white'
+                                    : (sectionCounts[key] ? 'bg-sky text-teal hover:brightness-95' : 'cursor-not-allowed bg-surface text-muted')">
                             {{ label }}
                             <span class="rounded-full px-1.5 text-xs tabular-nums"
                                   :class="localSection === key
                                       ? 'bg-white/25 text-white'
-                                      : (sectionCounts[key] ? 'bg-base text-neon' : 'bg-sky/40 text-muted')">
+                                      : (sectionCounts[key] ? 'bg-base text-teal' : 'bg-sky/40 text-muted')">
                                 {{ sectionCounts[key] ?? 0 }}
                             </span>
                         </button>
                     </template>
                     <button v-if="localSection !== ''" type="button" @click="localSection = ''"
-                            class="inline-flex cursor-pointer items-center rounded-full px-3 py-1 text-[13px] font-semibold text-muted underline-offset-2 transition hover:text-neon hover:underline">
+                            class="inline-flex cursor-pointer items-center rounded-full px-3 py-1 text-[13px] font-semibold text-muted underline-offset-2 transition hover:text-teal hover:underline">
                         Clear filter
                     </button>
                 </nav>
@@ -215,12 +220,31 @@ function courseListUrl() {
                 </template>
             </p>
 
-            <!-- Materials grouped by section -->
+            <!-- Whole-course empty state: one friendly card instead of four
+                 empty section stubs. Only when nothing's uploaded and no
+                 filter is active. -->
+            <div v-if="resultCount === 0 && !isFiltered"
+                 class="rounded-2xl border border-sky/30 bg-surface px-6 py-12 text-center shadow-sm">
+                <p class="text-[16px] font-semibold text-ink">No files yet</p>
+                <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
+                    Be the first to add notes, slides, or past papers for
+                    <span class="font-semibold text-ink">{{ course.code }}</span>.
+                </p>
+                <button type="button" @click="uploadOpen = true"
+                        class="mt-5 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-5 py-3 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
+                    <span class="text-lg leading-none">+</span> Add the first file
+                </button>
+            </div>
+
+            <!-- Materials grouped by section (only render once files exist) -->
             <template v-for="(label, key) in sections" :key="key">
                 <template v-if="materialsBySection[key]?.length === 0">
-                    <!-- Hidden while filtered -->
-                    <section v-if="!isFiltered" :id="'sec-' + key"
-                             class="mb-3 flex scroll-mt-20 items-baseline justify-between gap-3 rounded-xl border border-sky/30 bg-surface/50 px-5 py-3">
+                    <!-- Section stub: shown only when the course has SOME files
+                         but this section is empty. Hidden entirely on a fresh
+                         board (whole-course empty state covers that) and while
+                         filtering. -->
+                    <section v-if="!isFiltered && resultCount > 0" :id="'sec-' + key"
+                             class="mb-3 flex scroll-mt-20 flex-col gap-1 rounded-xl border border-sky/30 bg-surface/50 px-5 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                         <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">{{ label }}</h2>
                         <p class="text-[13px] text-muted">
                             Empty —
@@ -229,46 +253,47 @@ function courseListUrl() {
                     </section>
                 </template>
                 <template v-else>
-                    <section :id="'sec-' + key" class="mb-4 scroll-mt-20 rounded-2xl border border-sky/30 bg-surface px-6 py-5 shadow-md ring-1 ring-black/3">
+                    <section :id="'sec-' + key" class="mb-4 scroll-mt-20 rounded-2xl border border-sky/30 bg-surface px-4 py-5 shadow-md ring-1 ring-black/3 sm:px-6">
                         <h2 class="mb-3.5 flex items-baseline justify-between text-xs font-bold uppercase tracking-[0.06em] text-muted">
                             <span>{{ label }}</span>
-                            <span class="rounded-full border border-sky bg-sky/40 px-2.5 py-0.5 text-xs font-semibold normal-case tracking-normal text-teal">
+                            <span class="rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-xs font-semibold normal-case tracking-normal text-teal">
                                 {{ materialsBySection[key].length }}
                             </span>
                         </h2>
                         <div v-for="material in materialsBySection[key]" :key="material.id"
-                             class="flex items-center justify-between gap-4 border-b border-black/5 py-3 first:pt-0 last:border-0 last:pb-0">
+                             class="flex items-center justify-between gap-3 border-b border-sky/60 py-3 first:pt-0 last:border-0 last:pb-0">
                             <div class="flex min-w-0 items-start gap-3">
-                                <span class="mt-1 shrink-0 rounded bg-sky/30 px-1 py-px text-[10px] font-semibold tracking-wide text-muted"
+                                <span class="mt-0.5 shrink-0 rounded border border-muted/40 bg-sky px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-ink"
                                       :title="material.fileTypeLabel + ' file'">
                                     {{ material.fileTypeLabel }}
                                 </span>
                                 <div class="min-w-0">
                                     <a :href="material.download_url"
-                                       class="break-words text-[15px] font-semibold text-neon hover:underline">
+                                       class="block truncate text-[15px] font-semibold text-neon hover:underline">
                                         {{ material.displayName }}
                                     </a>
-                                    <div class="mt-0.5 text-[13px] text-muted">
-                                        <template v-if="material.title">{{ material.original_filename }} · </template>
+                                    <div class="mt-0.5 truncate text-[12px] text-muted">
                                         {{ material.uploader_name || 'Anonymous' }} · {{ material.created_at_human }}
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex shrink-0 items-center gap-2">
+                            <div class="flex shrink-0 items-center gap-1">
                                 <template v-if="isOwner">
                                     <form :action="material.delete_url" method="POST"
                                           :data-name="material.displayName"
                                           @submit="confirmDelete">
                                         <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
                                         <input type="hidden" name="_method" value="DELETE">
-                                        <button type="submit"
-                                                class="cursor-pointer rounded-full px-3 py-1.5 text-[13px] font-semibold text-muted transition hover:bg-red-50 hover:text-red-600">
-                                            Delete
+                                        <button type="submit" aria-label="Delete file"
+                                                class="cursor-pointer rounded-full p-2 text-muted transition hover:bg-red-50 hover:text-red-600">
+                                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H7a1 1 0 01-1-1V6"/>
+                                            </svg>
                                         </button>
                                     </form>
                                 </template>
                                 <a :href="material.download_url"
-                                   class="rounded-full bg-neon px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
+                                   class="rounded-full bg-neon px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
                                     Download
                                 </a>
                             </div>
@@ -303,7 +328,7 @@ function courseListUrl() {
 
                     <!-- Expanded form -->
                     <div v-if="uploadOpen"
-                         class="rounded-2xl border border-dashed border-teal/50 bg-surface px-6 py-5 shadow-sm">
+                         class="rounded-2xl border border-dashed border-teal/50 bg-surface px-4 py-5 shadow-sm sm:px-6">
                         <div class="mb-3.5 flex items-center justify-between">
                             <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Add a file</h2>
                             <button type="button" @click="uploadOpen = false"

@@ -1,7 +1,7 @@
-<x-layouts.app title="Privacy">
+<x-layouts.app title="Privacy" :indexable="true">
 <div class="mx-auto w-full max-w-2xl flex-1 px-5 pb-10 pt-10">
     <header class="mb-7">
-        <a href="{{ route('home') }}"
+        <a href="{{ route('welcome') }}"
            class="mb-2 inline-block text-xs font-semibold uppercase tracking-[0.08em] text-neon hover:underline">← SlipNote</a>
         <h1 class="text-3xl font-bold tracking-tight text-ink">Privacy</h1>
         <p class="mt-1.5 text-[13px] text-muted">Last updated {{ \Illuminate\Support\Carbon::parse(config('noteshare.legal_updated', '2026-05-19'))->isoFormat('MMMM D, YYYY') }}</p>

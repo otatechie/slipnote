@@ -195,12 +195,17 @@ function courseUrl(slug) {
                     <input type="search" v-model="localSearch"
                            :placeholder="`Search ${totalCourses} courses…`"
                            aria-label="Search courses"
-                           class="h-11 flex-1 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                    <select v-model="localSort" aria-label="Sort courses"
-                            class="h-11 rounded-lg border border-sky/30 bg-surface px-3.5 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                        <option value="active">Most recently active</option>
-                        <option value="az">A–Z</option>
-                    </select>
+                           class="box-border h-12 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                    <div class="relative">
+                        <select v-model="localSort" aria-label="Sort courses"
+                                class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                            <option value="active">Most recently active</option>
+                            <option value="az">A–Z</option>
+                        </select>
+                        <svg class="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
                 </div>
 
                 <!-- No results -->
@@ -225,7 +230,7 @@ function courseUrl(slug) {
                             </p>
                         </div>
                         <span v-if="course.materials_count > 0"
-                              class="shrink-0 rounded-full bg-sky/30 px-2.5 py-0.5 text-xs font-medium tabular-nums text-muted">
+                              class="shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-xs font-medium tabular-nums text-teal">
                             {{ plural(course.materials_count, 'file') }}
                         </span>
                         <span v-else
