@@ -11,11 +11,7 @@ new
 #[Title('Create your course board')]
 class extends Component
 {
-    // Create a workspace (the primary action)
     public string $name = '';
-
-    // Open an existing workspace by its human name (recovery path —
-    // most people arrive via their saved link, not by typing here)
     public string $openName = '';
 
     // One-time receipt after creating (the only place the owner link shows)
@@ -23,8 +19,6 @@ class extends Component
     public ?string $createdUrl = null;
     public ?string $ownerUrl = null;
 
-    /** Live preview of the URL the name will become, so the outcome is
-     *  predictable before the user commits. */
     public function slugPreview(): string
     {
         return Str::slug(trim($this->name));
@@ -34,23 +28,18 @@ class extends Component
     {
         $data = $this->validate(['name' => 'required|string|min:2|max:60']);
 
-        // Validate against the *stripped* name — that's what provision()
-        // actually stores and slugifies.
         $clean = strip_tags($data['name']);
         $slug = Str::slug($clean);
 
-        // 1. The name must yield a usable URL slug. "!!!" / pure punctuation
-        //    slugify to "" → an unfindable workspace. Reject with guidance.
+        // "!!!" / pure punctuation slugifies to "" → an unfindable workspace.
         if ($slug === '') {
             $this->addError('name', 'Use some letters or numbers — “'.$clean.'” can’t become a link.');
 
             return;
         }
 
-        // 2. Names are unique by slug. Because the app lets people FIND a
-        //    workspace by name, two names that slugify the same (e.g.
-        //    "CS Masters 2026" vs "cs-masters 2026") would silently send
-        //    users to the wrong board. Reject the collision instead.
+        // Two names that slugify the same (e.g. "CS Masters 2026" vs
+        // "cs-masters 2026") would silently send users to the wrong board.
         if (Workspace::where('slug', $slug)->exists()) {
             $this->addError('name', 'A workspace with this name already exists — pick a different name.');
 
@@ -59,9 +48,7 @@ class extends Component
 
         [$workspace, $secret] = Workspace::provision($clean);
 
-        // Shown exactly once. The plaintext secret is never stored or
-        // re-displayed — same one-time-capability pattern as the uploader
-        // delete receipt.
+        // Shown exactly once. Plaintext secret is never stored or re-displayed.
         $this->createdName = $workspace->name;
         $this->createdUrl = route('courses.index', ['workspace' => $workspace->slug]);
         $this->ownerUrl = $this->createdUrl.'?owner='.$secret;
@@ -69,9 +56,6 @@ class extends Component
         $this->reset('name');
     }
 
-    /** Leave the receipt and enter the new workspace. The blocking
-     *  "I saved it" confirmation is enforced client-side on the receipt;
-     *  this just navigates. */
     public function proceed(): void
     {
         if ($this->createdUrl) {
@@ -81,9 +65,8 @@ class extends Component
 
     public function open(): void
     {
-        // Accept the human name ("CS Masters 2026") — slugify it the same
-        // way provisioning did, so the user never needs to know what a slug
-        // is or type it exactly. Recognition over recall.
+        // Slugify the typed name the same way provisioning did, so the user
+        // never needs to know what a slug is. Recognition over recall.
         $typed = trim($this->openName);
 
         if ($typed === '') {
@@ -123,15 +106,10 @@ class extends Component
     </header>
 
     @if ($ownerUrl)
-        {{-- One-time owner receipt — takes over the screen. The owner link
-             is shown ONCE and is unrecoverable, so leaving is gated behind
-             an explicit "I saved it" confirmation (option 1), with copy and
-             download to make saving frictionless (option 2). --}}
-        {{-- Alpine component is registered in resources/js/app.js (ownerReceipt).
-             Keeping the props as a single @js() blob means the only thing in
-             this x-data attribute is a function call with JSON arguments —
-             no embedded double-quotes, no template literals, nothing that
-             can confuse the HTML attribute parser. --}}
+        {{-- Owner link is shown ONCE and unrecoverable — leaving is gated
+             behind an explicit "I saved it" confirmation. Alpine component
+             defined in resources/js/app.js (props passed via Js::from to
+             avoid embedded quotes in the x-data attribute). --}}
         <div x-data="ownerReceipt({{ \Illuminate\Support\Js::from([
                 'ownerUrl' => $ownerUrl,
                 'createdUrl' => $createdUrl,
@@ -145,8 +123,7 @@ class extends Component
                 not recoverable.</span> It controls this workspace.
             </p>
 
-            {{-- Full link, wrapped (not truncated): the one unrecoverable
-                 string in the app — the user must see all of it. --}}
+            {{-- Wrapped (not truncated): the user must see the whole secret. --}}
             <p onclick="window.getSelection().selectAllChildren(this)"
                class="mt-4 w-full cursor-text break-all rounded-lg bg-sky/50 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all">{{ $ownerUrl }}</p>
 
@@ -182,7 +159,6 @@ class extends Component
             </button>
         </div>
     @else
-        {{-- PRIMARY: create. The single focus of this screen. --}}
         <form wire:submit="create"
               class="rounded-2xl border border-sky/30 bg-surface p-6 shadow-sm">
             <label for="name" class="mb-1.5 block text-[13px] font-semibold text-ink">Workspace name</label>
@@ -209,9 +185,6 @@ class extends Component
             </p>
         </form>
 
-        {{-- SECONDARY: recovery only — most return via their saved link.
-             Sits in a quiet mint panel so it reads as a distinct second
-             region (not a stray input floating on the page). --}}
         <div class="mt-7 rounded-2xl border border-sky/60 bg-surface/60 px-6 py-5 text-center">
             <p class="text-[13px] text-ink">Already made one? Your saved link is the fastest way back — or find it by name:</p>
             <form wire:submit="open" class="mx-auto mt-2.5 flex max-w-sm gap-2">
@@ -224,8 +197,6 @@ class extends Component
                     Open
                 </button>
             </form>
-            {{-- Not-found here is a normal recall miss, not a system error —
-                 a calm muted hint, not alarm-red. --}}
             @error('openName') <span role="alert" class="mt-2 block text-[13px] text-muted">{{ $message }}</span> @enderror
         </div>
     @endif
