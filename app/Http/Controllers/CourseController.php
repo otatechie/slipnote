@@ -7,6 +7,7 @@ use App\Models\Material;
 use App\Services\TelegramNotifier;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 
 class CourseController extends Controller
@@ -28,6 +29,8 @@ class CourseController extends Controller
         // Handle ?owner= URL param
         $given = $request->query('owner');
         if ($workspace->verifyOwner(is_string($given) ? $given : null)) {
+            // Regenerate session ID on privilege change (anti-fixation).
+            session()->regenerate();
             session([$workspace->ownerSessionKey() => true]);
 
             return redirect()->route('course.show', ['workspace' => $workspace->slug, 'slug' => $slug]);
@@ -121,9 +124,20 @@ class CourseController extends Controller
         }
 
         if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true) {
+            // Brute-force protection per workspace. Same shape as the
+            // owner-unlock limiter (5 attempts / 10 min).
+            $key = 'upload_passphrase:'.$workspace->id;
+            if (RateLimiter::tooManyAttempts($key, 5)) {
+                return back()->withErrors(['passphrase' => 'Too many attempts. Try again in a few minutes.']);
+            }
+
             if (! $workspace->uploadPassphraseMatches($data['passphrase'] ?? null)) {
+                RateLimiter::hit($key, 600);
+
                 return back()->withErrors(['passphrase' => "That passphrase isn't right — ask your course rep."]);
             }
+
+            RateLimiter::clear($key);
             session([$workspace->uploadUnlockKey() => true]);
         }
 

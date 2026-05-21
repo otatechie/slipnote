@@ -33,7 +33,9 @@ class WorkspacesController extends Controller
         // The creator just proved ownership by being the one to create it —
         // unlock the owner session now so they don't have to re-paste the
         // secret after clicking "Continue". The plaintext secret is still
-        // shown exactly once for them to save.
+        // shown exactly once for them to save. Regenerate session ID on
+        // privilege change (defense against session fixation).
+        session()->regenerate();
         session([$workspace->ownerSessionKey() => true]);
 
         return back()->with([

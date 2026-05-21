@@ -28,6 +28,8 @@ class CoursesController extends Controller
         // Handle ?owner= URL param
         $given = $request->query('owner');
         if ($workspace->verifyOwner(is_string($given) ? $given : null)) {
+            // Regenerate session ID on privilege change (anti-fixation).
+            session()->regenerate();
             session([$workspace->ownerSessionKey() => true]);
 
             return redirect()->route('courses.index', ['workspace' => $workspace->slug]);
@@ -91,6 +93,8 @@ class CoursesController extends Controller
 
         if ($workspace->verifyOwner($given !== '' ? $given : null)) {
             RateLimiter::clear($key);
+            // Regenerate session ID on privilege change (anti-fixation).
+            session()->regenerate();
             session([$workspace->ownerSessionKey() => true]);
 
             return redirect()->route('courses.index', ['workspace' => $workspace->slug]);
