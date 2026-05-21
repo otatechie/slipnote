@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.7
+# Cache-bust: 2026-05-21 (force fresh build to pick up Alpine ownerReceipt fix)
 
 # ---- Stage 1: Build front-end assets ----
 FROM node:22-alpine AS assets
