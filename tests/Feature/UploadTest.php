@@ -9,7 +9,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Livewire;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
 
@@ -32,16 +31,20 @@ class UploadTest extends TestCase
         ]);
     }
 
+    private function uploadUrl(): string
+    {
+        return route('course.upload', $this->wsParams(['slug' => $this->course->slug]));
+    }
+
     public function test_it_uploads_a_valid_file_and_creates_a_material(): void
     {
         $file = UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('section', 'notes')
-            ->set('uploaderName', 'Alex')
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'uploaderName' => 'Alex',
+            'file' => $file,
+        ])->assertRedirect();
 
         $material = Material::first();
         $this->assertNotNull($material);
@@ -55,10 +58,10 @@ class UploadTest extends TestCase
     {
         $big = UploadedFile::fake()->create('huge.pdf', 12000, 'application/pdf'); // 12 MB > 10 MB cap
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $big)
-            ->call('save')
-            ->assertHasErrors(['file']);
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $big,
+        ])->assertSessionHasErrors(['file']);
 
         $this->assertSame(0, Material::count());
     }
@@ -67,23 +70,23 @@ class UploadTest extends TestCase
     {
         $exe = UploadedFile::fake()->create('virus.exe', 10, 'application/octet-stream');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $exe)
-            ->call('save')
-            ->assertHasErrors(['file']);
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $exe,
+        ])->assertSessionHasErrors(['file']);
 
         $this->assertSame(0, Material::count());
     }
 
     public function test_it_records_file_size_on_upload(): void
     {
-        // 100 KB file → 102400 bytes (UploadedFile::fake sizes are in KB)
+        // 100 KB file → 102400 bytes
         $file = UploadedFile::fake()->create('notes.pdf', 100, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+        ])->assertRedirect();
 
         $this->assertSame(102400, Material::first()->file_size);
         $this->assertSame(102400, $this->workspace->storageBytes());
@@ -91,10 +94,10 @@ class UploadTest extends TestCase
 
     public function test_it_rejects_upload_that_would_exceed_workspace_cap(): void
     {
-        // Tighten the cap to 1 MB for this test so a normal-sized file trips it.
+        // Tighten the cap to 1 MB for this test.
         config(['noteshare.workspace_storage_bytes' => 1024 * 1024]);
 
-        // Pre-fill 900 KB of existing material so the next upload pushes over.
+        // Pre-fill 900 KB of existing material.
         $this->course->materials()->create([
             'section' => 'notes',
             'original_filename' => 'old.pdf',
@@ -104,12 +107,12 @@ class UploadTest extends TestCase
 
         $file = UploadedFile::fake()->create('big.pdf', 200, 'application/pdf'); // 200 KB → over cap
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasErrors(['file']);
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+        ])->assertSessionHasErrors(['file']);
 
-        // Only the pre-seeded row exists; the new upload was rejected.
+        // Only the pre-seeded row exists.
         $this->assertSame(1, Material::count());
     }
 
@@ -117,11 +120,11 @@ class UploadTest extends TestCase
     {
         $file = UploadedFile::fake()->create('wk7.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('title', '<b>Week 7</b> solutions')
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'title' => '<b>Week 7</b> solutions',
+            'file' => $file,
+        ])->assertRedirect();
 
         $this->assertSame('Week 7 solutions', Material::first()->title);
     }
@@ -132,13 +135,12 @@ class UploadTest extends TestCase
         $this->course->materials()->create(['section' => 'slides', 'title' => null, 'original_filename' => 'optimization-lecture.pdf', 'stored_path' => 'x/b.pdf']);
         $this->course->materials()->create(['section' => 'notes', 'title' => 'Limits', 'original_filename' => 'c.pdf', 'stored_path' => 'x/c.pdf']);
 
-        // Search still matches on the full filename internally, even though
-        // the displayed name has its extension stripped.
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('search', 'optim')
-            ->assertSee('optimization-lecture') // display name (extension stripped)
-            ->assertDontSee('Chain Rule notes')
-            ->assertDontSee('Limits');
+        $this->get(route('course.show', array_merge($this->wsParams(['slug' => $this->course->slug]), ['search' => 'optim'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('materials', 1)
+                ->where('materials.0.original_filename', 'optimization-lecture.pdf')
+            );
     }
 
     public function test_sort_az_orders_by_display_label(): void
@@ -146,10 +148,12 @@ class UploadTest extends TestCase
         $this->course->materials()->create(['section' => 'notes', 'title' => 'Zebra', 'original_filename' => 'z.pdf', 'stored_path' => 'x/z.pdf']);
         $this->course->materials()->create(['section' => 'notes', 'title' => 'Apple', 'original_filename' => 'a.pdf', 'stored_path' => 'x/a.pdf']);
 
-        $component = Livewire::test('course-page', ['slug' => $this->course->slug])->set('sort', 'az');
-
-        $html = $component->html();
-        $this->assertLessThan(strpos($html, 'Zebra'), strpos($html, 'Apple'), 'Apple should render before Zebra when sorted A–Z');
+        $this->get(route('course.show', array_merge($this->wsParams(['slug' => $this->course->slug]), ['sort' => 'az'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('materials.0.displayName', 'Apple')
+                ->where('materials.1.displayName', 'Zebra')
+            );
     }
 
     public function test_display_name_prefers_title_then_strips_extension(): void
@@ -191,11 +195,11 @@ class UploadTest extends TestCase
     {
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('uploaderName', '<script>x</script>Bob')
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'uploaderName' => '<script>x</script>Bob',
+            'file' => $file,
+        ])->assertRedirect();
 
         $this->assertSame('xBob', Material::first()->uploader_name);
     }
@@ -204,10 +208,10 @@ class UploadTest extends TestCase
     {
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+        ])->assertRedirect();
 
         $this->assertNotEmpty(Material::first()->manage_token);
     }
@@ -253,7 +257,6 @@ class UploadTest extends TestCase
             'manage_token' => null,
         ]);
 
-        // Even guessing an empty/any token must not delete a tokenless (seed) row.
         $this->delete(route('material.destroy', ['material' => $material->id, 'token' => 'anything']))
             ->assertForbidden();
 
@@ -269,8 +272,6 @@ class UploadTest extends TestCase
             'manage_token' => 'someone-elses-token',
         ]);
 
-        // No token knowledge — authorised purely by the per-workspace
-        // owner session.
         $this->withSession([$this->workspace->ownerSessionKey() => true])
             ->delete(route('material.destroy', ['material' => $material->id, 'token' => 'owner']))
             ->assertRedirect(route('course.show', $this->wsParams(['slug' => $this->course->slug])));
@@ -287,12 +288,11 @@ class UploadTest extends TestCase
             'manage_token' => 'tok',
         ]);
 
-        // Visiting with a wrong ?owner= must not set the session flag...
-        Livewire::withQueryParams(['owner' => 'not-the-secret'])
-            ->test('course-page', ['slug' => $this->course->slug]);
+        // Visiting with a wrong ?owner= must not set the session flag
+        $this->get(route('course.show', $this->wsParams(['slug' => $this->course->slug])).'?owner=not-the-secret');
         $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
 
-        // ...and the destroy route still rejects without owner/token.
+        // and the destroy route still rejects without owner/token
         $this->delete(route('material.destroy', ['material' => $material->id, 'token' => 'owner']))
             ->assertForbidden();
         $this->assertSame(1, Material::count());
@@ -300,8 +300,7 @@ class UploadTest extends TestCase
 
     public function test_correct_owner_secret_unlocks_owner_mode(): void
     {
-        Livewire::withQueryParams(['owner' => $this->ownerSecret])
-            ->test('course-page', ['slug' => $this->course->slug])
+        $this->get(route('course.show', $this->wsParams(['slug' => $this->course->slug])).'?owner='.$this->ownerSecret)
             ->assertRedirect(route('course.show', $this->wsParams(['slug' => $this->course->slug])));
 
         $this->assertTrue(session($this->workspace->ownerSessionKey()));
@@ -309,13 +308,12 @@ class UploadTest extends TestCase
 
     public function test_uploads_are_open_when_no_passphrase_is_configured(): void
     {
-        // Workspace has no passphrase by default → uploads open.
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+        ])->assertRedirect();
 
         $this->assertSame(1, Material::count());
     }
@@ -325,11 +323,11 @@ class UploadTest extends TestCase
         $this->workspace->update(['upload_passphrase' => 'sesame']);
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->set('passphrase', 'wrong')
-            ->call('save')
-            ->assertHasErrors(['passphrase']);
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+            'passphrase' => 'wrong',
+        ])->assertSessionHasErrors(['passphrase']);
 
         $this->assertSame(0, Material::count());
     }
@@ -341,11 +339,11 @@ class UploadTest extends TestCase
 
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->set('passphrase', 'sesame')
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+            'passphrase' => 'sesame',
+        ])->assertRedirect();
 
         $this->assertSame(1, Material::count());
         $this->assertTrue(session($this->workspace->uploadUnlockKey()));
@@ -359,11 +357,11 @@ class UploadTest extends TestCase
         $this->actingInWorkspace($this->workspace = $this->workspace->fresh());
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('file', $file)
-            ->set('passphrase', 'sesame')
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'file' => $file,
+            'passphrase' => 'sesame',
+        ])->assertRedirect();
 
         $this->assertTrue(Hash::check('sesame', $this->workspace->fresh()->upload_passphrase));
     }
