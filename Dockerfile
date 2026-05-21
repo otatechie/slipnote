@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Cache-bust: 2026-05-21-4 (persist .env across redeploys via symlink)
+# Cache-bust: 2026-05-21-3 (trust Cloudflare proxy — fix Livewire upload 401)
 
 # ---- Stage 1: Build front-end assets ----
 FROM node:22-alpine AS assets
@@ -42,7 +42,6 @@ FROM serversideup/php:8.4-fpm-nginx AS runtime
 #   /var/www/html/storage/app/public     -> user uploads (course materials)
 #   /var/www/html/storage/framework      -> sessions/views/cache
 #   /var/www/html/storage/logs           -> optional, helpful
-#   /var/www/html/config-persist         -> .env lives here (survives redeploys)
 ENV PHP_OPCACHE_ENABLE=1 \
     SSL_MODE=off \
     AUTORUN_ENABLED=true \
@@ -65,8 +64,7 @@ RUN install-php-extensions gd exif intl pdo_sqlite bcmath \
         /var/www/html/storage/framework/sessions \
         /var/www/html/storage/framework/views \
         /var/www/html/storage/framework/cache/data \
-        /var/www/html/storage/logs \
-        /var/www/html/config-persist
+        /var/www/html/storage/logs
 USER www-data
 
 WORKDIR /var/www/html
@@ -74,12 +72,6 @@ WORKDIR /var/www/html
 COPY --chown=www-data:www-data . .
 COPY --from=vendor --chown=www-data:www-data /app/vendor ./vendor
 COPY --from=assets --chown=www-data:www-data /app/public/build ./public/build
-
-# .env lives on the persistent /config-persist volume so it survives
-# redeploys. The symlink itself ships with the image; the volume mount
-# provides the actual file. First boot: create an empty file (Laravel
-# falls back to runtime env vars), then `docker cp` real .env in.
-RUN ln -sf /var/www/html/config-persist/.env /var/www/html/.env
 
 # storage:link is best-effort; safe to fail if already linked on a redeploy
 RUN php artisan storage:link || true
