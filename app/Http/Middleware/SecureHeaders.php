@@ -23,8 +23,8 @@ class SecureHeaders
             $response->headers->set('Content-Security-Policy', implode('; ', [
                 "default-src 'self'",
                 "script-src 'self'",
-                "style-src 'self' 'unsafe-inline' https://api.fontshare.com",
-                "font-src 'self' https://cdn.fontshare.com",
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+                "font-src 'self' https://fonts.bunny.net",
                 "img-src 'self' data:",
                 "connect-src 'self'",
                 "frame-ancestors 'self'",

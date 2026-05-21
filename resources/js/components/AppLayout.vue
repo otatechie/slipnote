@@ -1,6 +1,4 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
-
 const year = new Date().getFullYear()
 </script>
 
@@ -11,9 +9,9 @@ const year = new Date().getFullYear()
             <div class="mx-auto max-w-3xl px-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                 <p class="text-[13px] font-semibold text-muted">SlipNote</p>
                 <p class="text-[13px] text-muted">
-                    <Link href="/privacy" class="hover:text-neon">Privacy</Link>
+                    <a href="/privacy" class="hover:text-neon">Privacy</a>
                     &middot;
-                    <Link href="/terms" class="hover:text-neon">Terms</Link>
+                    <a href="/terms" class="hover:text-neon">Terms</a>
                     &middot;
                     {{ year }}
                 </p>

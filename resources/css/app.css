@@ -7,50 +7,52 @@
 @source '../**/*.vue';
 
 @theme {
-    --font-sans: 'Satoshi', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Nata Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* SlipNote warm-cream + indigo palette — Notion-ish library calm:
-       #FAF6F0 warm cream   → page background
-       #F0EAD6 light beige  → cards, panels, surface
-       #D9D2C3 taupe        → input fills, borders, quiet panels (sky)
-       #4F46E5 indigo       → buttons & links (primary accent)
-       #1E1B4B deep indigo  → headings (heavier brand tone)
-       Body and muted text are warm greys so the indigo accent leads. */
-    --color-base: #fafafa;       /* page background — clean near-white (lifts beige cards clearly) */
-    --color-surface: #f3ecd9;    /* cards / panels — warm beige */
-    --color-teal: #1e1b4b;       /* headings — deep indigo */
-    --color-neon: #4f46e5;       /* buttons & links — indigo */
-    --color-sky: #e6dfd0;        /* light taupe — soft input borders, quiet panels */
-    --color-ink: #1f1f23;        /* body text — near-black (~16:1 AAA on base) */
-    --color-muted: #6b6b6b;      /* secondary text — mid grey (~5.5:1 AA) */
+    /* SlipNote cream + forest + amber palette — warm library calm:
+       #F9F5F0 warm cream   → page background
+       #F2EAD3 light beige  → cards, panels, surface
+       #E5D9B8 deeper beige → soft borders, quiet panels (sky)
+       #F4991A amber        → buttons & links (primary accent)
+       #344F1F forest green → headings */
+    --color-base: #f2ead3;       /* page background — light beige */
+    --color-surface: #fffdf8;    /* cards / panels — near-white (lifts off beige) */
+    --color-teal: #344f1f;       /* headings — forest green */
+    --color-neon: #f4991a;       /* buttons & links — amber */
+    --color-sky: #e0d4b0;        /* deeper beige — soft borders, quiet panels */
+    --color-ink: #1f1f23;        /* body text — near-black */
+    --color-muted: #6b6b6b;      /* secondary text — mid grey */
 }
 
-/* Dark mode — neutral near-black chrome with indigo used only as the
-   accent (buttons, links, headings). Same Notion-ish library calm,
-   after-hours temperature. */
+/* Dark mode — warm near-black chrome with amber as the accent
+   (buttons, links) and pale green for headings. */
 @media (prefers-color-scheme: dark) {
     :root {
-        --color-base: #121215;       /* near-black with faint indigo tint — page background */
-        --color-surface: #1c1c22;    /* lifted neutral — cards/panels */
-        --color-teal: #c7c4f0;       /* pale indigo — headings (brand accent) */
-        --color-neon: #818cf8;       /* light indigo — buttons & links (vibrant against dark) */
-        --color-sky: #2e2e36;        /* warm neutral — borders, fills */
-        --color-ink: #ededee;        /* near-white — body text (~13:1 AAA) */
-        --color-muted: #a3a3aa;      /* muted grey — secondary text (~6.5:1 AA) */
+        --color-base: #16140f;       /* near-black with faint warm tint */
+        --color-surface: #211e16;    /* lifted neutral — cards/panels */
+        --color-teal: #a3c585;       /* pale green — headings */
+        --color-neon: #f4991a;       /* amber — buttons & links */
+        --color-sky: #383326;        /* warm slate — borders, fills */
+        --color-ink: #ededee;        /* near-white — body text */
+        --color-muted: #a3a3aa;      /* muted grey — secondary text */
     }
 
-    /* `.text-base` on `.bg-neon` is light-indigo-on-light-indigo. Force the
-       page background on CTA text for legibility. */
-    .bg-neon .text-base, .bg-neon.text-base {
-        color: #121215;
-    }
-
-    /* Inputs use `bg-base` to pop against cream cards in light mode. In dark
+    /* Inputs use bg-base to pop against beige cards in light mode. In dark
        mode that's near-black-on-near-black inside cards; lift the field to
-       a slightly brighter neutral so the input is visible without per-input
-       overrides everywhere. */
+       a brighter warm neutral AND give it a visible border so the field
+       boundary reads clearly (the Tailwind border-sky/30 is too faint here). */
     input.bg-base, select.bg-base, textarea.bg-base {
-        background-color: #26262e;
+        background-color: #2a261c;
+        border-color: #4a4434;
     }
+}
+
+/* Amber (#f4991a) is a light accent: white text on it fails contrast in
+   both modes. Force near-black text on every amber CTA so the label stays
+   legible. Applies to .text-white buttons (the standard CTA) regardless of
+   colour scheme. */
+.bg-neon.text-white,
+.bg-neon .text-white {
+    color: #1f1410;
 }

@@ -9,8 +9,12 @@ use Illuminate\Support\Facades\Storage;
 // binding would try the primary key and 404 every slug). Unknown → 404.
 Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrFail());
 
-// Root: pick or create a workspace. No tenant resolved here.
-Route::get('/', [App\Http\Controllers\WorkspacesController::class, 'index'])->name('home');
+// Marketing landing page (Blade for SEO — rendered server-side, full
+// meta tag control, no Inertia/Vue hydration cost).
+Route::view('/', 'welcome')->name('welcome');
+
+// Workspace create/open hub. Authenticated workflow entrypoint.
+Route::get('/start', [App\Http\Controllers\WorkspacesController::class, 'index'])->name('start');
 Route::post('/workspaces', [App\Http\Controllers\WorkspacesController::class, 'store'])->name('workspaces.store');
 Route::post('/workspaces/open', [App\Http\Controllers\WorkspacesController::class, 'open'])->name('workspaces.open');
 Route::post('/workspaces/forget', [App\Http\Controllers\WorkspacesController::class, 'forget'])->name('workspaces.forget');

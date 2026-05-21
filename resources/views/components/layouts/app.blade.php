@@ -4,10 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ ($title ?? null) ? $title.' · SlipNote' : 'SlipNote' }}</title>
-    <meta name="robots" content="noindex,nofollow">
-    <link rel="preconnect" href="https://api.fontshare.com">
-    <link rel="preconnect" href="https://cdn.fontshare.com" crossorigin>
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+    @if ($description ?? null)
+        <meta name="description" content="{{ $description }}">
+    @endif
+    {{-- Workspace pages are capability URLs — keep them out of search.
+         The marketing page (/) and legal pages opt in to indexing. --}}
+    @if ($indexable ?? false)
+        <meta name="robots" content="index,follow">
+    @else
+        <meta name="robots" content="noindex,nofollow">
+    @endif
+    {{ $head ?? '' }}
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=nata-sans:400,500,600,700" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="m-0 bg-base font-sans text-ink">

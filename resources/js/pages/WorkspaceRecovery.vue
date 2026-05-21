@@ -24,7 +24,7 @@ function requestRecovery() {
 <template>
     <Head title="Recover owner link" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-md flex-1 px-5 pt-20 pb-12">
+        <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-12">
             <header class="mb-7 text-center">
                 <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
                 <h1 class="text-3xl font-bold tracking-tight text-ink">Recover owner access</h1>
