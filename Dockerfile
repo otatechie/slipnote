@@ -12,7 +12,7 @@ COPY resources ./resources
 # absolute asset URLs). Must be the public HTTPS origin or you get
 # mixed-content errors on production. Supply via --build-arg APP_URL=...
 # in Dokploy → Build → Build Arguments.
-ARG APP_URL=https://slipnote.app
+ARG APP_URL=https://slipnote.co
 ENV APP_URL=${APP_URL}
 
 RUN npm run build
