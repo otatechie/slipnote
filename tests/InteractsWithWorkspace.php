@@ -25,15 +25,13 @@ trait InteractsWithWorkspace
         [$this->workspace, $this->ownerSecret] = Workspace::provision('Test Workspace');
 
         // Resolve the tenant for direct model use (Course::create, etc.).
-        // HTTP/Livewire requests re-resolve it via the route binding.
+        // HTTP requests re-resolve it via the route binding.
         app(Tenancy::class)->set($this->workspace);
     }
 
     /**
      * Make the given workspace the resolved tenant — mirrors what the route
-     * middleware does for a real request. Livewire component tests must NOT
-     * pass `workspace` as a param (it would bind the slug string onto the
-     * typed Workspace property); the component reads the resolved tenant.
+     * middleware does for a real request.
      */
     protected function actingInWorkspace(Workspace $workspace): void
     {
@@ -53,16 +51,5 @@ trait InteractsWithWorkspace
     protected function wsParams(array $extra = []): array
     {
         return array_merge(['workspace' => $this->workspace->slug], $extra);
-    }
-
-    /**
-     * Livewire component params. The component resolves its workspace from
-     * the Tenancy singleton (set in setUpWorkspace), NOT from a mount param —
-     * passing 'workspace' here would bind the slug string onto the typed
-     * Workspace property. So this passes only non-workspace params.
-     */
-    protected function lwParams(array $extra = []): array
-    {
-        return $extra;
     }
 }
