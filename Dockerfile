@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-# Cache-bust: 2026-05-21 (force fresh build to pick up Alpine ownerReceipt fix)
+# Cache-bust: 2026-05-21-3 (trust Cloudflare proxy — fix Livewire upload 401)
 
 # ---- Stage 1: Build front-end assets ----
 FROM node:22-alpine AS assets
@@ -46,7 +46,14 @@ ENV PHP_OPCACHE_ENABLE=1 \
     SSL_MODE=off \
     AUTORUN_ENABLED=true \
     AUTORUN_LARAVEL_STORAGE_LINK=true \
-    AUTORUN_LARAVEL_MIGRATION=true
+    AUTORUN_LARAVEL_MIGRATION=true \
+    # Disable build-time route/config/view caching: caches get baked before
+    # the runtime .env is in place, so requests 404 with stale routes. With
+    # opcache enabled the perf cost is negligible for an app this size.
+    AUTORUN_LARAVEL_CONFIG_CACHE=false \
+    AUTORUN_LARAVEL_ROUTE_CACHE=false \
+    AUTORUN_LARAVEL_VIEW_CACHE=false \
+    AUTORUN_LARAVEL_EVENT_CACHE=false
 
 USER root
 RUN install-php-extensions gd exif intl pdo_sqlite bcmath \
