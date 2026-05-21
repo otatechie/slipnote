@@ -49,9 +49,14 @@ ENV PHP_OPCACHE_ENABLE=1 \
 
 USER root
 RUN install-php-extensions gd exif intl pdo_sqlite bcmath \
- && install -d -o www-data -g www-data /var/www/html/storage \
- && install -d -o www-data -g www-data /var/www/html/bootstrap/cache \
- && install -d -o www-data -g www-data /var/www/html/database
+ && install -d -o www-data -g www-data \
+        /var/www/html/database \
+        /var/www/html/bootstrap/cache \
+        /var/www/html/storage/app/public \
+        /var/www/html/storage/framework/sessions \
+        /var/www/html/storage/framework/views \
+        /var/www/html/storage/framework/cache/data \
+        /var/www/html/storage/logs
 USER www-data
 
 WORKDIR /var/www/html
