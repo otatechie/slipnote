@@ -68,12 +68,14 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}', [App\Http\Controllers\CoursesController::class, 'index'])->name('courses.index');
     Route::post('/{workspace}/courses', [App\Http\Controllers\CoursesController::class, 'store'])->name('courses.store');
+    Route::post('/{workspace}/courses/reorder', [App\Http\Controllers\CoursesController::class, 'reorder'])->name('courses.reorder');
     Route::post('/{workspace}/unlock', [App\Http\Controllers\CoursesController::class, 'unlock'])->name('courses.unlock');
     Route::post('/{workspace}/recovery-email', [App\Http\Controllers\CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
 
     Route::get('/{workspace}/c/{slug}', [App\Http\Controllers\CourseController::class, 'show'])->name('course.show');
     Route::post('/{workspace}/c/{slug}/upload', [App\Http\Controllers\CourseController::class, 'upload'])->name('course.upload');
-    Route::post('/{workspace}/c/{slug}/exit-owner', [App\Http\Controllers\CourseController::class, 'exitOwner'])->name('course.exit-owner');
+
+    Route::delete('/{workspace}/c/{slug}/materials', [App\Http\Controllers\CourseController::class, 'bulkDelete'])->name('course.bulk-delete');
 
     Route::get('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
     Route::post('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');

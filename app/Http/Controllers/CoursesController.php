@@ -39,7 +39,7 @@ class CoursesController extends Controller
         }
 
         $search = trim($request->input('search', ''));
-        $sort = $request->input('sort', 'active');
+        $sort = $request->input('sort', 'manual');
 
         $query = Course::withCount('materials')->withMax('materials', 'created_at');
 
@@ -51,7 +51,8 @@ class CoursesController extends Controller
 
         match ($sort) {
             'az' => $query->orderBy('code'),
-            default => $query->orderByRaw('COALESCE(materials_max_created_at, courses.created_at) desc'),
+            'active' => $query->orderByRaw('COALESCE(materials_max_created_at, courses.created_at) desc'),
+            default => $query->orderBy('position'),
         };
 
         $used = $workspace->storageBytes();
@@ -64,6 +65,7 @@ class CoursesController extends Controller
                 'code' => $c->code,
                 'title' => $c->title,
                 'slug' => $c->slug,
+                'position' => $c->position,
                 'materials_count' => $c->materials_count,
                 'materials_max_created_at' => $c->materials_max_created_at,
             ]),
@@ -125,6 +127,25 @@ class CoursesController extends Controller
         return back()->with('recoverySaved', $email === '' ? 'Recovery email removed.' : 'Recovery email saved.');
     }
 
+    public function reorder(Request $request)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $ids = $request->validate(['ids' => 'required|array', 'ids.*' => 'integer'])['ids'];
+
+        // Only update courses that belong to this workspace
+        $allowed = Course::whereIn('id', $ids)->pluck('workspace_id', 'id');
+
+        foreach ($ids as $position => $id) {
+            if (($allowed[$id] ?? null) === $workspace->id) {
+                Course::where('id', $id)->update(['position' => $position]);
+            }
+        }
+
+        return response()->noContent();
+    }
+
     public function store(Request $request)
     {
         $workspace = $this->workspace();
@@ -143,10 +164,13 @@ class CoursesController extends Controller
             $n++;
         }
 
+        $nextPosition = Course::max('position') + 1;
+
         $course = Course::create([
             'code' => strip_tags($data['code']),
             'title' => strip_tags($data['title']),
             'slug' => $slug,
+            'position' => $nextPosition,
         ]);
 
         return redirect()->route('course.show', [
