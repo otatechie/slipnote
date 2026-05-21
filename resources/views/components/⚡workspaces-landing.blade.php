@@ -127,27 +127,17 @@ class extends Component
              is shown ONCE and is unrecoverable, so leaving is gated behind
              an explicit "I saved it" confirmation (option 1), with copy and
              download to make saving frictionless (option 2). --}}
-        <div x-data="{ saved: false, copied: false,
-                       copy() {
-                           window.copyText(@js($ownerUrl)).then(() => {
-                               this.copied = true; this.saved = true;
-                               setTimeout(() => this.copied = false, 2000);
-                           }).catch(() => { /* user can still select the link manually */ });
-                       },
-                       download() {
-                           const workspaceName = @js($createdName);
-                           const ownerUrl = @js($ownerUrl);
-                           const createdUrl = @js($createdUrl);
-                           const filename = @js(Str::slug($createdName).'-owner-link.txt');
-                           const body = `SlipNote owner link for "${workspaceName}"\n\n`
-                               + `OWNER (keep private - controls the workspace):\n${ownerUrl}\n\n`
-                               + `SHARE WITH CLASSMATES:\n${createdUrl}\n`;
-                           const a = document.createElement('a');
-                           a.href = URL.createObjectURL(new Blob([body], {type:'text/plain'}));
-                           a.download = filename;
-                           a.click(); URL.revokeObjectURL(a.href);
-                           this.saved = true;
-                       } }"
+        {{-- Alpine component is registered in resources/js/app.js (ownerReceipt).
+             Keeping the props as a single @js() blob means the only thing in
+             this x-data attribute is a function call with JSON arguments —
+             no embedded double-quotes, no template literals, nothing that
+             can confuse the HTML attribute parser. --}}
+        <div x-data="ownerReceipt({{ \Illuminate\Support\Js::from([
+                'ownerUrl' => $ownerUrl,
+                'createdUrl' => $createdUrl,
+                'workspaceName' => $createdName,
+                'filename' => Str::slug($createdName).'-owner-link.txt',
+            ]) }})"
              class="rounded-2xl border border-neon/40 bg-neon/10 p-6">
             <p class="text-[15px] font-bold text-neon">“{{ $createdName }}” is ready 🎉</p>
             <p class="mt-1.5 text-[13px] text-ink">
