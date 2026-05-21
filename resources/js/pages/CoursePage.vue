@@ -361,9 +361,18 @@ function courseListUrl() {
                             </div>
 
                             <button type="submit" :disabled="uploadForm.processing"
-                                    class="cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:cursor-progress disabled:opacity-60">
-                                <span v-if="!uploadForm.processing">Upload</span>
-                                <span v-else>Saving…</span>
+                                    class="relative cursor-pointer overflow-hidden rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:cursor-progress disabled:opacity-90">
+                                <!-- Progress fill: a translucent white bar that
+                                     grows left→right as the upload streams to
+                                     the server. Sits BEHIND the button text. -->
+                                <span v-if="uploadForm.progress"
+                                      class="absolute inset-y-0 left-0 bg-white/25 transition-[width] duration-150 ease-linear"
+                                      :style="{ width: uploadForm.progress.percentage + '%' }"></span>
+                                <span class="relative" v-if="!uploadForm.processing">Upload</span>
+                                <span class="relative tabular-nums" v-else-if="uploadForm.progress">
+                                    Uploading… {{ uploadForm.progress.percentage }}%
+                                </span>
+                                <span class="relative" v-else>Saving…</span>
                             </button>
                         </form>
                     </div>

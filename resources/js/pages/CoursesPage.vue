@@ -169,7 +169,11 @@ function courseUrl(slug) {
                 <div class="rounded-2xl border border-sky/30 bg-surface px-6 py-10 text-center shadow-sm">
                     <p class="text-[15px] font-semibold text-ink">No courses yet</p>
                     <template v-if="isOwner">
-                        <p class="mt-1.5 text-[14px] text-muted">Add the first one to get this board started.</p>
+                        <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
+                            A course is one class — like <span class="font-semibold text-ink">PHYS 101</span> or
+                            <span class="font-semibold text-ink">CS 250</span>. Add one and
+                            classmates can drop their notes, slides, and past papers into it.
+                        </p>
                         <button type="button" @click="sheet = true"
                                 class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
                             <span class="text-lg leading-none">+</span> New course
