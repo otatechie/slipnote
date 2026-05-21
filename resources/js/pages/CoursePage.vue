@@ -186,12 +186,12 @@ function courseListUrl() {
                                 :aria-pressed="localSection === key ? 'true' : 'false'"
                                 class="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1 text-[13px] font-semibold transition"
                                 :class="localSection === key
-                                    ? 'bg-neon text-base'
+                                    ? 'bg-neon text-white'
                                     : (sectionCounts[key] ? 'bg-sky text-neon hover:brightness-95' : 'cursor-not-allowed bg-surface text-muted')">
                             {{ label }}
                             <span class="rounded-full px-1.5 text-xs tabular-nums"
                                   :class="localSection === key
-                                      ? 'bg-base/25 text-base'
+                                      ? 'bg-white/25 text-white'
                                       : (sectionCounts[key] ? 'bg-base text-neon' : 'bg-sky/40 text-muted')">
                                 {{ sectionCounts[key] ?? 0 }}
                             </span>
@@ -268,7 +268,7 @@ function courseListUrl() {
                                     </form>
                                 </template>
                                 <a :href="material.download_url"
-                                   class="rounded-full bg-neon px-4 py-1.5 text-[13px] font-semibold text-base shadow-sm transition hover:brightness-125">
+                                   class="rounded-full bg-neon px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
                                     Download
                                 </a>
                             </div>
@@ -291,7 +291,7 @@ function courseListUrl() {
                     <!-- FAB -->
                     <button v-if="!uploadOpen" type="button" @click="uploadOpen = true"
                             aria-label="Add a file"
-                            class="fixed bottom-6 right-6 z-20 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-neon text-2xl font-bold text-base shadow-lg transition hover:brightness-125">
+                            class="fixed bottom-6 right-6 z-20 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-neon text-2xl font-bold text-white shadow-lg transition hover:brightness-125">
                         +
                     </button>
 
@@ -361,7 +361,7 @@ function courseListUrl() {
                             </div>
 
                             <button type="submit" :disabled="uploadForm.processing"
-                                    class="cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-base transition hover:brightness-125 disabled:cursor-progress disabled:opacity-60">
+                                    class="cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:cursor-progress disabled:opacity-60">
                                 <span v-if="!uploadForm.processing">Upload</span>
                                 <span v-else>Saving…</span>
                             </button>

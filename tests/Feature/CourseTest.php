@@ -44,7 +44,7 @@ class CourseTest extends TestCase
 
     public function test_inertia_requests_work_with_route_middleware(): void
     {
-        // Regression: tenant is resolved from the route binding, not Livewire hydrate.
+        // Regression: tenant is resolved from the route binding before the controller runs.
         Course::create(['code' => 'MATH 251', 'title' => 'Calc', 'slug' => 'math-251']);
 
         $this->get(route('courses.index', array_merge($this->wsParams(), ['search' => 'math'])))

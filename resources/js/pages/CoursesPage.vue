@@ -147,12 +147,12 @@ function courseUrl(slug) {
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-2">
                     <button type="button" @click="share"
-                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-semibold text-base shadow-sm transition hover:brightness-110">
+                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm transition hover:brightness-110">
                         <span v-if="!shareCopied">Share with classmates</span>
-                        <span v-else class="text-neon">Link copied ✓</span>
+                        <span v-else>Link copied ✓</span>
                     </button>
                     <button v-if="isOwner && totalCourses > 0" type="button" @click="sheet = true"
-                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-base shadow-sm transition hover:brightness-125">
+                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
                         <span class="text-lg leading-none">+</span> New course
                     </button>
                 </div>
@@ -171,7 +171,7 @@ function courseUrl(slug) {
                     <template v-if="isOwner">
                         <p class="mt-1.5 text-[14px] text-muted">Add the first one to get this board started.</p>
                         <button type="button" @click="sheet = true"
-                                class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-base shadow-sm transition hover:brightness-125">
+                                class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
                             <span class="text-lg leading-none">+</span> New course
                         </button>
                     </template>
@@ -261,7 +261,7 @@ function courseUrl(slug) {
                                 <span v-if="courseForm.errors.title" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ courseForm.errors.title }}</span>
                             </div>
                             <button type="submit" :disabled="courseForm.processing"
-                                    class="mt-1 cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-base transition hover:brightness-125 disabled:opacity-60">
+                                    class="mt-1 cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
                                 Create course
                             </button>
                         </form>
@@ -294,7 +294,7 @@ function courseUrl(slug) {
                                :placeholder="needsRecoveryEmail ? 'you@example.com' : 'new email, or blank to remove'"
                                class="h-9 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="recoveryForm.processing"
-                                class="h-9 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-base transition hover:brightness-125 disabled:opacity-60">
+                                class="h-9 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
                             Save
                         </button>
                     </form>
@@ -322,7 +322,7 @@ function courseUrl(slug) {
                                    placeholder="Owner secret or link"
                                    class="h-9 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                             <button type="submit" :disabled="unlockForm.processing"
-                                    class="h-9 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-base transition hover:brightness-125 disabled:opacity-60">
+                                    class="h-9 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
                                 Unlock
                             </button>
                         </form>

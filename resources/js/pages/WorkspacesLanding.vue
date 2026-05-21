@@ -94,7 +94,7 @@ function proceed() {
 
                     <div class="mt-2.5 flex gap-2">
                         <button type="button" @click="copyOwnerLink"
-                                class="h-9 flex-1 cursor-pointer rounded-lg bg-neon text-[13px] font-bold text-base transition hover:brightness-125">
+                                class="h-9 flex-1 cursor-pointer rounded-lg bg-neon text-[13px] font-bold text-white transition hover:brightness-125">
                             <span v-if="!copied">Copy link</span>
                             <span v-else>Copied ✓</span>
                         </button>
@@ -117,7 +117,7 @@ function proceed() {
 
                     <button type="button" @click="proceed" :disabled="!saved"
                             class="mt-4 w-full rounded-lg py-3.5 text-[15px] font-bold transition
-                                   enabled:cursor-pointer enabled:bg-neon enabled:text-base enabled:hover:brightness-125
+                                   enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:hover:brightness-125
                                    disabled:cursor-not-allowed disabled:border disabled:border-sky disabled:bg-surface disabled:text-muted">
                         Continue to {{ flash.createdName }}
                     </button>
@@ -141,7 +141,7 @@ function proceed() {
                     </div>
 
                     <button type="submit" :disabled="createForm.processing"
-                            class="mt-3 w-full cursor-pointer rounded-lg bg-neon py-3.5 text-[15px] font-bold text-base transition hover:brightness-125 disabled:opacity-60">
+                            class="mt-3 w-full cursor-pointer rounded-lg bg-neon py-3.5 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
                         Create workspace
                     </button>
                     <p class="mt-3 text-center text-[12px] text-muted">
@@ -157,7 +157,7 @@ function proceed() {
                                placeholder="CS Masters 2026"
                                class="h-10 flex-1 rounded-lg border border-sky/30 bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="openForm.processing"
-                                class="h-10 shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-base transition hover:brightness-125 disabled:opacity-60">
+                                class="h-10 shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
                             Open
                         </button>
                     </form>

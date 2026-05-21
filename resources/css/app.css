@@ -54,6 +54,3 @@
         background-color: #26262e;
     }
 }
-
-/* Hide x-cloak elements until Alpine initializes (prevents collapse-form flash) */
-[x-cloak] { display: none !important; }

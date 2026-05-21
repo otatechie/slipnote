@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  * current tenant before any tenant-scoped query runs. Unknown slug → 404.
  *
  * Applied to all /{workspace}/... routes. Must run before the route's
- * controller/Livewire mount so the WorkspaceScope has a tenant to read.
+ * controller so the WorkspaceScope has a tenant to read.
  */
 class ResolveWorkspace
 {

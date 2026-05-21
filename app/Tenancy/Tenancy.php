@@ -7,8 +7,8 @@ use RuntimeException;
 
 /**
  * Holds the current workspace for the request. Bound as a singleton so the
- * BelongsToWorkspace global scope and Livewire components read the same
- * resolved tenant. Set once by ResolveWorkspace middleware.
+ * BelongsToWorkspace global scope and controllers read the same resolved
+ * tenant. Set once by ResolveWorkspace middleware.
  *
  * Console/queue context has no request and therefore no current workspace —
  * callers there must scope explicitly (withoutWorkspaceScope + an explicit
