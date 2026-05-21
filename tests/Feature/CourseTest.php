@@ -3,9 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
-use App\Tenancy\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
 
@@ -25,90 +23,81 @@ class CourseTest extends TestCase
         Course::create(['code' => 'MATH 251', 'title' => 'Calculus II', 'slug' => 'math-251']);
         Course::create(['code' => 'PHYS 101', 'title' => 'Intro Physics', 'slug' => 'phys-101']);
 
-        Livewire::test('courses-page')
-            ->assertSee('MATH 251')
-            ->assertSee('PHYS 101');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('CoursesPage')
+                ->has('courses', 2)
+            );
     }
 
     public function test_create_form_is_hidden_for_non_owners(): void
     {
-        Livewire::test('courses-page')
-            ->assertDontSee('New course');
+        // Non-owner sees isOwner=false in props
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('CoursesPage')
+                ->where('isOwner', false)
+            );
     }
 
-    public function test_livewire_followup_requests_work_without_route_middleware(): void
+    public function test_inertia_requests_work_with_route_middleware(): void
     {
-        // Regression: the POST /livewire/update endpoint bypasses the
-        // {workspace} route + ResolveWorkspace middleware. Simulate that by
-        // forgetting the resolved tenant AFTER mount, then driving an action.
-        // Without hydrate() re-establishing it, a scoped re-render throws
-        // "No current workspace" (the reported 500).
+        // Regression: tenant is resolved from the route binding, not Livewire hydrate.
         Course::create(['code' => 'MATH 251', 'title' => 'Calc', 'slug' => 'math-251']);
 
-        $component = Livewire::test('courses-page');
-
-        // Drop the singleton so only hydrate() can restore tenant context.
-        app()->forgetInstance(Tenancy::class);
-
-        $component->set('search', 'math')   // triggers a scoped re-render
-            ->assertSee('MATH 251')
-            ->set('sort', 'az')
-            ->assertSee('MATH 251');
+        $this->get(route('courses.index', array_merge($this->wsParams(), ['search' => 'math'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('courses', 1));
     }
 
-    public function test_share_button_is_available_to_everyone_and_copies_the_plain_link(): void
+    public function test_share_button_is_available_to_everyone_and_does_not_leak_owner_secret(): void
     {
-        $html = Livewire::test('courses-page') // non-owner
-            ->assertSee('Share with classmates')
-            ->html();
+        $page = $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk();
 
-        // The share action embeds the bare workspace URL...
-        $this->assertStringContainsString($this->workspace->slug, $html);
-        // ...and the real leak risk — the owner secret value itself — must
-        // never appear anywhere in what this control renders. (Substring
-        // grep for "?owner=" is avoided: it legitimately appears in source
-        // comments; the secret value is the thing that actually matters.)
-        $this->assertStringNotContainsString($this->ownerSecret, $html);
+        // The owner secret must not appear in the JSON response
+        $content = $page->getContent();
+        $this->assertStringNotContainsString($this->ownerSecret, $content);
     }
 
     public function test_empty_board_tells_a_non_owner_how_courses_get_added(): void
     {
-        // The disorienting case: visit the bare workspace URL, no courses,
-        // not in owner mode — must explain the owner link, not dead-end.
-        Livewire::test('courses-page')
-            ->assertSee('No courses yet')
-            ->assertSee('owner link')
-            ->assertDontSee('New course');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('CoursesPage')
+                ->where('totalCourses', 0)
+                ->where('isOwner', false)
+            );
     }
 
     public function test_returning_owner_can_unlock_with_the_raw_secret(): void
     {
-        Livewire::test('courses-page')
-            ->set('ownerInput', $this->ownerSecret)
-            ->call('unlockOwner')
-            ->assertHasNoErrors()
-            ->assertSee('New course'); // owner UI now visible
+        $this->post(
+            route('courses.unlock', $this->wsParams()),
+            ['ownerInput' => $this->ownerSecret]
+        )->assertRedirect(route('courses.index', $this->wsParams()));
 
         $this->assertTrue(session($this->workspace->ownerSessionKey()));
     }
 
     public function test_returning_owner_can_unlock_by_pasting_the_full_owner_link(): void
     {
-        $ownerUrl = route('courses.index', ['workspace' => $this->workspace->slug])
-            .'?owner='.$this->ownerSecret;
+        $ownerUrl = route('courses.index', $this->wsParams()).'?owner='.$this->ownerSecret;
 
-        Livewire::test('courses-page')
-            ->set('ownerInput', $ownerUrl)
-            ->call('unlockOwner')
-            ->assertHasNoErrors();
+        $this->post(
+            route('courses.unlock', $this->wsParams()),
+            ['ownerInput' => $ownerUrl]
+        )->assertRedirect(route('courses.index', $this->wsParams()));
 
         $this->assertTrue(session($this->workspace->ownerSessionKey()));
     }
 
     public function test_owner_query_link_unlocks_then_redirects_to_the_clean_workspace_url(): void
     {
-        Livewire::withQueryParams(['owner' => $this->ownerSecret])
-            ->test('courses-page')
+        $this->get(route('courses.index', $this->wsParams()).'?owner='.$this->ownerSecret)
             ->assertRedirect(route('courses.index', $this->wsParams()));
 
         $this->assertTrue(session($this->workspace->ownerSessionKey()));
@@ -116,11 +105,10 @@ class CourseTest extends TestCase
 
     public function test_a_wrong_owner_secret_is_rejected_and_does_not_unlock(): void
     {
-        Livewire::test('courses-page')
-            ->set('ownerInput', 'definitely-not-the-secret')
-            ->call('unlockOwner')
-            ->assertHasErrors(['ownerInput'])
-            ->assertDontSee('New course');
+        $this->post(
+            route('courses.unlock', $this->wsParams()),
+            ['ownerInput' => 'definitely-not-the-secret']
+        )->assertSessionHasErrors(['ownerInput']);
 
         $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
     }
@@ -129,29 +117,31 @@ class CourseTest extends TestCase
     {
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->assertDontSee('I’m the owner of this board');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('isOwner', true));
     }
 
     public function test_empty_board_prompts_the_owner_to_add_the_first_course(): void
     {
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->assertSee('No courses yet')
-            ->assertSee('Add the first one')
-            ->assertSee('New course');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('isOwner', true)
+                ->where('totalCourses', 0)
+            );
     }
 
     public function test_owner_sees_the_create_form_and_can_create_a_course(): void
     {
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->assertSee('New course')
-            ->set('code', 'PHYS 101')
-            ->set('title', 'Introductory Physics')
-            ->call('createCourse');
+        $this->post(route('courses.store', $this->wsParams()), [
+            'code' => 'PHYS 101',
+            'title' => 'Introductory Physics',
+        ])->assertRedirect();
 
         $course = Course::firstWhere('code', 'PHYS 101');
         $this->assertNotNull($course);
@@ -162,11 +152,10 @@ class CourseTest extends TestCase
 
     public function test_a_non_owner_cannot_create_even_by_calling_the_action(): void
     {
-        Livewire::test('courses-page')
-            ->set('code', 'HACK 999')
-            ->set('title', 'Sneaky')
-            ->call('createCourse')
-            ->assertForbidden();
+        $this->post(route('courses.store', $this->wsParams()), [
+            'code' => 'HACK 999',
+            'title' => 'Sneaky',
+        ])->assertForbidden();
 
         $this->assertSame(0, Course::count());
     }
@@ -177,10 +166,10 @@ class CourseTest extends TestCase
 
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->set('code', 'PHYS 101')
-            ->set('title', 'Second section')
-            ->call('createCourse');
+        $this->post(route('courses.store', $this->wsParams()), [
+            'code' => 'PHYS 101',
+            'title' => 'Second section',
+        ]);
 
         $this->assertSame('phys-101-2', Course::where('title', 'Second section')->value('slug'));
     }
@@ -189,14 +178,17 @@ class CourseTest extends TestCase
     {
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->set('code', 'CHEM 110')
-            ->set('title', 'General Chemistry')
-            ->call('createCourse');
+        $this->post(route('courses.store', $this->wsParams()), [
+            'code' => 'CHEM 110',
+            'title' => 'General Chemistry',
+        ]);
 
         $this->get(route('course.show', $this->wsParams(['slug' => 'chem-110'])))
             ->assertOk()
-            ->assertSee('CHEM 110');
+            ->assertInertia(fn ($page) => $page
+                ->component('CoursePage')
+                ->where('course.code', 'CHEM 110')
+            );
     }
 
     public function test_search_filters_courses_by_code_and_title(): void
@@ -205,34 +197,41 @@ class CourseTest extends TestCase
         Course::create(['code' => 'PHYS 101', 'title' => 'Intro Physics', 'slug' => 'phys-101']);
         Course::create(['code' => 'CHEM 110', 'title' => 'General Chemistry', 'slug' => 'chem-110']);
 
-        Livewire::test('courses-page')
-            ->set('search', 'phys')
-            ->assertSee('PHYS 101')
-            ->assertDontSee('MATH 251')
-            ->assertDontSee('CHEM 110');
+        $this->get(route('courses.index', array_merge($this->wsParams(), ['search' => 'phys'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('courses', 1)
+                ->where('courses.0.code', 'PHYS 101')
+            );
 
         // matches on title too
-        Livewire::test('courses-page')
-            ->set('search', 'chemistry')
-            ->assertSee('CHEM 110')
-            ->assertDontSee('MATH 251');
+        $this->get(route('courses.index', array_merge($this->wsParams(), ['search' => 'chemistry'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('courses', 1)
+                ->where('courses.0.code', 'CHEM 110')
+            );
     }
 
-    public function test_a_course_with_no_files_shows_the_be_the_first_hint(): void
+    public function test_a_course_with_no_files_shows_zero_materials_count(): void
     {
         Course::create(['code' => 'NEW 100', 'title' => 'Brand New', 'slug' => 'new-100']);
 
-        Livewire::test('courses-page')
-            ->assertSee('No files yet — be the first');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('courses.0.materials_count', 0)
+            );
     }
 
-    public function test_no_search_box_until_there_are_enough_courses(): void
+    public function test_no_search_box_shown_via_prop_threshold(): void
     {
+        // The prop totalCourses drives the Vue v-if for search; assert the prop value.
         Course::create(['code' => 'MATH 251', 'title' => 'Calculus II', 'slug' => 'math-251']);
 
-        Livewire::test('courses-page')
-            ->assertDontSee('Search')
-            ->assertDontSeeHtml('type="search"');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('totalCourses', 1));
     }
 
     public function test_active_sort_orders_courses_by_most_recent_upload(): void
@@ -240,30 +239,37 @@ class CourseTest extends TestCase
         $old = Course::create(['code' => 'OLD 100', 'title' => 'Old', 'slug' => 'old-100']);
         $fresh = Course::create(['code' => 'ZZZ 999', 'title' => 'Fresh', 'slug' => 'zzz-999']);
 
-        // Force created_at explicitly (Eloquent would otherwise stamp "now").
         $m1 = $old->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf', 'stored_path' => 'x/a.pdf']);
         $m1->forceFill(['created_at' => now()->subMonth()])->saveQuietly();
         $m2 = $fresh->materials()->create(['section' => 'notes', 'original_filename' => 'b.pdf', 'stored_path' => 'x/b.pdf']);
         $m2->forceFill(['created_at' => now()])->saveQuietly();
 
-        // Default sort is "active": ZZZ 999 (just uploaded) must precede OLD 100.
-        $html = Livewire::test('courses-page')->html();
-        $this->assertLessThan(
-            strpos($html, 'OLD 100'),
-            strpos($html, 'ZZZ 999'),
-            'Course with the most recent upload should sort first under "active"',
-        );
+        // Default sort "active": ZZZ 999 (just uploaded) should be first
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('courses.0.code', 'ZZZ 999')
+                ->where('courses.1.code', 'OLD 100')
+            );
 
-        // A–Z flips it back to alphabetical.
-        $htmlAz = Livewire::test('courses-page')->set('sort', 'az')->html();
-        $this->assertLessThan(strpos($htmlAz, 'ZZZ 999'), strpos($htmlAz, 'OLD 100'));
+        // A–Z flips it back to alphabetical
+        $this->get(route('courses.index', array_merge($this->wsParams(), ['sort' => 'az'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('courses.0.code', 'OLD 100')
+                ->where('courses.1.code', 'ZZZ 999')
+            );
     }
 
-    public function test_a_course_with_files_shows_an_updated_timestamp(): void
+    public function test_a_course_with_files_has_a_materials_max_created_at(): void
     {
         $course = Course::create(['code' => 'MATH 251', 'title' => 'Calculus II', 'slug' => 'math-251']);
         $course->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf', 'stored_path' => 'x/a.pdf']);
 
-        Livewire::test('courses-page')->assertSee('Updated');
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->whereNot('courses.0.materials_max_created_at', null)
+            );
     }
 }

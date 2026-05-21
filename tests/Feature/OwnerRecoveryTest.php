@@ -8,14 +8,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
-use Livewire\Livewire;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
 
 /**
  * Owner-link recovery: opt-in, encrypted email; recovery rotates the secret
  * and mails the NEW link to the STORED address only; no enumeration oracle;
- * rate-limited; workspace-isolated. Written failing-first.
+ * rate-limited; workspace-isolated.
  */
 class OwnerRecoveryTest extends TestCase
 {
@@ -28,7 +27,7 @@ class OwnerRecoveryTest extends TestCase
         $this->setUpWorkspace();
         config(['mail.default' => 'smtp']);
         Mail::fake();
-        RateLimiter::clear('recover:'.$this->workspace->id);
+        RateLimiter::clear('recovery:'.$this->workspace->id);
     }
 
     // --- Owner sets the recovery email (owner-gated, opt-in) ---
@@ -37,10 +36,9 @@ class OwnerRecoveryTest extends TestCase
     {
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->set('recoveryEmail', 'me@example.com')
-            ->call('saveRecoveryEmail')
-            ->assertHasNoErrors();
+        $this->post(route('courses.recovery-email', $this->wsParams()), [
+            'recoveryEmail' => 'me@example.com',
+        ])->assertRedirect();
 
         $this->assertTrue(
             $this->workspace->fresh()->recoveryEmailMatches('me@example.com')
@@ -49,10 +47,10 @@ class OwnerRecoveryTest extends TestCase
 
     public function test_non_owner_cannot_set_a_recovery_email(): void
     {
-        Livewire::test('courses-page') // not owner
-            ->set('recoveryEmail', 'attacker@example.com')
-            ->call('saveRecoveryEmail')
-            ->assertForbidden();
+        // Not owner
+        $this->post(route('courses.recovery-email', $this->wsParams()), [
+            'recoveryEmail' => 'attacker@example.com',
+        ])->assertForbidden();
 
         $this->assertNull($this->workspace->fresh()->recovery_email);
     }
@@ -68,12 +66,16 @@ class OwnerRecoveryTest extends TestCase
         $this->assertTrue($this->workspace->fresh()->recoveryEmailMatches('secret@example.com'));
     }
 
-    public function test_owner_panel_nudges_when_no_recovery_email_is_set(): void
+    public function test_owner_panel_shows_needs_recovery_email_prop_when_none_set(): void
     {
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->assertSee('this board can’t be recovered', false);
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('isOwner', true)
+                ->where('needsRecoveryEmail', true)
+            );
     }
 
     public function test_recovery_panel_is_hidden_when_mail_is_not_deliverable(): void
@@ -82,9 +84,11 @@ class OwnerRecoveryTest extends TestCase
 
         $this->unlockOwnerSession();
 
-        Livewire::test('courses-page')
-            ->assertDontSee('No recovery email set')
-            ->assertDontSee('this board can’t be recovered', false);
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('recoveryAvailable', false)
+            );
     }
 
     // --- Recovery request flow ---
@@ -94,11 +98,9 @@ class OwnerRecoveryTest extends TestCase
         $this->workspace->setRecoveryEmail('owner@example.com');
         $oldSecret = $this->ownerSecret;
 
-        $this->actingInWorkspace($this->workspace);
-        Livewire::test('workspace-recovery')
-            ->set('email', 'owner@example.com')
-            ->call('requestRecovery')
-            ->assertHasNoErrors();
+        $this->post(route('workspace.recover.store', $this->wsParams()), [
+            'email' => 'owner@example.com',
+        ])->assertRedirect();
 
         // Old link is dead (rotated).
         $this->assertFalse($this->workspace->fresh()->verifyOwner($oldSecret));
@@ -113,23 +115,18 @@ class OwnerRecoveryTest extends TestCase
     {
         $this->workspace->setRecoveryEmail('owner@example.com');
 
-        $this->actingInWorkspace($this->workspace);
-        Livewire::test('workspace-recovery')
-            ->set('email', 'not-the-owner@example.com')
-            ->call('requestRecovery')
-            ->assertHasNoErrors()
-            ->assertSet('done', true); // identical "done" state as a match
+        $this->post(route('workspace.recover.store', $this->wsParams()), [
+            'email' => 'not-the-owner@example.com',
+        ])->assertSessionHas('done', true);
 
         Mail::assertNothingQueued();
 
-        // No-recovery-email workspace: identical outcome, still nothing sent.
+        // No-recovery-email workspace: identical outcome.
         [$other] = Workspace::provision('No Email Board');
         $this->actingInWorkspace($other);
-        Livewire::test('workspace-recovery')
-            ->set('email', 'anyone@example.com')
-            ->call('requestRecovery')
-            ->assertHasNoErrors()
-            ->assertSet('done', true);
+        $this->post(route('workspace.recover.store', ['workspace' => $other->slug]), [
+            'email' => 'anyone@example.com',
+        ])->assertSessionHas('done', true);
 
         Mail::assertNothingQueued();
     }
@@ -138,10 +135,9 @@ class OwnerRecoveryTest extends TestCase
     {
         $this->workspace->setRecoveryEmail('real-owner@example.com');
 
-        $this->actingInWorkspace($this->workspace);
-        Livewire::test('workspace-recovery')
-            ->set('email', 'real-owner@example.com') // must match to trigger
-            ->call('requestRecovery');
+        $this->post(route('workspace.recover.store', $this->wsParams()), [
+            'email' => 'real-owner@example.com',
+        ]);
 
         Mail::assertQueued(OwnerLinkRecovery::class, function ($mail) {
             return $mail->hasTo('real-owner@example.com')
@@ -152,18 +148,19 @@ class OwnerRecoveryTest extends TestCase
     public function test_recovery_is_rate_limited(): void
     {
         $this->workspace->setRecoveryEmail('owner@example.com');
-        $this->actingInWorkspace($this->workspace);
 
         for ($i = 0; $i < 5; $i++) {
-            Livewire::test('workspace-recovery')
-                ->set('email', 'wrong@example.com')
-                ->call('requestRecovery');
+            $this->post(route('workspace.recover.store', $this->wsParams()), [
+                'email' => 'wrong@example.com',
+            ]);
         }
 
-        Livewire::test('workspace-recovery')
-            ->set('email', 'owner@example.com')
-            ->call('requestRecovery')
-            ->assertHasErrors('email'); // throttled
+        // 6th request should be throttled — done=true but no mail
+        $this->post(route('workspace.recover.store', $this->wsParams()), [
+            'email' => 'owner@example.com',
+        ])->assertSessionHas('done', true);
+
+        Mail::assertNothingQueued();
     }
 
     public function test_recovery_is_isolated_between_workspaces(): void
@@ -174,9 +171,9 @@ class OwnerRecoveryTest extends TestCase
 
         // Requesting recovery under Beta with Alpha's email must do nothing.
         $this->actingInWorkspace($beta);
-        Livewire::test('workspace-recovery')
-            ->set('email', 'alpha-owner@example.com')
-            ->call('requestRecovery');
+        $this->post(route('workspace.recover.store', ['workspace' => $beta->slug]), [
+            'email' => 'alpha-owner@example.com',
+        ]);
 
         Mail::assertNothingQueued();
     }
