@@ -8,7 +8,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Livewire;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
 
@@ -175,11 +174,10 @@ class TelegramNotifierTest extends TestCase
 
         $file = UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf');
 
-        Livewire::test('course-page', ['slug' => $this->course->slug])
-            ->set('section', 'notes')
-            ->set('file', $file)
-            ->call('save')
-            ->assertHasNoErrors();
+        $this->post(
+            route('course.upload', $this->wsParams(['slug' => $this->course->slug])),
+            ['section' => 'notes', 'file' => $file]
+        )->assertRedirect();
 
         $this->assertSame(1, $this->course->materials()->count());
     }
