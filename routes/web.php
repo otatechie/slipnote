@@ -13,6 +13,7 @@ Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrF
 Route::get('/', [App\Http\Controllers\WorkspacesController::class, 'index'])->name('home');
 Route::post('/workspaces', [App\Http\Controllers\WorkspacesController::class, 'store'])->name('workspaces.store');
 Route::post('/workspaces/open', [App\Http\Controllers\WorkspacesController::class, 'open'])->name('workspaces.open');
+Route::post('/workspaces/forget', [App\Http\Controllers\WorkspacesController::class, 'forget'])->name('workspaces.forget');
 
 // Static legal pages. Declared BEFORE the /{workspace} catch-all so the
 // slugs "privacy" and "terms" aren't read as workspace names.

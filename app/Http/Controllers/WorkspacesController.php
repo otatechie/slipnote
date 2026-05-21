@@ -3,15 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workspace;
+use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class WorkspacesController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Inertia::render('WorkspacesLanding');
+        return Inertia::render('WorkspacesLanding', [
+            'recent' => RecentWorkspaces::read($request),
+        ]);
+    }
+
+    public function forget(Request $request)
+    {
+        $slug = (string) $request->input('slug', '');
+
+        return back()->withCookie(RecentWorkspaces::remove($request, $slug));
     }
 
     public function store(Request $request)
@@ -30,19 +40,19 @@ class WorkspacesController extends Controller
 
         [$workspace, $secret] = Workspace::provision($clean);
 
-        // The creator just proved ownership by being the one to create it —
-        // unlock the owner session now so they don't have to re-paste the
-        // secret after clicking "Continue". The plaintext secret is still
-        // shown exactly once for them to save. Regenerate session ID on
-        // privilege change (defense against session fixation).
+        // The creator owns it; unlock the owner session immediately so they
+        // don't have to re-paste the secret on the next page. Regenerate the
+        // session ID on every privilege change (anti-fixation).
         session()->regenerate();
         session([$workspace->ownerSessionKey() => true]);
 
-        return back()->with([
-            'createdName' => $workspace->name,
-            'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),
-            'ownerUrl' => route('courses.index', ['workspace' => $workspace->slug]).'?owner='.$secret,
-        ]);
+        return back()
+            ->withCookie(RecentWorkspaces::add($request, $workspace))
+            ->with([
+                'createdName' => $workspace->name,
+                'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),
+                'ownerUrl' => route('courses.index', ['workspace' => $workspace->slug]).'?owner='.$secret,
+            ]);
     }
 
     public function open(Request $request)

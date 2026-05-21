@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Material;
 use App\Services\TelegramNotifier;
+use App\Support\RecentWorkspaces;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -29,11 +30,13 @@ class CourseController extends Controller
         // Handle ?owner= URL param
         $given = $request->query('owner');
         if ($workspace->verifyOwner(is_string($given) ? $given : null)) {
-            // Regenerate session ID on privilege change (anti-fixation).
-            session()->regenerate();
+            session()->regenerate(); // anti-fixation on privilege change
+
             session([$workspace->ownerSessionKey() => true]);
 
-            return redirect()->route('course.show', ['workspace' => $workspace->slug, 'slug' => $slug]);
+            return redirect()
+                ->route('course.show', ['workspace' => $workspace->slug, 'slug' => $slug])
+                ->withCookie(RecentWorkspaces::add($request, $workspace));
         }
 
         $course = Course::where('slug', $slug)->firstOrFail();
@@ -124,8 +127,7 @@ class CourseController extends Controller
         }
 
         if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true) {
-            // Brute-force protection per workspace. Same shape as the
-            // owner-unlock limiter (5 attempts / 10 min).
+            // Brute-force limit: 5 attempts per 10 min per workspace.
             $key = 'upload_passphrase:'.$workspace->id;
             if (RateLimiter::tooManyAttempts($key, 5)) {
                 return back()->withErrors(['passphrase' => 'Too many attempts. Try again in a few minutes.']);
