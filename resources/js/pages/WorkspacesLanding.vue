@@ -3,6 +3,10 @@ import { computed, ref } from 'vue'
 import { Head, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 
+const props = defineProps({
+    recent: { type: Array, default: () => [] },
+})
+
 const page = usePage()
 
 // Flash data from server
@@ -57,6 +61,10 @@ function downloadTxt() {
 
 function proceed() {
     router.visit(flash.value.createdUrl)
+}
+
+function forget(slug) {
+    router.post('/workspaces/forget', { slug }, { preserveScroll: true })
 }
 </script>
 
@@ -162,6 +170,27 @@ function proceed() {
                         </button>
                     </form>
                     <span v-if="errors.openName" role="alert" class="mt-2 block text-[13px] text-muted">{{ errors.openName[0] }}</span>
+                </div>
+
+                <div v-if="props.recent.length" class="mt-4 rounded-2xl border border-sky/30 bg-surface/40 px-6 py-4">
+                    <p class="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Your recent workspaces</p>
+                    <ul class="divide-y divide-sky/30">
+                        <li v-for="ws in props.recent" :key="ws.slug"
+                            class="flex items-center justify-between gap-3 py-2">
+                            <a :href="'/' + ws.slug"
+                               class="min-w-0 flex-1 truncate text-[14px] font-medium text-neon hover:underline">
+                                {{ ws.name }}
+                            </a>
+                            <button type="button" @click="forget(ws.slug)"
+                                    aria-label="Forget this workspace"
+                                    class="cursor-pointer rounded-md px-2 py-1 text-[12px] text-muted transition hover:bg-sky/40 hover:text-ink">
+                                Forget
+                            </button>
+                        </li>
+                    </ul>
+                    <p class="mt-2 text-[11px] text-muted/80">
+                        Saved on this browser only — not synced or accessible to anyone else.
+                    </p>
                 </div>
             </template>
         </div>

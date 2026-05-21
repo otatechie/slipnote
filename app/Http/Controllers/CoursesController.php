@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Support\RecentWorkspaces;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -28,11 +29,13 @@ class CoursesController extends Controller
         // Handle ?owner= URL param
         $given = $request->query('owner');
         if ($workspace->verifyOwner(is_string($given) ? $given : null)) {
-            // Regenerate session ID on privilege change (anti-fixation).
-            session()->regenerate();
+            session()->regenerate(); // anti-fixation on privilege change
+
             session([$workspace->ownerSessionKey() => true]);
 
-            return redirect()->route('courses.index', ['workspace' => $workspace->slug]);
+            return redirect()
+                ->route('courses.index', ['workspace' => $workspace->slug])
+                ->withCookie(RecentWorkspaces::add($request, $workspace));
         }
 
         $search = trim($request->input('search', ''));
@@ -93,11 +96,13 @@ class CoursesController extends Controller
 
         if ($workspace->verifyOwner($given !== '' ? $given : null)) {
             RateLimiter::clear($key);
-            // Regenerate session ID on privilege change (anti-fixation).
-            session()->regenerate();
+            session()->regenerate(); // anti-fixation on privilege change
+
             session([$workspace->ownerSessionKey() => true]);
 
-            return redirect()->route('courses.index', ['workspace' => $workspace->slug]);
+            return redirect()
+                ->route('courses.index', ['workspace' => $workspace->slug])
+                ->withCookie(RecentWorkspaces::add($request, $workspace));
         }
 
         RateLimiter::hit($key, 600);
