@@ -11,13 +11,15 @@ their own classmates; workspaces never see each other. No accounts: creating
 a workspace yields a one-time **owner link** (the only credential), the same
 capability-URL idea as the per-file delete token.
 
-Built with Laravel 13 + Livewire 4 (single-file components), Tailwind v4, SQLite.
+Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
 
 ## Features
 
 - **Anonymous upload** — pick a section, optional "what is this?" title and
-  your name, attach a file. PDF / Word / PowerPoint / image, up to 10 MB.
-  Validated the moment a file is picked, not just on submit.
+  your name, attach one or several files at once. PDF / Word / PowerPoint /
+  image, up to 10 MB each. Selected files list with a per-file remove and a
+  running count; files that would exceed the workspace cap are skipped while
+  the rest save. A shared title applies only to a single-file upload.
 - **Uploader delete** — each upload gets a secret token; the success banner
   shows a one-time "Remove it" link so the uploader can undo a mistake. No
   accounts: holding the token is the only credential. Seeded/legacy rows have
@@ -89,8 +91,10 @@ The site root (`/`) is the workspace landing: **create** a workspace (you're
 shown a one-time owner link — save it) or **open** an existing one by name.
 Inside a workspace (`/<workspace>`) is its course list. Create courses in
 **owner mode** — open `/<workspace>?owner=SECRET` and use "New course".
-Course slugs are unique *within a workspace* (two workspaces may both have
-`phys-201`). There is no workspace/course edit or delete UI.
+Owners can also edit a course's code/title (the slug stays fixed so shared
+`/c/<slug>` links keep working), drag courses into a custom order, and bulk-
+delete files on a course page. Course slugs are unique *within a workspace*
+(two workspaces may both have `phys-201`).
 
 ### Owner recovery (opt-in)
 
@@ -154,19 +158,19 @@ For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
 - The by-id `/download` and `/materials` routes deliberately run *without*
   the workspace scope; the delete route re-checks the owner session against
   the material's **own** workspace.
-- Single Livewire 4 component: `resources/views/components/⚡course-page.blade.php`
-  (logic + template in one file). The submit method is `save()` — **not**
-  `upload()`, which Livewire reserves for its JS file-upload mechanism.
+- **Inertia + Vue 3 pages** in `resources/js/pages/` (`CoursesPage.vue`,
+  `CoursePage.vue`, etc.) talk to thin Laravel controllers; the marketing
+  root (`/`) is server-rendered Blade for SEO.
 - `Material::fileType()` derives the scanning icon from the filename extension.
 - Search uses SQLite's `collate nocase` for A–Z sort — SQLite-specific; revisit
   if the DB driver ever changes.
 
 ## Known scope limits (v1)
 
-- Workspaces isolate boards, but there is **no workspace or course edit/
-  delete UI** (once made, it stays). One owner secret per workspace owns
-  everything *in that workspace*; lose it and owner control is unrecoverable
-  (same trade-off as the per-file delete token).
+- Owners can edit and reorder courses, but there is **no workspace edit/
+  delete UI** (a workspace, once made, stays). One owner secret per
+  workspace owns everything *in that workspace*; lose it and owner control
+  is unrecoverable (same trade-off as the per-file delete token).
 - No accounts. The owner secret / per-file token are the only credentials;
   no admin/bulk moderation, no soft-delete/restore (hard delete is permanent).
 - No pagination; search keeps long lists manageable at expected volume.
