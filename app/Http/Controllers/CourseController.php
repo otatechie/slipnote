@@ -126,6 +126,43 @@ class CourseController extends Controller
         return back();
     }
 
+    /**
+     * Anonymous abuse report. Anyone viewing a board can flag a file; the
+     * operator is notified (Telegram, or logged) and decides what to do —
+     * we never auto-delete, so a report can't be weaponised to remove a
+     * legit file. The material is resolved through the scoped course, so a
+     * report can only target a file in the board being viewed.
+     */
+    public function report(Request $request, string $workspaceSlug, string $slug, int $material)
+    {
+        $course = Course::where('slug', $slug)->firstOrFail();
+
+        // Material has no workspace global scope, so resolve it THROUGH the
+        // (scoped) course — a report can only target a file in this board.
+        $material = $course->materials()->whereKey($material)->firstOrFail();
+
+        // Throttle to blunt spam/notification floods: 5 reports / 10 min,
+        // keyed per material + client IP.
+        $key = 'report:'.$material->id.':'.$request->ip();
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            return back()->with('reported', 'Thanks — this file has already been reported.');
+        }
+        RateLimiter::hit($key, 600);
+
+        $reason = trim((string) $request->input('reason', ''));
+        $reason = $reason !== '' ? strip_tags(mb_substr($reason, 0, 280)) : null;
+
+        // Persist for the operator dashboard, then notify (best-effort).
+        $material->reports()->create([
+            'reason' => $reason,
+            'reporter_ip' => $request->ip(),
+        ]);
+
+        dispatch(fn () => app(TelegramNotifier::class)->notifyReport($material, $reason))->afterResponse();
+
+        return back()->with('reported', 'Thanks — reported to the site operator for review.');
+    }
+
     public function upload(Request $request, string $workspaceSlug, string $slug)
     {
         $workspace = $this->workspace();
@@ -139,6 +176,14 @@ class CourseController extends Controller
             'files' => 'required|array|min:1|max:20',
             'files.*' => 'file|max:10240|mimes:pdf,docx,pptx,png,jpg,jpeg',
         ]);
+
+        // Per-IP upload throttle: blunts automated abuse / mass dumping while
+        // staying generous for a student uploading a semester's notes.
+        $rlKey = 'upload:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($rlKey, 30)) {
+            return back()->withErrors(['files' => 'Too many uploads in a short time. Please wait a few minutes and try again.']);
+        }
+        RateLimiter::hit($rlKey, 600);
 
         // Fail closed: if the free-space probe errors (returns false), treat
         // it as zero space rather than waving the upload through.
@@ -177,8 +222,17 @@ class CourseController extends Controller
         $remaining = $workspace->storageRemaining();
         $created = [];
         $skipped = 0;
+        $blocked = 0;
 
         foreach ($files as $file) {
+            // Refuse files the operator previously removed (exact-content match).
+            $hash = hash_file('sha256', $file->getRealPath());
+            if (\App\Models\BlockedUpload::where('content_hash', $hash)->exists()) {
+                $blocked++;
+
+                continue;
+            }
+
             $size = (int) $file->getSize();
             if ($size > $remaining) {
                 $skipped++;
@@ -202,6 +256,10 @@ class CourseController extends Controller
         }
 
         if (count($created) === 0) {
+            if ($blocked > 0 && $skipped === 0) {
+                return back()->withErrors(['files' => 'That file was removed by the site operator and can’t be re-uploaded.']);
+            }
+
             return back()->withErrors(['files' => 'This board is full — ask the owner to delete old files.']);
         }
 
@@ -209,6 +267,9 @@ class CourseController extends Controller
         $message = $count === 1 ? 'File added.' : "{$count} files added.";
         if ($skipped > 0) {
             $message .= " {$skipped} skipped — board is full.";
+        }
+        if ($blocked > 0) {
+            $message .= " {$blocked} blocked — removed by the operator.";
         }
 
         return back()->with([

@@ -23,6 +23,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => $session->get('success'),
                 'created' => $session->get('created'),
                 'uploaded' => $session->get('uploaded'),
+                'reported' => $session->get('reported'),
                 'manageUrl' => $session->get('manageUrl'),
                 'recoverySaved' => $session->get('recoverySaved'),
                 'done' => $session->get('done'),

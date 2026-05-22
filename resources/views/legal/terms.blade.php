@@ -35,8 +35,22 @@
         </section>
 
         <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">Reporting abuse</h2>
+            <p class="text-[14px] text-ink/90">
+                Every file has a <strong>Report</strong> button that flags it to the site operator for review — the fastest way to surface a problem.
+                @if (filled(config('noteshare.contact_email')))
+                    For anything urgent or requiring a direct reply, email the operator at
+                    <a href="mailto:{{ config('noteshare.contact_email') }}" class="font-semibold text-neon hover:underline">{{ config('noteshare.contact_email') }}</a>.
+                @else
+                    For anything urgent, contact the operator of the specific site.
+                @endif
+                Include the file's URL and what's wrong.
+            </p>
+        </section>
+
+        <section>
             <h2 class="mb-2 text-[15px] font-bold text-ink">Copyright takedowns</h2>
-            <p class="text-[14px] text-ink/90">If you believe content on SlipNote infringes your copyright, contact the operator of the specific site with a description of the material and its URL. The operator will remove infringing content promptly when verified.</p>
+            <p class="text-[14px] text-ink/90">If you believe content on SlipNote infringes your copyright, report the file or contact the operator with a description of the material and its URL. The operator will remove infringing content promptly when verified.</p>
         </section>
 
         <section>

@@ -54,6 +54,11 @@ class Material extends Model
         return $this->belongsTo(Course::class);
     }
 
+    public function reports(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
+
     /**
      * A coarse file-type bucket derived from the filename extension,
      * used to pick a scanning icon in the UI.
