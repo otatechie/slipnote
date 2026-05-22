@@ -120,6 +120,41 @@ function upload() {
     })
 }
 
+// Report a file to the site operator. Anonymous, via a styled modal with
+// preset reasons. The server rate-limits and notifies — never auto-deletes.
+const REPORT_REASONS = [
+    'Not my notes / wrong file',
+    'Copyright — shouldn\'t be shared',
+    'Inappropriate or offensive',
+    'Spam',
+    'Other',
+]
+const reportTarget = ref(null)
+const reportReason = ref('')
+const reportNote = ref('')
+const reportSubmitting = ref(false)
+
+function openReport(material) {
+    reportTarget.value = material
+    reportReason.value = ''
+    reportNote.value = ''
+}
+
+function submitReport() {
+    if (!reportTarget.value) return
+    // Combine the preset reason and the optional note into one string.
+    const reason = [reportReason.value, reportNote.value.trim()].filter(Boolean).join(' — ')
+    reportSubmitting.value = true
+    router.post(
+        '/' + props.workspace.slug + '/c/' + props.course.slug + '/report/' + reportTarget.value.id,
+        { reason },
+        {
+            preserveScroll: true,
+            onFinish: () => { reportSubmitting.value = false; reportTarget.value = null },
+        },
+    )
+}
+
 // Delete: POST with _method=DELETE using a plain form submit for simplicity
 // (Inertia router.delete works but needs confirmation modal — keep it native)
 function confirmDelete(e) {
@@ -200,6 +235,12 @@ watch(() => props.materials, () => { selected.value = [] })
             <div v-if="flash.uploaded"
                  class="mb-5 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
                 {{ flash.uploaded }}
+            </div>
+
+            <!-- Report receipt -->
+            <div v-if="flash.reported"
+                 class="mb-5 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
+                {{ flash.reported }}
             </div>
 
             <!-- Sticky filter bar -->
@@ -310,10 +351,7 @@ watch(() => props.materials, () => { selected.value = [] })
                     <section v-if="!isFiltered && resultCount > 0" :id="'sec-' + key"
                              class="mb-3 flex scroll-mt-20 flex-col gap-1 rounded-xl border border-sky/30 bg-surface/50 px-5 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                         <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">{{ label }}</h2>
-                        <p class="text-[13px] text-muted">
-                            Empty —
-                            <a href="#add-file" @click="uploadOpen = true" class="font-medium text-neon hover:underline">be the first to upload</a>
-                        </p>
+                        <p class="text-[13px] text-muted">Nothing here yet</p>
                     </section>
                 </template>
                 <template v-else>
@@ -333,7 +371,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                        :checked="isSelected(material.id)"
                                        @change="toggleSelect(material.id)"
                                        class="mt-1 size-4 shrink-0 cursor-pointer accent-teal">
-                                <span class="mt-0.5 shrink-0 rounded border border-muted/40 bg-sky px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-ink"
+                                <span class="mt-0.5 shrink-0 rounded bg-sky/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted"
                                       :title="material.fileTypeLabel + ' file'">
                                     {{ material.fileTypeLabel }}
                                 </span>
@@ -365,6 +403,15 @@ watch(() => props.materials, () => { selected.value = [] })
                                         </button>
                                     </form>
                                 </template>
+                                <button v-if="!isOwner && !selectedCount" type="button"
+                                        @click="openReport(material)"
+                                        aria-label="Report this file"
+                                        title="Report this file"
+                                        class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted/60 transition hover:bg-red-50 hover:text-red-600">
+                                    <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M5 17V3.5M5 4h9l-2 3 2 3H5"/>
+                                    </svg>
+                                </button>
                                 <a v-if="!selectedCount && material.download_url" :href="material.download_url"
                                    class="rounded-full bg-neon px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
                                     Download
@@ -507,6 +554,44 @@ watch(() => props.materials, () => { selected.value = [] })
                     </div>
                 </template>
             </section>
+
+            <!-- Report modal -->
+            <div v-if="reportTarget" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-label="Report file"
+                 @keydown.escape.window="reportTarget = null">
+                <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="reportTarget = null"></div>
+                <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                    <!-- Mobile grab handle -->
+                    <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                    <h2 class="text-[15px] font-bold text-ink">Report this file</h2>
+                    <p class="mt-1 truncate text-[13px] text-muted">{{ reportTarget.displayName }}</p>
+
+                    <fieldset class="mt-4 space-y-1.5">
+                        <legend class="sr-only">Reason</legend>
+                        <label v-for="r in REPORT_REASONS" :key="r"
+                               class="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-[14px] transition"
+                               :class="reportReason === r ? 'border-neon bg-neon/5 text-ink' : 'border-sky/40 text-ink/90 hover:bg-sky/30'">
+                            <input type="radio" name="report-reason" :value="r" v-model="reportReason"
+                                   class="size-4 accent-neon">
+                            {{ r }}
+                        </label>
+                    </fieldset>
+
+                    <textarea v-model="reportNote" rows="2" maxlength="280"
+                              placeholder="Add a note (optional)"
+                              class="mt-3 w-full resize-none rounded-lg border border-sky bg-base px-3 py-2.5 text-[14px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20"></textarea>
+
+                    <div class="mt-4 flex items-center justify-end gap-2">
+                        <button type="button" @click="reportTarget = null"
+                                class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
+                        <button type="button" @click="submitReport" :disabled="!reportReason || reportSubmitting"
+                                class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-red-600/90 px-5 text-[14px] font-semibold text-white transition hover:bg-red-600 disabled:opacity-50">
+                            Report file
+                        </button>
+                    </div>
+                    <p class="mt-3 text-[11px] text-muted/70">Goes to the site operator for review. Files aren't removed automatically.</p>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>

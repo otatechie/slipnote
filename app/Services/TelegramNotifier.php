@@ -50,6 +50,77 @@ class TelegramNotifier
         }
     }
 
+    /**
+     * Posts an abuse report to the operator's Telegram channel. Unlike
+     * notifyUpload, this falls back to a logged warning when Telegram is not
+     * configured — an abuse report must never vanish silently.
+     */
+    public function notifyReport(Material $material, ?string $reason): void
+    {
+        $token = (string) config('noteshare.telegram_bot_token');
+        $chatId = (string) config('noteshare.telegram_chat_id');
+
+        if ($token === '' || $chatId === '') {
+            Log::warning('Abuse report (Telegram not configured)', [
+                'material_id' => $material->id,
+                'file' => $material->original_filename,
+                'reason' => $reason,
+            ]);
+
+            return;
+        }
+
+        try {
+            $response = Http::asJson()
+                ->timeout(5)
+                ->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                    'chat_id' => $chatId,
+                    'text' => $this->reportMessage($material, $reason),
+                    'parse_mode' => 'HTML',
+                    'disable_web_page_preview' => true,
+                ]);
+
+            if ($response->failed()) {
+                Log::warning('Telegram abuse report failed', [
+                    'status' => $response->status(),
+                    'material_id' => $material->id,
+                    'reason' => $reason,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Telegram abuse report threw', [
+                'message' => $e->getMessage(),
+                'material_id' => $material->id,
+            ]);
+        }
+    }
+
+    private function reportMessage(Material $material, ?string $reason): string
+    {
+        $course = $material->course;
+        $workspace = $course->workspace;
+        $file = $this->esc($material->original_filename);
+        $code = $this->esc($course->code);
+        $boardUrl = $this->esc(route('course.show', [
+            'workspace' => $workspace->slug,
+            'slug' => $course->slug,
+        ]));
+        // The operator dashboard is where reports are reviewed and acted on.
+        $dashboardUrl = $this->esc(route('operator.dashboard'));
+
+        $lines = [
+            '⚠️ <b>File reported</b>',
+            "<b>{$code}</b> · <i>{$file}</i>",
+        ];
+        if (filled($reason)) {
+            $lines[] = 'Reason: '.$this->esc($reason);
+        }
+        $lines[] = "<a href=\"{$boardUrl}\">View board</a>";
+        $lines[] = "<a href=\"{$dashboardUrl}\">Review in operator dashboard</a>";
+
+        return implode("\n", $lines);
+    }
+
     private function message(Material $material): string
     {
         $course = $material->course;

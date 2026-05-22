@@ -64,6 +64,15 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
         ->with('uploaded', 'File removed.');
 })->name('material.destroy');
 
+// Operator moderation dashboard (site admin). Lists reported files across all
+// workspaces; gated by OPERATOR_SECRET held in session. Declared BEFORE the
+// /{workspace} catch-all so "operator" isn't read as a workspace slug.
+Route::get('/operator', [App\Http\Controllers\OperatorController::class, 'dashboard'])->name('operator.dashboard');
+Route::post('/operator/login', [App\Http\Controllers\OperatorController::class, 'login'])->name('operator.login');
+Route::post('/operator/logout', [App\Http\Controllers\OperatorController::class, 'logout'])->name('operator.logout');
+Route::post('/operator/material/{material}/remove', [App\Http\Controllers\OperatorController::class, 'remove'])->name('operator.remove');
+Route::post('/operator/material/{material}/dismiss', [App\Http\Controllers\OperatorController::class, 'dismiss'])->name('operator.dismiss');
+
 // Everything inside a workspace. ResolveWorkspace sets the current tenant
 // from the {workspace} slug (unknown slug → 404) before any scoped query.
 // Declared last so the static routes above win.
@@ -79,6 +88,8 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/c/{slug}/upload', [App\Http\Controllers\CourseController::class, 'upload'])->name('course.upload');
 
     Route::delete('/{workspace}/c/{slug}/materials', [App\Http\Controllers\CourseController::class, 'bulkDelete'])->name('course.bulk-delete');
+
+    Route::post('/{workspace}/c/{slug}/report/{material}', [App\Http\Controllers\CourseController::class, 'report'])->name('material.report');
 
     Route::get('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
     Route::post('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');

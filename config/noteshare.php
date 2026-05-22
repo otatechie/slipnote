@@ -20,6 +20,23 @@ return [
     'telegram_chat_id' => env('TELEGRAM_CHAT_ID'),
 
     /*
+    | Operator (site-admin) secret. When set, it unlocks a kill-switch: the
+    | operator can remove ANY reported file from any workspace via the
+    | confirmation page linked in abuse-report notifications — no per-board
+    | owner secret needed. Entered once per session (never in a URL), checked
+    | timing-safe, rate-limited. Leave empty to disable operator removal.
+    */
+    'operator_secret' => env('OPERATOR_SECRET'),
+
+    /*
+    | Public contact address for abuse / copyright reports. Shown on the Terms
+    | page so a user (or a host receiving a complaint) has a fast way to reach
+    | the operator. Leave empty to omit the address (the in-app Report button
+    | still works either way).
+    */
+    'contact_email' => env('CONTACT_EMAIL'),
+
+    /*
     | Storage limits. The per-workspace cap is the primary control; the
     | global disk-free check is a safety net so the host machine itself
     | never runs out of room.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Workspace;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -26,6 +27,13 @@ class WorkspacesController extends Controller
 
     public function store(Request $request)
     {
+        // Per-IP throttle: stops one source from spinning up many boards to
+        // host abuse across them. Generous for genuine use (few boards each).
+        $rlKey = 'workspace_create:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($rlKey, 10)) {
+            return back()->withErrors(['name' => 'Too many workspaces created from here recently. Try again later.']);
+        }
+
         $data = $request->validate(['name' => 'required|string|min:2|max:60']);
         $clean = strip_tags($data['name']);
         $slug = Str::slug($clean);
@@ -39,6 +47,7 @@ class WorkspacesController extends Controller
         }
 
         [$workspace, $secret] = Workspace::provision($clean);
+        RateLimiter::hit($rlKey, 3600); // count only successful creations
 
         // The creator owns it; unlock the owner session immediately so they
         // don't have to re-paste the secret on the next page. Regenerate the
