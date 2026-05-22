@@ -43,7 +43,7 @@ class UploadTest extends TestCase
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
             'uploaderName' => 'Alex',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $material = Material::first();
@@ -54,14 +54,65 @@ class UploadTest extends TestCase
         Storage::disk('public')->assertExists($material->stored_path);
     }
 
+    public function test_it_uploads_multiple_files_at_once(): void
+    {
+        $this->post($this->uploadUrl(), [
+            'section' => 'slides',
+            'uploaderName' => 'Sam',
+            'files' => [
+                UploadedFile::fake()->create('wk1.pdf', 50, 'application/pdf'),
+                UploadedFile::fake()->create('wk2.pdf', 50, 'application/pdf'),
+                UploadedFile::fake()->create('wk3.pdf', 50, 'application/pdf'),
+            ],
+        ])->assertRedirect();
+
+        $this->assertSame(3, Material::count());
+        $this->assertSame(['wk1.pdf', 'wk2.pdf', 'wk3.pdf'], Material::pluck('original_filename')->sort()->values()->all());
+        // Each gets its own manage token and the shared section/uploader.
+        $this->assertSame(3, Material::whereNotNull('manage_token')->count());
+        $this->assertSame(3, Material::where('section', 'slides')->where('uploader_name', 'Sam')->count());
+    }
+
+    public function test_a_title_is_ignored_when_several_files_are_uploaded(): void
+    {
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'title' => 'My title',
+            'files' => [
+                UploadedFile::fake()->create('a.pdf', 50, 'application/pdf'),
+                UploadedFile::fake()->create('b.pdf', 50, 'application/pdf'),
+            ],
+        ])->assertRedirect();
+
+        // A shared title can't apply to several files — each keeps its own name.
+        $this->assertSame(2, Material::whereNull('title')->count());
+    }
+
+    public function test_files_that_exceed_the_cap_are_skipped_but_others_save(): void
+    {
+        config(['noteshare.workspace_storage_bytes' => 1024 * 1024]); // 1 MB cap
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [
+                UploadedFile::fake()->create('fits.pdf', 600, 'application/pdf'),   // 600 KB — fits
+                UploadedFile::fake()->create('toobig.pdf', 600, 'application/pdf'), // would exceed remaining
+            ],
+        ])->assertRedirect();
+
+        // Only the first fit under the running cap.
+        $this->assertSame(1, Material::count());
+        $this->assertSame('fits.pdf', Material::first()->original_filename);
+    }
+
     public function test_it_rejects_a_file_that_is_too_large(): void
     {
         $big = UploadedFile::fake()->create('huge.pdf', 12000, 'application/pdf'); // 12 MB > 10 MB cap
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $big,
-        ])->assertSessionHasErrors(['file']);
+            'files' => [$big],
+        ])->assertSessionHasErrors(['files.0']);
 
         $this->assertSame(0, Material::count());
     }
@@ -72,8 +123,8 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $exe,
-        ])->assertSessionHasErrors(['file']);
+            'files' => [$exe],
+        ])->assertSessionHasErrors(['files.0']);
 
         $this->assertSame(0, Material::count());
     }
@@ -85,7 +136,7 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $this->assertSame(102400, Material::first()->file_size);
@@ -109,8 +160,8 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
-        ])->assertSessionHasErrors(['file']);
+            'files' => [$file],
+        ])->assertSessionHasErrors(['files']);
 
         // Only the pre-seeded row exists.
         $this->assertSame(1, Material::count());
@@ -123,7 +174,7 @@ class UploadTest extends TestCase
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
             'title' => '<b>Week 7</b> solutions',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $this->assertSame('Week 7 solutions', Material::first()->title);
@@ -198,7 +249,7 @@ class UploadTest extends TestCase
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
             'uploaderName' => '<script>x</script>Bob',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $this->assertSame('xBob', Material::first()->uploader_name);
@@ -210,7 +261,7 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $this->assertNotEmpty(Material::first()->manage_token);
@@ -312,7 +363,7 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
+            'files' => [$file],
         ])->assertRedirect();
 
         $this->assertSame(1, Material::count());
@@ -325,7 +376,7 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
+            'files' => [$file],
             'passphrase' => 'wrong',
         ])->assertSessionHasErrors(['passphrase']);
 
@@ -341,7 +392,7 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
+            'files' => [$file],
             'passphrase' => 'sesame',
         ])->assertRedirect();
 
@@ -359,7 +410,7 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'file' => $file,
+            'files' => [$file],
             'passphrase' => 'sesame',
         ])->assertRedirect();
 

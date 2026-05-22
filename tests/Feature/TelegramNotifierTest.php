@@ -176,7 +176,7 @@ class TelegramNotifierTest extends TestCase
 
         $this->post(
             route('course.upload', $this->wsParams(['slug' => $this->course->slug])),
-            ['section' => 'notes', 'file' => $file]
+            ['section' => 'notes', 'files' => [$file]]
         )->assertRedirect();
 
         $this->assertSame(1, $this->course->materials()->count());
