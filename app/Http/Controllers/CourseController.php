@@ -73,7 +73,9 @@ class CourseController extends Controller
             'fileTypeLabel' => $m->fileTypeLabel(),
             'uploader_name' => $m->uploader_name,
             'created_at_human' => $m->created_at->diffForHumans(),
-            'download_url' => route('material.download', $m),
+            'download_url' => filled($m->manage_token)
+                ? route('material.download', ['token' => $m->manage_token])
+                : null,
             'delete_url' => route('material.destroy', ['material' => $m->id, 'token' => 'owner']),
             'manage_url' => $m->manageUrl(),
             'title' => $m->title,
@@ -138,8 +140,10 @@ class CourseController extends Controller
             'files.*' => 'file|max:10240|mimes:pdf,docx,pptx,png,jpg,jpeg',
         ]);
 
-        $free = @disk_free_space(storage_path('app/public')) ?: PHP_INT_MAX;
-        if ($free < (int) config('noteshare.min_free_disk_bytes')) {
+        // Fail closed: if the free-space probe errors (returns false), treat
+        // it as zero space rather than waving the upload through.
+        $free = disk_free_space(storage_path('app/public'));
+        if ($free === false || $free < (int) config('noteshare.min_free_disk_bytes')) {
             return back()->withErrors(['files' => 'The site is at capacity — please try again later.']);
         }
 
@@ -167,6 +171,9 @@ class CourseController extends Controller
         $title = count($files) === 1 && isset($data['title']) ? strip_tags($data['title']) : null;
         $uploaderName = isset($data['uploaderName']) ? strip_tags($data['uploaderName']) : null;
 
+        // Soft per-workspace cap: track headroom across this batch so a single
+        // request never overshoots. The host-disk check above is the hard
+        // safety net; a tiny overshoot under concurrent uploads is acceptable.
         $remaining = $workspace->storageRemaining();
         $created = [];
         $skipped = 0;

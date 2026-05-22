@@ -13,7 +13,7 @@ Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrF
 // meta tag control, no Inertia/Vue hydration cost).
 Route::view('/', 'welcome')->name('welcome');
 
-// Workspace create/open hub. Authenticated workflow entrypoint.
+// Workspace create/open hub.
 Route::get('/start', [App\Http\Controllers\WorkspacesController::class, 'index'])->name('start');
 Route::post('/workspaces', [App\Http\Controllers\WorkspacesController::class, 'store'])->name('workspaces.store');
 Route::post('/workspaces/open', [App\Http\Controllers\WorkspacesController::class, 'open'])->name('workspaces.open');
@@ -24,10 +24,12 @@ Route::post('/workspaces/forget', [App\Http\Controllers\WorkspacesController::cl
 Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::view('/terms', 'legal.terms')->name('terms');
 
-// Material download. By global id (decision a): these are shared files and
-// downloads are anonymous by design. Declared BEFORE the /{workspace}
-// catch-all so "download" isn't read as a workspace slug.
-Route::get('/download/{material}', function (Material $material) {
+// Material download. Anonymous by design — but addressed by the file's
+// random manage_token, not a sequential id, so files can't be enumerated
+// across workspaces by guessing /download/1, /download/2, … Declared
+// BEFORE the /{workspace} catch-all so "download" isn't read as a slug.
+Route::get('/download/{token}', function (string $token) {
+    $material = Material::where('manage_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('public')->exists($material->stored_path), 404);
 
