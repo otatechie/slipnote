@@ -54,6 +54,44 @@ class UploadTest extends TestCase
         Storage::disk('public')->assertExists($material->stored_path);
     }
 
+    public function test_a_file_downloads_via_its_unguessable_token(): void
+    {
+        $material = $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'lecture.pdf',
+            'stored_path' => UploadedFile::fake()->create('lecture.pdf', 10)->store('materials', 'public'),
+            'manage_token' => 'tok-'.str_repeat('a', 36),
+        ]);
+
+        $this->get(route('material.download', ['token' => $material->manage_token]))
+            ->assertOk()
+            ->assertDownload('lecture.pdf');
+    }
+
+    public function test_files_cannot_be_enumerated_by_sequential_id(): void
+    {
+        $material = $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'secret.pdf',
+            'stored_path' => 'x/secret.pdf',
+            'manage_token' => 'the-only-valid-token-aaaaaaaaaaaaaaaaaa',
+        ]);
+
+        // The numeric id is no longer a valid download path — only the token is.
+        $this->get('/download/'.$material->id)->assertNotFound();
+        $this->get('/download/guessed-token')->assertNotFound();
+    }
+
+    public function test_course_page_shares_a_csrf_token_for_the_native_delete_form(): void
+    {
+        // The per-row owner delete is a native <form> POST that reads
+        // $page.props.csrf_token; without it the form submits an empty token
+        // and is rejected as a CSRF failure (419).
+        $this->get(route('course.show', $this->wsParams(['slug' => $this->course->slug])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('csrf_token', fn ($t) => is_string($t) && $t !== ''));
+    }
+
     public function test_it_uploads_multiple_files_at_once(): void
     {
         $this->post($this->uploadUrl(), [

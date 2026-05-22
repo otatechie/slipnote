@@ -16,6 +16,9 @@ class HandleInertiaRequests extends Middleware
         $session = $request->session();
 
         return array_merge(parent::share($request), [
+            // Needed by native <form> POSTs (e.g. the per-row owner delete),
+            // which can't rely on the XSRF cookie header that axios sends.
+            'csrf_token' => csrf_token(),
             'flash' => [
                 'success' => $session->get('success'),
                 'created' => $session->get('created'),
