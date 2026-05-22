@@ -38,8 +38,18 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   Outbound only — no webhook/polling. Sent *after* the response and
   failure-swallowed, so a slow or down Telegram never blocks or breaks an
   upload. Leave either value empty to disable (the default).
+- **Reporting & operator moderation** — every file has a Report button (styled
+  modal with preset reasons). Reports are stored and surfaced on an operator
+  dashboard at `/operator`, gated by `OPERATOR_SECRET` (held in session, never
+  in a URL). The operator can **Remove** any file from any workspace (the
+  kill-switch) or **Dismiss** false reports. Removing a file blocklists its
+  content hash so the exact same bytes can't be re-uploaded. Reports also fire
+  a Telegram notice if configured.
+- **Abuse throttling** — per-IP rate limits on uploads (30 / 10 min) and
+  workspace creation (10 / hr) blunt automated abuse and mass board-spinning.
 - **Anonymous download** — files grouped by section, file-type icons for quick
-  scanning.
+  scanning. Files are addressed by an unguessable per-file token, not a
+  sequential id, so they can't be enumerated across workspaces.
 - **Live search + sort** — global filter (matches title *and* filename) that
   keeps the section grouping; sort by Newest / Oldest / A–Z. Designed for the
   find-fast student mental model at a full semester's volume (~60+ files).
@@ -126,6 +136,15 @@ a workspace via the `InteractsWithWorkspace` trait.
   unlocking one workspace never leaks into another in the same browser.
 - **Workspace isolation** enforced at the query layer by the
   `WorkspaceScope` global scope; `workspace_id` is never mass-assignable.
+- **Operator kill-switch** gated by `OPERATOR_SECRET`: checked timing-safe,
+  rate-limited (5 / 10 min per IP), held in session (never in a URL), and the
+  whole `/operator` surface 404s when the secret is unset. There is no email
+  reset by design — rotate by changing the env value and redeploying.
+- **Unguessable downloads:** files are served via their random `manage_token`,
+  not a sequential id, so they can't be enumerated across workspaces.
+- **Abuse throttling:** per-IP rate limits on uploads and workspace creation;
+  a fail-closed host-disk check; and a content-hash blocklist that refuses
+  re-upload of any file an operator has removed.
 
 For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
 `SESSION_SECURE_COOKIE=true`, and serve over HTTPS.
