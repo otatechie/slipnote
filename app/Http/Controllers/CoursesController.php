@@ -178,4 +178,28 @@ class CoursesController extends Controller
             'slug' => $course->slug,
         ])->with('created', "\u{201C}{$course->code}\u{201D} created.");
     }
+
+    public function update(Request $request, string $workspaceSlug, string $slug)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        // WorkspaceScope constrains this to the current workspace.
+        $course = Course::where('slug', $slug)->firstOrFail();
+
+        $data = $request->validate([
+            'code' => 'required|string|max:40',
+            'title' => 'required|string|max:120',
+        ]);
+
+        // Slug is left untouched: classmates' shared /c/{slug} links stay valid.
+        $course->update([
+            'code' => strip_tags($data['code']),
+            'title' => strip_tags($data['title']),
+        ]);
+
+        return redirect()
+            ->route('courses.index', ['workspace' => $workspace->slug])
+            ->with('created', "\u{201C}{$course->code}\u{201D} updated.");
+    }
 }

@@ -261,6 +261,47 @@ class CourseTest extends TestCase
             );
     }
 
+    public function test_owner_can_edit_a_course_without_changing_its_slug(): void
+    {
+        Course::create(['code' => 'PHYS 101', 'title' => 'Intro Physics', 'slug' => 'phys-101']);
+
+        $this->unlockOwnerSession();
+
+        $this->put(route('courses.update', $this->wsParams(['slug' => 'phys-101'])), [
+            'code' => 'PHYS 102',
+            'title' => 'Intermediate Physics',
+        ])->assertRedirect(route('courses.index', $this->wsParams()));
+
+        $course = Course::firstWhere('slug', 'phys-101');
+        $this->assertSame('PHYS 102', $course->code);
+        $this->assertSame('Intermediate Physics', $course->title);
+        $this->assertSame('phys-101', $course->slug); // shareable link stays valid
+    }
+
+    public function test_a_non_owner_cannot_edit_even_by_calling_the_action(): void
+    {
+        Course::create(['code' => 'PHYS 101', 'title' => 'Intro Physics', 'slug' => 'phys-101']);
+
+        $this->put(route('courses.update', $this->wsParams(['slug' => 'phys-101'])), [
+            'code' => 'HACK 999',
+            'title' => 'Sneaky',
+        ])->assertForbidden();
+
+        $this->assertSame('PHYS 101', Course::firstWhere('slug', 'phys-101')->code);
+    }
+
+    public function test_editing_a_course_validates_required_fields(): void
+    {
+        Course::create(['code' => 'PHYS 101', 'title' => 'Intro Physics', 'slug' => 'phys-101']);
+
+        $this->unlockOwnerSession();
+
+        $this->put(route('courses.update', $this->wsParams(['slug' => 'phys-101'])), [
+            'code' => '',
+            'title' => '',
+        ])->assertSessionHasErrors(['code', 'title']);
+    }
+
     public function test_a_course_with_files_has_a_materials_max_created_at(): void
     {
         $course = Course::create(['code' => 'MATH 251', 'title' => 'Calculus II', 'slug' => 'math-251']);

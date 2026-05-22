@@ -69,6 +69,7 @@ Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}', [App\Http\Controllers\CoursesController::class, 'index'])->name('courses.index');
     Route::post('/{workspace}/courses', [App\Http\Controllers\CoursesController::class, 'store'])->name('courses.store');
     Route::post('/{workspace}/courses/reorder', [App\Http\Controllers\CoursesController::class, 'reorder'])->name('courses.reorder');
+    Route::put('/{workspace}/c/{slug}', [App\Http\Controllers\CoursesController::class, 'update'])->name('courses.update');
     Route::post('/{workspace}/unlock', [App\Http\Controllers\CoursesController::class, 'unlock'])->name('courses.unlock');
     Route::post('/{workspace}/recovery-email', [App\Http\Controllers\CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
 
