@@ -54,23 +54,44 @@ function share() {
     }).catch(() => {})
 }
 
-// Course create sheet
+// Course create / edit sheet. editing holds the course being edited, or
+// null when the sheet is creating a new course.
 const sheet = ref(false)
+const editing = ref(null)
 const codeField = ref(null)
 watch(sheet, (v) => {
     if (v) {
         setTimeout(() => codeField.value?.focus(), 50)
     }
 })
-function closeSheet(e) {
-    if (e.key === 'Escape') sheet.value = false
-}
 
 const courseForm = useForm({ code: '', title: '' })
-function createCourse() {
-    courseForm.post('/' + props.workspace.slug + '/courses', {
-        onSuccess: () => { sheet.value = false },
-    })
+
+function openCreate() {
+    editing.value = null
+    courseForm.reset()
+    courseForm.clearErrors()
+    sheet.value = true
+}
+
+function openEdit(course) {
+    editing.value = course
+    courseForm.code = course.code
+    courseForm.title = course.title
+    courseForm.clearErrors()
+    sheet.value = true
+}
+
+function submitCourse() {
+    if (editing.value) {
+        courseForm.put('/' + props.workspace.slug + '/c/' + editing.value.slug, {
+            onSuccess: () => { sheet.value = false },
+        })
+    } else {
+        courseForm.post('/' + props.workspace.slug + '/courses', {
+            onSuccess: () => { sheet.value = false },
+        })
+    }
 }
 
 // Recovery email form
@@ -181,7 +202,7 @@ function onDrop() {
                         <span v-if="!shareCopied">Share with classmates</span>
                         <span v-else>Link copied ✓</span>
                     </button>
-                    <button v-if="isOwner && totalCourses > 0" type="button" @click="sheet = true"
+                    <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
                             class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
                         <span class="text-lg leading-none">+</span> New course
                     </button>
@@ -204,7 +225,7 @@ function onDrop() {
                             <span class="font-semibold text-ink">CS 250</span>. Add one and
                             classmates can drop their notes, slides, and past papers into it.
                         </p>
-                        <button type="button" @click="sheet = true"
+                        <button type="button" @click="openCreate"
                                 class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
                             <span class="text-lg leading-none">+</span> New course
                         </button>
@@ -273,7 +294,7 @@ function onDrop() {
                                 {{ course.code }}
                                 <span aria-hidden="true" class="opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100">→</span>
                             </p>
-                            <p class="mt-0.5 truncate text-[13px] text-muted">{{ course.title }}</p>
+                            <p class="mt-0.5 text-[13px] text-muted">{{ course.title }}</p>
                             <p v-if="course.materials_max_created_at" class="mt-0.5 text-[12px] text-muted/80">
                                 Updated {{ timeAgo(course.materials_max_created_at) }}
                             </p>
@@ -287,6 +308,14 @@ function onDrop() {
                               class="shrink-0 rounded-full border border-dashed border-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted">
                             No files yet — be the first
                         </span>
+
+                        <button v-if="isOwner" type="button" @click.stop.prevent="openEdit(course)"
+                                :aria-label="`Edit ${course.code}`"
+                                class="shrink-0 cursor-pointer rounded-md p-1.5 text-muted opacity-0 transition hover:bg-sky/40 hover:text-neon focus:opacity-100 group-hover:opacity-100">
+                            <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
+                                <path d="M13.5 3.5l3 3L7 16l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
 
@@ -298,17 +327,18 @@ function onDrop() {
 
             <!-- Owner: create-course slide-in panel -->
             <template v-if="isOwner">
-                <div v-if="sheet" class="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="New course">
+                <div v-if="sheet" class="fixed inset-0 z-40" role="dialog" aria-modal="true"
+                     :aria-label="editing ? 'Edit course' : 'New course'">
                     <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="sheet = false"></div>
                     <div class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-surface px-6 py-6 shadow-xl
                                 transition-transform duration-200"
                          style="transform: translateX(0)">
                         <div class="mb-5 flex items-center justify-between">
-                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">New course</h2>
+                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">{{ editing ? 'Edit course' : 'New course' }}</h2>
                             <button type="button" @click="sheet = false"
                                     class="cursor-pointer text-[13px] font-semibold text-muted hover:text-neon">Close</button>
                         </div>
-                        <form @submit.prevent="createCourse" class="flex flex-col gap-3.5">
+                        <form @submit.prevent="submitCourse" class="flex flex-col gap-3.5">
                             <div>
                                 <label for="code" class="mb-1.5 block text-[13px] font-semibold text-ink">Course code</label>
                                 <input id="code" type="text" v-model="courseForm.code" placeholder="e.g. PHYS 101"
@@ -326,7 +356,7 @@ function onDrop() {
                             </div>
                             <button type="submit" :disabled="courseForm.processing"
                                     class="mt-1 cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
-                                Create course
+                                {{ editing ? 'Save changes' : 'Create course' }}
                             </button>
                         </form>
                     </div>
