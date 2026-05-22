@@ -184,7 +184,7 @@ watch(() => props.materials, () => { selected.value = [] })
             <header class="mb-7">
                 <Link :href="courseListUrl()"
                       class="mb-1.5 inline-block text-xs font-semibold uppercase tracking-[0.08em] text-neon hover:underline">
-                    ← {{ workspace.name }}
+                    ‹ {{ workspace.name }}
                 </Link>
                 <h1 class="text-3xl font-bold tracking-tight text-ink">{{ course.code }}</h1>
                 <p class="mt-1.5 text-[15px] text-muted">{{ course.title }}</p>
@@ -338,10 +338,13 @@ watch(() => props.materials, () => { selected.value = [] })
                                     {{ material.fileTypeLabel }}
                                 </span>
                                 <div class="min-w-0">
-                                    <a :href="material.download_url"
+                                    <a v-if="material.download_url" :href="material.download_url"
                                        class="block truncate text-[15px] font-semibold text-neon hover:underline">
                                         {{ material.displayName }}
                                     </a>
+                                    <span v-else class="block truncate text-[15px] font-semibold text-ink">
+                                        {{ material.displayName }}
+                                    </span>
                                     <div class="mt-0.5 truncate text-[12px] text-muted">
                                         {{ material.uploader_name || 'Anonymous' }} · {{ material.created_at_human }}
                                     </div>
@@ -362,7 +365,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                         </button>
                                     </form>
                                 </template>
-                                <a v-if="!selectedCount" :href="material.download_url"
+                                <a v-if="!selectedCount && material.download_url" :href="material.download_url"
                                    class="rounded-full bg-neon px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
                                     Download
                                 </a>
@@ -454,13 +457,15 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <input id="ufile" type="file" multiple @change="onFileChange"
                                        :aria-invalid="!!errors.files" class="sr-only">
                                 <label for="ufile"
-                                       class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg bg-sky px-4 py-2.5 text-[14px] font-semibold text-teal transition hover:brightness-95">
-                                    <span class="text-base leading-none">+</span>
+                                       class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal transition hover:bg-sky/50">
+                                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round">
+                                        <path d="M10 4v12M4 10h12"/>
+                                    </svg>
                                     {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
                                 </label>
                                 <p class="mt-1.5 text-xs text-muted">PDF, Word, PowerPoint, or image · up to 10&nbsp;MB each · pick several at once</p>
-                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg border border-sky/40 bg-base px-3 py-2">
-                                    <p class="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg border border-teal/20 bg-teal/5 px-3 py-2.5">
+                                    <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-teal/70">
                                         {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected
                                     </p>
                                     <ul class="space-y-0.5">
@@ -470,8 +475,8 @@ watch(() => props.materials, () => { selected.value = [] })
                                             <span class="truncate">{{ f.name }}</span>
                                             <button type="button" @click="removeFile(i)"
                                                     :aria-label="`Remove ${f.name}`"
-                                                    class="-my-2 -mr-1 ml-auto flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-red-50 hover:text-red-600">
-                                                <svg class="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                                    class="-my-2 -mr-1 ml-auto flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted/40 transition hover:bg-red-50 hover:text-red-600">
+                                                <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                                                     <path d="M4 4l8 8M12 4l-8 8"/>
                                                 </svg>
                                             </button>

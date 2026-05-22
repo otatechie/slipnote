@@ -189,7 +189,14 @@ function onDrop() {
 
             <header class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <p class="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
+                    <a href="/start"
+                       class="mb-1.5 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted transition hover:text-neon">
+                        <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9.5 10 4l7 5.5"/>
+                            <path d="M5 8.5V16h10V8.5"/>
+                        </svg>
+                        SlipNote
+                    </a>
                     <h1 class="text-3xl font-bold tracking-tight text-ink">Courses</h1>
                     <p class="mt-1.5 text-[15px] text-muted">
                         <template v-if="totalCourses > 0">Pick a course to browse and share materials.</template>
@@ -198,8 +205,12 @@ function onDrop() {
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-2">
                     <button type="button" @click="share"
-                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-semibold text-white shadow-sm transition hover:brightness-110">
-                        <span v-if="!shareCopied">Share with classmates</span>
+                            class="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1"/>
+                            <path d="M12 9a3 3 0 0 0-4.5-.4L4.9 11.2a3 3 0 1 0 4.2 4.2l1-1"/>
+                        </svg>
+                        <span v-if="!shareCopied">Share board</span>
                         <span v-else>Link copied ✓</span>
                     </button>
                     <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
@@ -274,11 +285,11 @@ function onDrop() {
                          @dragover="draggable && onDragOver($event, course.id)"
                          @drop="draggable && onDrop()"
                          :class="draggable ? 'cursor-grab active:cursor-grabbing' : ''"
-                         class="group flex items-center gap-4 rounded-2xl border border-sky/30 bg-surface px-6 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md">
+                         class="group flex items-start gap-4 rounded-2xl border border-sky/30 bg-surface px-6 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md">
 
                         <!-- Drag handle (owner + manual sort only) -->
                         <svg v-if="draggable" aria-hidden="true"
-                             class="size-4 shrink-0 text-muted/50"
+                             class="mt-1 size-4 shrink-0 text-muted/50"
                              viewBox="0 0 16 16" fill="currentColor">
                             <rect x="4" y="3" width="2" height="2" rx="1"/>
                             <rect x="10" y="3" width="2" height="2" rx="1"/>
@@ -290,28 +301,29 @@ function onDrop() {
 
                         <Link :href="courseUrl(course.slug)" class="min-w-0 flex-1"
                               @click.stop>
-                            <p class="flex items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
-                                {{ course.code }}
-                                <span aria-hidden="true" class="opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100">→</span>
-                            </p>
+                            <div class="flex items-center gap-2">
+                                <p class="flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
+                                    <span class="truncate">{{ course.code }}</span>
+                                    <span aria-hidden="true" class="shrink-0 opacity-0 transition group-hover:translate-x-0.5 group-hover:opacity-100">›</span>
+                                </p>
+                                <span v-if="course.materials_count > 0"
+                                      class="ml-auto shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-xs font-medium tabular-nums text-teal">
+                                    {{ plural(course.materials_count, 'file') }}
+                                </span>
+                                <span v-else
+                                      class="ml-auto shrink-0 rounded-full border border-dashed border-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted">
+                                    No files yet
+                                </span>
+                            </div>
                             <p class="mt-0.5 text-[13px] text-muted">{{ course.title }}</p>
                             <p v-if="course.materials_max_created_at" class="mt-0.5 text-[12px] text-muted/80">
                                 Updated {{ timeAgo(course.materials_max_created_at) }}
                             </p>
                         </Link>
 
-                        <span v-if="course.materials_count > 0"
-                              class="shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-xs font-medium tabular-nums text-teal">
-                            {{ plural(course.materials_count, 'file') }}
-                        </span>
-                        <span v-else
-                              class="shrink-0 rounded-full border border-dashed border-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted">
-                            No files yet — be the first
-                        </span>
-
                         <button v-if="isOwner" type="button" @click.stop.prevent="openEdit(course)"
                                 :aria-label="`Edit ${course.code}`"
-                                class="shrink-0 cursor-pointer rounded-md p-1.5 text-muted opacity-0 transition hover:bg-sky/40 hover:text-neon focus:opacity-100 group-hover:opacity-100">
+                                class="mt-0.5 shrink-0 cursor-pointer rounded-md p-1.5 text-muted opacity-0 transition hover:bg-sky/40 hover:text-neon focus:opacity-100 group-hover:opacity-100">
                             <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7">
                                 <path d="M13.5 3.5l3 3L7 16l-4 1 1-4 9.5-9.5z" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
