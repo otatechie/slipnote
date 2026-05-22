@@ -134,17 +134,13 @@ class CourseController extends Controller
             'title' => 'nullable|string|max:120',
             'uploaderName' => 'nullable|string|max:60',
             'passphrase' => 'nullable|string',
-            'file' => 'required|file|max:10240|mimes:pdf,docx,pptx,png,jpg,jpeg',
+            'files' => 'required|array|min:1|max:20',
+            'files.*' => 'file|max:10240|mimes:pdf,docx,pptx,png,jpg,jpeg',
         ]);
 
         $free = @disk_free_space(storage_path('app/public')) ?: PHP_INT_MAX;
         if ($free < (int) config('noteshare.min_free_disk_bytes')) {
-            return back()->withErrors(['file' => 'The site is at capacity — please try again later.']);
-        }
-
-        $incoming = (int) $request->file('file')->getSize();
-        if ($incoming > $workspace->storageRemaining()) {
-            return back()->withErrors(['file' => 'This board is full — ask the owner to delete old files.']);
+            return back()->withErrors(['files' => 'The site is at capacity — please try again later.']);
         }
 
         if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true) {
@@ -164,23 +160,53 @@ class CourseController extends Controller
             session([$workspace->uploadUnlockKey() => true]);
         }
 
-        $storedPath = $request->file('file')->store('materials', 'public');
+        $files = $request->file('files');
 
-        $material = $course->materials()->create([
-            'section' => $data['section'],
-            'title' => isset($data['title']) ? strip_tags($data['title']) : null,
-            'original_filename' => $request->file('file')->getClientOriginalName(),
-            'stored_path' => $storedPath,
-            'uploader_name' => isset($data['uploaderName']) ? strip_tags($data['uploaderName']) : null,
-            'manage_token' => \Illuminate\Support\Str::random(40),
-            'file_size' => $incoming,
-        ]);
+        // A shared title only makes sense for a single file; with several
+        // files each keeps its own filename.
+        $title = count($files) === 1 && isset($data['title']) ? strip_tags($data['title']) : null;
+        $uploaderName = isset($data['uploaderName']) ? strip_tags($data['uploaderName']) : null;
 
-        dispatch(fn () => app(TelegramNotifier::class)->notifyUpload($material))->afterResponse();
+        $remaining = $workspace->storageRemaining();
+        $created = [];
+        $skipped = 0;
+
+        foreach ($files as $file) {
+            $size = (int) $file->getSize();
+            if ($size > $remaining) {
+                $skipped++;
+
+                continue;
+            }
+            $remaining -= $size;
+
+            $material = $course->materials()->create([
+                'section' => $data['section'],
+                'title' => $title,
+                'original_filename' => $file->getClientOriginalName(),
+                'stored_path' => $file->store('materials', 'public'),
+                'uploader_name' => $uploaderName,
+                'manage_token' => \Illuminate\Support\Str::random(40),
+                'file_size' => $size,
+            ]);
+
+            dispatch(fn () => app(TelegramNotifier::class)->notifyUpload($material))->afterResponse();
+            $created[] = $material;
+        }
+
+        if (count($created) === 0) {
+            return back()->withErrors(['files' => 'This board is full — ask the owner to delete old files.']);
+        }
+
+        $count = count($created);
+        $message = $count === 1 ? 'File added.' : "{$count} files added.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} skipped — board is full.";
+        }
 
         return back()->with([
-            'uploaded' => 'File added.',
-            'manageUrl' => $material->manageUrl(),
+            'uploaded' => $message,
+            'manageUrl' => $count === 1 ? $created[0]->manageUrl() : null,
         ]);
     }
 }

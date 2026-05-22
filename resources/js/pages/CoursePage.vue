@@ -68,7 +68,7 @@ const uploadForm = useForm({
     title: '',
     uploaderName: '',
     passphrase: '',
-    file: null,
+    files: [],
 })
 
 watch(uploadOpen, (v) => {
@@ -90,7 +90,23 @@ window.addEventListener('hashchange', () => {
 })
 
 function onFileChange(e) {
-    uploadForm.file = e.target.files[0] ?? null
+    // Append to the running selection so "Add more files" accumulates,
+    // skipping exact dupes (same name + size). Clearing the input lets the
+    // same file be re-picked after removal.
+    const picked = Array.from(e.target.files)
+    const seen = new Set(uploadForm.files.map(f => f.name + ':' + f.size))
+    for (const f of picked) {
+        const key = f.name + ':' + f.size
+        if (!seen.has(key)) {
+            uploadForm.files.push(f)
+            seen.add(key)
+        }
+    }
+    e.target.value = ''
+}
+
+function removeFile(index) {
+    uploadForm.files = uploadForm.files.filter((_, i) => i !== index)
 }
 
 function upload() {
@@ -400,8 +416,8 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <span v-if="errors.passphrase" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.passphrase[0] }}</span>
                             </div>
 
-                            <!-- Title -->
-                            <div>
+                            <!-- Title — only meaningful for a single file -->
+                            <div v-if="uploadForm.files.length <= 1">
                                 <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">What is this? (optional)</label>
                                 <input id="utitle" type="text" v-model="uploadForm.title"
                                        placeholder="e.g. Week 7 quiz solutions"
@@ -429,25 +445,54 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <span v-if="errors.uploaderName" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.uploaderName[0] }}</span>
                             </div>
 
-                            <!-- File -->
+                            <!-- Files -->
                             <div>
-                                <label for="ufile" class="mb-1.5 block text-[13px] font-semibold text-ink">File</label>
-                                <input id="ufile" type="file" @change="onFileChange"
-                                       :aria-invalid="!!errors.file"
-                                       class="w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-sky file:px-3 file:py-1.5 file:text-[13px] file:font-semibold file:text-teal">
-                                <p class="mt-1.5 text-xs text-muted">PDF, Word, PowerPoint, or image · up to 10&nbsp;MB</p>
-                                <span v-if="errors.file" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.file[0] }}</span>
+                                <span class="mb-1.5 block text-[13px] font-semibold text-ink">Files</span>
+                                <!-- Native input is visually hidden; the label below
+                                     drives it so the browser's "No file chosen" text
+                                     never contradicts the managed list. -->
+                                <input id="ufile" type="file" multiple @change="onFileChange"
+                                       :aria-invalid="!!errors.files" class="sr-only">
+                                <label for="ufile"
+                                       class="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg bg-sky px-4 py-2.5 text-[14px] font-semibold text-teal transition hover:brightness-95">
+                                    <span class="text-base leading-none">+</span>
+                                    {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
+                                </label>
+                                <p class="mt-1.5 text-xs text-muted">PDF, Word, PowerPoint, or image · up to 10&nbsp;MB each · pick several at once</p>
+                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg border border-sky/40 bg-base px-3 py-2">
+                                    <p class="mb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                                        {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected
+                                    </p>
+                                    <ul class="space-y-0.5">
+                                        <li v-for="(f, i) in uploadForm.files" :key="i"
+                                            class="flex items-center gap-1.5 text-[12px] text-ink">
+                                            <span aria-hidden="true" class="shrink-0 text-muted">·</span>
+                                            <span class="truncate">{{ f.name }}</span>
+                                            <button type="button" @click="removeFile(i)"
+                                                    :aria-label="`Remove ${f.name}`"
+                                                    class="-my-2 -mr-1 ml-auto flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-red-50 hover:text-red-600">
+                                                <svg class="size-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                                    <path d="M4 4l8 8M12 4l-8 8"/>
+                                                </svg>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <span v-if="errors.files" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.files[0] }}</span>
+                                <span v-if="errors['files.0']" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors['files.0'] }}</span>
                             </div>
 
-                            <button type="submit" :disabled="uploadForm.processing"
-                                    class="relative cursor-pointer overflow-hidden rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:cursor-progress disabled:opacity-90">
+                            <button type="submit" :disabled="uploadForm.processing || uploadForm.files.length === 0"
+                                    class="relative cursor-pointer overflow-hidden rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:cursor-not-allowed disabled:opacity-60">
                                 <!-- Progress fill: a translucent white bar that
                                      grows left→right as the upload streams to
                                      the server. Sits BEHIND the button text. -->
                                 <span v-if="uploadForm.progress"
                                       class="absolute inset-y-0 left-0 bg-white/25 transition-[width] duration-150 ease-linear"
                                       :style="{ width: uploadForm.progress.percentage + '%' }"></span>
-                                <span class="relative" v-if="!uploadForm.processing">Upload</span>
+                                <span class="relative" v-if="!uploadForm.processing">
+                                    {{ uploadForm.files.length > 1 ? `Upload ${uploadForm.files.length} files` : 'Upload' }}
+                                </span>
                                 <span class="relative tabular-nums" v-else-if="uploadForm.progress">
                                     Uploading… {{ uploadForm.progress.percentage }}%
                                 </span>
