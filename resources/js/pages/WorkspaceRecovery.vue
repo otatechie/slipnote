@@ -45,7 +45,7 @@ function requestRecovery() {
                 </p>
                 <Link :href="'/' + workspace.slug"
                       class="mt-5 inline-block text-[13px] font-semibold text-neon hover:underline">
-                    ← Back to {{ workspace.name }}
+                    ‹ Back to {{ workspace.name }}
                 </Link>
             </div>
 

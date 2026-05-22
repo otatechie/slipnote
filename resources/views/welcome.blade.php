@@ -47,7 +47,7 @@
             <a href="{{ route('start') }}"
                class="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-neon px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
                 Create your board
-                <span aria-hidden="true">→</span>
+                <span aria-hidden="true">›</span>
             </a>
             <p class="text-[12px] text-muted">Free, forever · no email required</p>
         </div>
@@ -149,7 +149,7 @@
         <a href="{{ route('start') }}"
            class="mt-6 inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-neon px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
             Create your board
-            <span aria-hidden="true">→</span>
+            <span aria-hidden="true">›</span>
         </a>
     </section>
 </x-layouts.app>
