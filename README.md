@@ -65,25 +65,10 @@ php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
 php artisan storage:link     # required: downloads serve from public/storage
-php artisan db:seed          # creates the single demo course
 
 npm run build                # or `npm run dev` for hot reload
 php artisan serve
 ```
-
-> **Gotcha:** if you run `npm run dev` and the process is force-killed, a stale
-> `public/hot` file can remain and break asset loading (the page goes JS-dead).
-> Delete `public/hot` and use `npm run build`, or restart `npm run dev`.
-
-### Demo data (to test the UI at realistic volume)
-
-```bash
-php artisan db:seed --class=DemoMaterialsSeeder
-```
-
-Generates a full semester's worth of materials (61 files: 30 notes, 20 slides,
-8 past papers, 3 announcements) with real files on disk so downloads work.
-Idempotent — re-running wipes and regenerates the demo course's materials.
 
 ## Workspaces & courses
 
