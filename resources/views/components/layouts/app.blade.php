@@ -14,9 +14,23 @@
     @else
         <meta name="robots" content="noindex,nofollow">
     @endif
+    <script>
+        (() => {
+            const key = 'slipnote-theme'
+            const options = new Set(['system', 'light', 'dark'])
+            const saved = localStorage.getItem(key)
+            const theme = options.has(saved) ? saved : 'system'
+            const system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+            const resolved = theme === 'system' ? system : theme
+            document.documentElement.dataset.theme = theme
+            document.documentElement.dataset.systemTheme = system
+            document.documentElement.style.colorScheme = resolved
+        })()
+    </script>
     {{ $head ?? '' }}
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Strichpunkt+Sans:wght@400..900&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="m-0 bg-base font-sans text-ink">
@@ -35,7 +49,21 @@
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <a href="https://github.com/otatechie/slipnote" class="hover:text-neon" target="_blank" rel="noopener noreferrer">GitHub</a>
                 </p>
-                <p class="text-[12px] text-muted/70">&copy; {{ date('Y') }} SlipNote</p>
+                <button type="button"
+                        data-theme-toggle
+                        aria-label="Switch theme mode"
+                        class="group inline-flex cursor-pointer items-center justify-center rounded-full border border-sky bg-surface p-2 text-muted transition hover:border-neon hover:text-neon">
+                    <svg aria-hidden="true" data-theme-icon="system" class="size-4 group-data-[active-theme=light]:hidden group-data-[active-theme=dark]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>
+                    </svg>
+                    <svg aria-hidden="true" data-theme-icon="light" class="hidden size-4 group-data-[active-theme=light]:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>
+                    </svg>
+                    <svg aria-hidden="true" data-theme-icon="dark" class="hidden size-4 group-data-[active-theme=dark]:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/>
+                    </svg>
+                </button>
+                <p class="text-[12px] text-muted">&copy; {{ date('Y') }} SlipNote</p>
             </div>
         </footer>
     </div>

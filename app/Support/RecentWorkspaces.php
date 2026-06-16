@@ -66,6 +66,10 @@ class RecentWorkspaces
             value: $value,
             minutes: self::TTL_MINUTES,
             path: '/',
+            // Follow the app's session-cookie security: HTTPS-only in prod,
+            // relaxed for local http dev. Avoids hardcoding secure=true, which
+            // would silently drop the cookie over http in development.
+            secure: (bool) config('session.secure'),
             httpOnly: true,
             sameSite: 'lax',
         );

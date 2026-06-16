@@ -1,6 +1,6 @@
 <x-layouts.app
     title="Share course notes with classmates"
-    description="A free, no-account board for sharing course materials. One link, your whole class — no logins, no setup."
+    description="A free, no-account board for sharing course materials. One link, your whole class, no logins, no setup."
     :indexable="true">
 
     <x-slot:head>
@@ -8,11 +8,11 @@
 
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="SlipNote">
-        <meta property="og:title" content="SlipNote — Share course notes with classmates">
+        <meta property="og:title" content="SlipNote: Share course notes with classmates">
         <meta property="og:description" content="A free, no-account board for sharing course materials. One link, your whole class.">
         <meta property="og:url" content="{{ url('/') }}">
         <meta name="twitter:card" content="summary">
-        <meta name="twitter:title" content="SlipNote — Share course notes with classmates">
+        <meta name="twitter:title" content="SlipNote: Share course notes with classmates">
         <meta name="twitter:description" content="A free, no-account board for sharing course materials. One link, your whole class.">
 
         <script type="application/ld+json">
@@ -33,123 +33,220 @@
         </script>
     </x-slot:head>
 
-    {{-- HERO --}}
-    <section class="mx-auto w-full max-w-4xl flex-1 px-5 pt-12 pb-10 text-center sm:pt-16">
-        <h1 class="text-4xl font-bold tracking-tight text-ink sm:text-5xl md:text-6xl">
-            Share course notes
-            <span class="block text-neon">in one link.</span>
-        </h1>
-        <p class="mx-auto mt-5 max-w-xl text-[16px] leading-relaxed text-muted sm:text-[17px]">
-            Name your class, get a link, share it with classmates. They drop in slides,
-            past papers, and notes — no accounts, no passwords, no setup.
-        </p>
-        <div class="mt-7 flex flex-col items-center gap-3">
-            <a href="{{ route('start') }}"
-               class="inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-neon px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
-                Create your board
-                <span aria-hidden="true">›</span>
-            </a>
-            <p class="text-[12px] text-muted">Free, forever · no email required</p>
-        </div>
+    <section class="hero-bg relative isolate flex-1 overflow-hidden bg-white">
+        <div class="hero-texture pointer-events-none absolute inset-0 -z-10" aria-hidden="true"
+             style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' x2='0' y1='1' y2='0'%3E%3Cstop offset='0' stop-color='%230FF'/%3E%3Cstop offset='1' stop-color='%23CF6'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23F00'/%3E%3Cstop offset='1' stop-color='%23FC0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg fill='none' stroke-miterlimit='10'%3E%3Cg stroke='url(%23a)' stroke-opacity='0.55'%3E%3Cpath stroke-width='2' d='M1409 581 1450.35 511 1490 581z'/%3E%3Ccircle stroke-width='4' cx='500' cy='100' r='40'/%3E%3Cpath stroke-width='3' d='M400.86 735.5h-83.73c0-23.12 18.74-41.87 41.87-41.87S400.86 712.38 400.86 735.5z'/%3E%3Ccircle stroke-width='2' cx='180' cy='560' r='22'/%3E%3Cpath stroke-width='2' d='M760 250 780 215 800 250z'/%3E%3Crect stroke-width='2' x='1230' y='120' width='46' height='46' transform='rotate(18 1253 143)'/%3E%3Cpath stroke-width='2' d='M960 690 985 647 1010 690z'/%3E%3C/g%3E%3Cg stroke='url(%23b)' stroke-opacity='0.5'%3E%3Cpath stroke-width='4' d='M149.8 345.2 118.4 389.8 149.8 434.4 181.2 389.8z'/%3E%3Crect stroke-width='6' x='1039' y='709' width='100' height='100'/%3E%3Cpath stroke-width='4' d='M1426.8 132.4 1405.7 168.8 1363.7 168.8 1342.7 132.4 1363.7 96 1405.7 96z'/%3E%3Ccircle stroke-width='3' cx='620' cy='820' r='30'/%3E%3Cpath stroke-width='2' d='M300 160 318 128 336 160z'/%3E%3Crect stroke-width='2' x='830' y='470' width='34' height='34' transform='rotate(-12 847 487)'/%3E%3Cpath stroke-width='2' d='M1500 760 1520 725 1540 760z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E&quot;);background-position:center;background-repeat:no-repeat;background-size:cover;"></div>
+        <div class="hero-vignette pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40" aria-hidden="true"></div>
+        <header class="relative px-4 pt-4 sm:px-5 sm:pt-6">
+            <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-sky/80 bg-surface/85 px-3 py-2.5 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur sm:px-6 sm:py-3">
+                <a href="{{ route('welcome') }}" class="inline-flex min-w-0 items-center gap-2 text-[13px] font-bold tracking-[-0.01em] text-teal sm:text-[14px]">
+                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neon text-[14px] text-white shadow-[0_4px_12px_-6px_rgba(91,91,214,0.85)] sm:h-9 sm:w-9 sm:text-[15px]">S</span>
+                    SlipNote
+                </a>
 
-        {{-- Mock screenshot: a small, hand-drawn-feel preview of the actual
-             course board so the hero isn't just text. Pure CSS — keeps the
-             page lean and works for crawlers. --}}
-        <div class="mx-auto mt-12 max-w-2xl">
-            <div class="overflow-hidden rounded-2xl border border-sky/40 bg-surface shadow-xl ring-1 ring-black/5">
-                {{-- Fake browser chrome --}}
-                <div class="flex items-center gap-1.5 border-b border-sky/40 bg-base/60 px-4 py-2.5">
-                    <span class="h-2.5 w-2.5 rounded-full bg-red-300"></span>
-                    <span class="h-2.5 w-2.5 rounded-full bg-yellow-300"></span>
-                    <span class="h-2.5 w-2.5 rounded-full bg-green-300"></span>
-                    <span class="ml-3 inline-flex items-center gap-1 rounded-md bg-base/80 px-2.5 py-0.5 text-[11px] text-muted">
-                        <span aria-hidden="true">🔒</span> slipnote.co/cs-101
-                    </span>
+                <nav class="hidden items-center gap-6 text-[14px] font-medium text-muted md:flex">
+                    <a href="#how" class="transition hover:text-neon">How it works</a>
+                    <a href="#why" class="transition hover:text-neon">Why SlipNote</a>
+                    <a href="{{ route('privacy') }}" class="transition hover:text-neon">Privacy</a>
+                </nav>
+
+                <a href="{{ route('start') }}"
+                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white transition hover:brightness-110 sm:px-4 sm:py-2.5 sm:text-[13px]">
+                    <span class="sm:hidden">Create board</span>
+                    <span class="hidden sm:inline">Create your board</span>
+                </a>
+            </div>
+        </header>
+
+        <section class="relative px-4 pt-6 pb-10 sm:px-5 sm:pt-14 sm:pb-20">
+            <div class="mx-auto grid max-w-6xl items-center gap-9 sm:gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+                <div class="text-center lg:text-left">
+                    <h1 class="text-[34px] font-bold leading-[1.02] tracking-[-0.03em] text-teal sm:text-[52px] lg:text-[58px]">
+                        Your whole class's notes,
+                        <span class="relative inline-block text-neon sm:whitespace-nowrap">
+                            in one link.
+                            <svg class="absolute -bottom-2 left-0 w-full text-neon" height="12" viewBox="0 0 240 12" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                                <path d="M3 8 Q 40 2 80 6 T 160 5 T 237 6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                            </svg>
+                        </span>
+                    </h1>
+                    <p class="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-muted sm:mt-7 sm:text-[17px] lg:mx-0">
+                        Make a board for your class, add a space for each course, and
+                        share one link. Everyone adds slides, past papers and notes.
+                    </p>
+                    <div class="mt-5 flex flex-col items-center gap-2.5 sm:mt-8 sm:flex-row sm:justify-center sm:gap-3.5 lg:justify-start">
+                        <a href="{{ route('start') }}"
+                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_var(--color-teal)] active:translate-y-1 active:shadow-none sm:w-auto">
+                            Create your board
+                        </a>
+                        <a href="#how"
+                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full border-2 border-sky bg-surface px-7 py-3 text-[15px] font-bold text-ink transition hover:border-neon hover:text-neon sm:w-auto">
+                            See how it works
+                        </a>
+                    </div>
+                    <p class="mt-3 text-[13px] font-medium text-muted">
+                        No account, no setup · takes under a minute
+                    </p>
                 </div>
-                {{-- Fake board content --}}
-                <div class="px-4 py-5 text-left sm:px-6">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">CS 101</p>
-                    <p class="text-[18px] font-bold tracking-tight text-ink">Intro to Computer Science</p>
-                    <div class="mt-4 space-y-2">
-                        <div class="flex items-center justify-between rounded-lg border border-sky/30 bg-base/60 px-3 py-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="shrink-0 rounded bg-sky/40 px-1.5 py-0.5 text-[10px] font-bold text-muted">PDF</span>
-                                <span class="truncate text-[13px] font-semibold text-neon">Week 7 quiz solutions</span>
-                            </div>
-                            <span class="shrink-0 rounded-full bg-neon px-2.5 py-0.5 text-[11px] font-semibold text-white">Download</span>
+
+                <div class="group relative mx-auto w-full max-w-md lg:max-w-none" role="img" aria-label="Example board: the Computer Science Level 100 class, showing its CS 101 course with three shared files (a quiz solution, lecture slides and a past paper), each downloadable.">
+                    <div class="pointer-events-none absolute inset-2 -z-10 -rotate-1 rounded-2xl border border-sky bg-surface sm:-rotate-3" aria-hidden="true"></div>
+                    <div class="overflow-hidden rounded-2xl border border-sky bg-surface text-left shadow-[0_18px_50px_-22px_rgba(0,0,0,0.3)] transition-transform duration-300 rotate-1 group-hover:rotate-0 sm:rotate-2" aria-hidden="true">
+                        <div class="flex items-center gap-1.5 border-b border-sky px-4 py-3">
+                            <span class="h-2.5 w-2.5 rounded-full bg-red-400/70" aria-hidden="true"></span>
+                            <span class="h-2.5 w-2.5 rounded-full bg-yellow-400/70" aria-hidden="true"></span>
+                            <span class="h-2.5 w-2.5 rounded-full bg-green-400/70" aria-hidden="true"></span>
+                            <span class="ml-2 truncate text-[12px] text-muted">slipnote.app/cs-level-100/c/cs-101</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg border border-sky/30 bg-base/60 px-3 py-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="shrink-0 rounded bg-sky/40 px-1.5 py-0.5 text-[10px] font-bold text-muted">PPTX</span>
-                                <span class="truncate text-[13px] font-semibold text-neon">Lecture 12 slides</span>
+                        <div class="flex items-start justify-between gap-3 px-4 py-4 sm:px-5">
+                            <div class="min-w-0">
+                                <p class="text-[11px] font-semibold text-muted">CS · Level 100</p>
+                                <p class="mt-0.5 text-[14px] font-bold text-teal sm:text-[15px]">CS 101 · Intro to Computer Science</p>
                             </div>
-                            <span class="shrink-0 rounded-full bg-neon px-2.5 py-0.5 text-[11px] font-semibold text-white">Download</span>
+                            <span class="hidden text-[12.5px] text-muted sm:block">24 contributors</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-lg border border-sky/30 bg-base/60 px-3 py-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <span class="shrink-0 rounded bg-sky/40 px-1.5 py-0.5 text-[10px] font-bold text-muted">PDF</span>
-                                <span class="truncate text-[13px] font-semibold text-neon">2024 past paper</span>
-                            </div>
-                            <span class="shrink-0 rounded-full bg-neon px-2.5 py-0.5 text-[11px] font-semibold text-white">Download</span>
-                        </div>
+                        <ul class="divide-y divide-sky border-t border-sky">
+                            @foreach ([
+                                ['kind' => 'PDF',  'tag' => 'filetag filetag-pdf',  'title' => 'Week 7 quiz solutions', 'by' => 'Kwame'],
+                                ['kind' => 'PPTX', 'tag' => 'filetag filetag-pptx', 'title' => 'Lecture 12 slides',      'by' => 'Ama'],
+                                ['kind' => 'PDF',  'tag' => 'filetag filetag-pdf',  'title' => '2024 past paper',        'by' => 'Yaw'],
+                            ] as $file)
+                                <li class="flex items-center gap-2 px-3 py-3.5 transition hover:bg-base/60 sm:gap-3 sm:px-5">
+                                    <span class="inline-flex w-10 shrink-0 justify-center rounded-md px-2 py-1 text-[10px] font-bold tracking-wide sm:w-11 {{ $file['tag'] }}">{{ $file['kind'] }}</span>
+                                    <span class="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink sm:text-[14px]">{{ $file['title'] }}</span>
+                                    <span class="hidden text-[12.5px] text-muted sm:block">{{ $file['by'] }}</span>
+                                    <span class="shrink-0 rounded-full border border-sky bg-base px-2.5 py-1 text-[11px] font-semibold text-ink shadow-[0_1px_2px_rgba(51,29,44,0.12)] sm:px-3 sm:text-[12px]">Open</span>
+                                </li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
+            </div>
+        </section>
+    </section>
+
+    <section id="how" class="border-t border-sky bg-surface px-4 py-10 sm:px-5 sm:py-20">
+        <div class="mx-auto max-w-6xl">
+            <h2 class="mb-7 text-center text-[24px] font-semibold tracking-[-0.01em] text-teal sm:mb-12 sm:text-[28px]">
+                Three steps to a
+                <span class="relative inline-block whitespace-nowrap">
+                    shared board
+                    <svg class="absolute -bottom-1.5 left-0 w-full text-neon" height="10" viewBox="0 0 240 10" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                        <path d="M3 7 Q 40 2 80 5 T 160 4 T 237 5" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+                    </svg>
+                </span>
+            </h2>
+            <ol class="grid gap-5 sm:grid-cols-3">
+                @foreach ([
+                    [
+                        'title' => 'Create your board',
+                        'body' => 'Name it for your class and add a space for each course.',
+                        // duotone: solid document body + solid plus badge
+                        'icon' => '<path class="opacity-40" d="M6 2h7l6 6v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M13 2l6 6h-6V2z"/><circle cx="17" cy="17" r="5"/><path d="M17 14.6v4.8M14.6 17h4.8" stroke="white" stroke-width="2" stroke-linecap="round"/>',
+                    ],
+                    [
+                        'title' => 'Share the link',
+                        'body' => 'Drop it in your class group chat. That\'s it.',
+                        // duotone: solid nodes + solid connector bars
+                        'icon' => '<path class="opacity-40" d="M7.6 10.6l8.8-4.9 1.5 2.6-8.8 4.9zM9.1 11.1l8.8 4.9-1.5 2.6-8.8-4.9z"/><circle cx="6" cy="12" r="3.4"/><circle cx="18" cy="5" r="3.4"/><circle cx="18" cy="19" r="3.4"/>',
+                    ],
+                    [
+                        'title' => 'Everyone uploads',
+                        'body' => 'Classmates open a course and add slides, papers and notes.',
+                        // duotone: solid tray + solid arrow
+                        'icon' => '<path class="opacity-40" d="M3 14h18v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 3l5 5h-3.2v6.5h-3.6V8H7z"/>',
+                    ],
+                ] as $step)
+                    <li class="rounded-3xl border border-sky bg-base px-5 py-5 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-9 sm:py-10">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-neon/10 text-neon sm:h-12 sm:w-12">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
+                                {!! $step['icon'] !!}
+                            </svg>
+                        </span>
+                        <p class="mt-4 text-[18px] font-semibold leading-[1.1] tracking-[-0.02em] text-teal sm:mt-6 sm:text-[30px]">{{ $step['title'] }}</p>
+                        <p class="mt-2.5 text-[15px] leading-relaxed text-muted">{{ $step['body'] }}</p>
+                    </li>
+                @endforeach
+            </ol>
+
+            <p class="mt-8 text-center text-[13px] text-muted sm:mt-14">
+                PDFs, Word, PowerPoint &amp; images · sorted into sections ·
+                upload with or without your name · only you get the private owner link
+            </p>
+        </div>
+    </section>
+
+    <section id="why" class="border-t border-sky bg-surface px-4 py-9 sm:px-5 sm:py-20">
+        <div class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+            <div>
+                <h2 class="max-w-md text-[24px] font-semibold leading-[1.08] tracking-[-0.03em] text-teal sm:text-[34px]">
+                    Better than losing files in a busy class group chat
+                </h2>
+                <p class="mt-3 max-w-lg text-[15px] leading-relaxed text-muted sm:mt-4 sm:text-[16px]">
+                    Group chats are great for talking, but files get buried fast.
+                    SlipNote keeps sharing just as easy (drop a file in) while keeping everything findable a week later.
+                </p>
+            </div>
+
+            <div class="grid gap-5 sm:grid-cols-2">
+                @foreach ([
+                    [
+                        'title' => 'Works anywhere',
+                        'body' => 'Opens in any browser on any phone or laptop — nothing to install.',
+                        // duotone: solid bolt + faded disc
+                        'icon' => '<circle class="opacity-40" cx="12" cy="12" r="10"/><path d="M13 4 6.5 13.2H11l-1 6.8 7-9.5h-4.4z"/>',
+                    ],
+                    [
+                        'title' => 'Always findable',
+                        'body' => 'The newest files sit right on top, so nothing scrolls out of reach weeks later.',
+                        // duotone: solid bars + faded panel
+                        'icon' => '<rect class="opacity-40" x="3" y="3" width="18" height="18" rx="3"/><circle cx="7.5" cy="8" r="1.4"/><rect x="10.5" y="7" width="7.5" height="2" rx="1"/><circle cx="7.5" cy="12" r="1.4"/><rect x="10.5" y="11" width="7.5" height="2" rx="1"/><circle cx="7.5" cy="16" r="1.4"/><rect x="10.5" y="15" width="7.5" height="2" rx="1"/>',
+                    ],
+                    [
+                        'title' => 'Share on your terms',
+                        'body' => 'Add your name or stay anonymous — your call on every file you upload.',
+                        // duotone: solid lock body + faded open shackle
+                        'icon' => '<path class="opacity-40" d="M9 10V7a4.5 4.5 0 0 1 8.5-2l-2.6 1.1A1.8 1.8 0 0 0 11.4 7v3z"/><rect x="4" y="10" width="13" height="11" rx="2.5"/>',
+                    ],
+                    [
+                        'title' => 'Safer ownership',
+                        'body' => 'One person owns the board, with a private link to recover access anytime.',
+                        // duotone: faded shield + solid check
+                        'icon' => '<path class="opacity-40" d="M12 2.5l8 3.2V11c0 5-3.3 8.4-8 10-4.7-1.6-8-5-8-10V5.7z"/><path d="M8.5 11.5l2.4 2.4 4.4-4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+                    ],
+                ] as $benefit)
+                    <div class="rounded-3xl border border-sky bg-base px-5 py-6 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-7 sm:py-8">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-neon/10 text-neon">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
+                                {!! $benefit['icon'] !!}
+                            </svg>
+                        </span>
+                        <p class="mt-5 text-[17px] font-semibold text-teal">{{ $benefit['title'] }}</p>
+                        <p class="mt-2.5 text-[14px] leading-relaxed text-muted">{{ $benefit['body'] }}</p>
+                    </div>
+                @endforeach
             </div>
         </div>
     </section>
 
-    {{-- HOW IT WORKS: three sequential steps. Sequential reads better than
-         parallel for a 30-second product. --}}
-    <section id="how" class="border-t border-sky/40 bg-surface/50 px-5 py-12">
-        <div class="mx-auto max-w-4xl">
-            <p class="mb-8 text-center text-[22px] font-bold tracking-tight text-ink sm:text-[26px]">
-                Three steps. Thirty seconds.
-            </p>
-            <ol class="grid gap-5 sm:grid-cols-3">
-                <li class="relative rounded-2xl border border-sky/30 bg-base px-6 py-5 shadow-sm">
-                    <span class="absolute -top-3 left-5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-neon text-[13px] font-bold text-white shadow-sm">1</span>
-                    <p class="mt-1 text-[15px] font-bold text-ink">Name your class</p>
-                    <p class="mt-1.5 text-[13.5px] leading-relaxed text-muted">
-                        Type the course code or class name. Takes 5 seconds.
+    <section class="border-t border-sky px-4 py-10 sm:px-5 sm:py-20">
+        <div class="mx-auto max-w-5xl rounded-[2rem] border border-sky bg-surface px-5 py-6 shadow-[0_8px_24px_-22px_rgba(51,29,44,0.3)] sm:px-8 sm:py-10">
+            <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
+                    <h2 class="max-w-xl text-[24px] font-semibold leading-[1.08] tracking-[-0.03em] text-teal sm:text-[34px]">
+                        Make your class's board in a minute
+                    </h2>
+                    <p class="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-muted sm:mt-3">
+                        Name it, share the link, and let everyone add their files. No account, no setup.
                     </p>
-                </li>
-                <li class="relative rounded-2xl border border-sky/30 bg-base px-6 py-5 shadow-sm">
-                    <span class="absolute -top-3 left-5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-neon text-[13px] font-bold text-white shadow-sm">2</span>
-                    <p class="mt-1 text-[15px] font-bold text-ink">Share the link</p>
-                    <p class="mt-1.5 text-[13.5px] leading-relaxed text-muted">
-                        Drop it in your class group chat. That's it.
-                    </p>
-                </li>
-                <li class="relative rounded-2xl border border-sky/30 bg-base px-6 py-5 shadow-sm">
-                    <span class="absolute -top-3 left-5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-neon text-[13px] font-bold text-white shadow-sm">3</span>
-                    <p class="mt-1 text-[15px] font-bold text-ink">Everyone uploads</p>
-                    <p class="mt-1.5 text-[13.5px] leading-relaxed text-muted">
-                        Classmates add slides, papers, notes. No sign-ups.
-                    </p>
-                </li>
-            </ol>
-
-            {{-- Quick facts strip — what feature cards used to be, condensed.
-                 Reads as a footnote, not a sales pitch. --}}
-            <p class="mt-10 text-center text-[13px] text-muted">
-                PDFs, Word, PowerPoint &amp; images · sorted by section ·
-                anonymous uploads supported · owner link kept private
-            </p>
+                </div>
+                <div class="flex flex-col items-center gap-2 lg:items-stretch">
+                    <a href="{{ route('start') }}"
+                       class="inline-flex items-center justify-center rounded-full bg-neon px-6 py-3 text-[15px] font-bold text-white shadow-[0_4px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_var(--color-teal)] active:translate-y-1 active:shadow-none">
+                        Create your board
+                    </a>
+                </div>
+            </div>
         </div>
-    </section>
-
-    {{-- FINAL CTA --}}
-    <section class="px-5 py-14 text-center">
-        <h2 class="text-2xl font-bold tracking-tight text-ink sm:text-3xl">
-            Start a board in 30 seconds.
-        </h2>
-        <p class="mx-auto mt-3 max-w-md text-[15px] text-muted">
-            No credit card, no email, no fine print. Just a link to share with your class.
-        </p>
-        <a href="{{ route('start') }}"
-           class="mt-6 inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-lg bg-neon px-6 py-3.5 text-[15px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
-            Create your board
-            <span aria-hidden="true">›</span>
-        </a>
     </section>
 </x-layouts.app>

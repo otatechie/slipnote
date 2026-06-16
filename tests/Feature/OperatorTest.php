@@ -21,14 +21,14 @@ class OperatorTest extends TestCase
     {
         parent::setUp();
         $this->setUpWorkspace();
-        Storage::fake('public');
+        Storage::fake('local');
         config(['noteshare.operator_secret' => 'op-secret']);
 
         $course = Course::create(['code' => 'MATH 251', 'title' => 'Calc', 'slug' => 'math-251']);
         $this->material = $course->materials()->create([
             'section' => 'notes',
             'original_filename' => 'bad.pdf',
-            'stored_path' => UploadedFile::fake()->create('bad.pdf', 10)->store('materials', 'public'),
+            'stored_path' => UploadedFile::fake()->create('bad.pdf', 10)->store('materials', 'local'),
             'manage_token' => 'tok-'.str_repeat('a', 36),
         ]);
         $this->material->reports()->create(['reason' => 'spam', 'reporter_ip' => '1.2.3.4']);
@@ -53,7 +53,7 @@ class OperatorTest extends TestCase
         $this->post(route('operator.login'), ['secret' => 'nope'])
             ->assertSessionHasErrors(['secret']);
 
-        $this->assertNotSame(true, session('operator_ok'));
+        $this->assertNull(session('operator_fp'));
     }
 
     public function test_correct_secret_unlocks_and_lists_reported_files(): void
@@ -61,7 +61,7 @@ class OperatorTest extends TestCase
         $this->post(route('operator.login'), ['secret' => 'op-secret'])
             ->assertRedirect(route('operator.dashboard'));
 
-        $this->assertTrue(session('operator_ok'));
+        $this->assertSame(hash('sha256', 'op-secret'), session('operator_fp'));
 
         $this->get(route('operator.dashboard'))
             ->assertOk()
@@ -69,21 +69,36 @@ class OperatorTest extends TestCase
             ->assertSee('spam');      // the report reason
     }
 
+    public function test_rotating_the_operator_secret_invalidates_existing_sessions(): void
+    {
+        // Authenticated against the old secret.
+        $this->post(route('operator.login'), ['secret' => 'op-secret'])
+            ->assertRedirect(route('operator.dashboard'));
+
+        // Operator rotates the secret in the environment.
+        config(['noteshare.operator_secret' => 'rotated-secret']);
+
+        // The old session no longer authenticates — back to the login form.
+        $this->get(route('operator.dashboard'))
+            ->assertOk()
+            ->assertSee('Operator secret', false);
+    }
+
     public function test_operator_can_remove_a_reported_file(): void
     {
         $path = $this->material->stored_path;
 
-        $this->withSession(['operator_ok' => true])
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
             ->post(route('operator.remove', $this->material->id))
             ->assertRedirect(route('operator.dashboard'));
 
         $this->assertSame(0, Material::count());
-        Storage::disk('public')->assertMissing($path);
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_operator_can_dismiss_reports_without_deleting_the_file(): void
     {
-        $this->withSession(['operator_ok' => true])
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
             ->post(route('operator.dismiss', $this->material->id))
             ->assertRedirect(route('operator.dashboard'));
 

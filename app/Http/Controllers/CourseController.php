@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlockedUpload;
 use App\Models\Course;
 use App\Models\Material;
 use App\Services\TelegramNotifier;
@@ -9,6 +10,8 @@ use App\Support\RecentWorkspaces;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class CourseController extends Controller
@@ -72,7 +75,10 @@ class CourseController extends Controller
             'original_filename' => $m->original_filename,
             'fileTypeLabel' => $m->fileTypeLabel(),
             'uploader_name' => $m->uploader_name,
-            'created_at_human' => $m->created_at->diffForHumans(),
+            // "just now" reads better than "0 seconds ago" for fresh uploads.
+            'created_at_human' => $m->created_at->diffInSeconds() < 45
+                ? 'just now'
+                : $m->created_at->diffForHumans(),
             'download_url' => filled($m->manage_token)
                 ? route('material.download', ['token' => $m->manage_token])
                 : null,
@@ -109,7 +115,7 @@ class CourseController extends Controller
         $materials = $course->materials()->whereIn('id', $ids)->get();
 
         foreach ($materials as $material) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($material->stored_path);
+            Storage::disk('local')->delete($material->stored_path);
             $material->delete();
         }
 
@@ -227,7 +233,7 @@ class CourseController extends Controller
         foreach ($files as $file) {
             // Refuse files the operator previously removed (exact-content match).
             $hash = hash_file('sha256', $file->getRealPath());
-            if (\App\Models\BlockedUpload::where('content_hash', $hash)->exists()) {
+            if (BlockedUpload::where('content_hash', $hash)->exists()) {
                 $blocked++;
 
                 continue;
@@ -245,9 +251,9 @@ class CourseController extends Controller
                 'section' => $data['section'],
                 'title' => $title,
                 'original_filename' => $file->getClientOriginalName(),
-                'stored_path' => $file->store('materials', 'public'),
+                'stored_path' => $file->store('materials', 'local'),
                 'uploader_name' => $uploaderName,
-                'manage_token' => \Illuminate\Support\Str::random(40),
+                'manage_token' => Str::random(40),
                 'file_size' => $size,
             ]);
 

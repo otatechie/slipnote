@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CoursesController;
+use App\Http\Controllers\OperatorController;
+use App\Http\Controllers\WorkspaceRecoveryController;
+use App\Http\Controllers\WorkspacesController;
 use App\Models\Material;
 use App\Models\Workspace;
 use Illuminate\Support\Facades\Route;
@@ -14,10 +19,10 @@ Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrF
 Route::view('/', 'welcome')->name('welcome');
 
 // Workspace create/open hub.
-Route::get('/start', [App\Http\Controllers\WorkspacesController::class, 'index'])->name('start');
-Route::post('/workspaces', [App\Http\Controllers\WorkspacesController::class, 'store'])->name('workspaces.store');
-Route::post('/workspaces/open', [App\Http\Controllers\WorkspacesController::class, 'open'])->name('workspaces.open');
-Route::post('/workspaces/forget', [App\Http\Controllers\WorkspacesController::class, 'forget'])->name('workspaces.forget');
+Route::get('/start', [WorkspacesController::class, 'index'])->name('start');
+Route::post('/workspaces', [WorkspacesController::class, 'store'])->name('workspaces.store');
+Route::post('/workspaces/open', [WorkspacesController::class, 'open'])->name('workspaces.open');
+Route::post('/workspaces/forget', [WorkspacesController::class, 'forget'])->name('workspaces.forget');
 
 // Static legal pages. Declared BEFORE the /{workspace} catch-all so the
 // slugs "privacy" and "terms" aren't read as workspace names.
@@ -31,9 +36,9 @@ Route::view('/terms', 'legal.terms')->name('terms');
 Route::get('/download/{token}', function (string $token) {
     $material = Material::where('manage_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
-    abort_unless(Storage::disk('public')->exists($material->stored_path), 404);
+    abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
 
-    return Storage::disk('public')->download(
+    return Storage::disk('local')->download(
         $material->stored_path,
         $material->original_filename,
     );
@@ -53,7 +58,7 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 
     abort_unless($byToken || $byOwner, 403);
 
-    Storage::disk('public')->delete($material->stored_path);
+    Storage::disk('local')->delete($material->stored_path);
     $material->delete();
 
     return redirect()
@@ -67,30 +72,30 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 // Operator moderation dashboard (site admin). Lists reported files across all
 // workspaces; gated by OPERATOR_SECRET held in session. Declared BEFORE the
 // /{workspace} catch-all so "operator" isn't read as a workspace slug.
-Route::get('/operator', [App\Http\Controllers\OperatorController::class, 'dashboard'])->name('operator.dashboard');
-Route::post('/operator/login', [App\Http\Controllers\OperatorController::class, 'login'])->name('operator.login');
-Route::post('/operator/logout', [App\Http\Controllers\OperatorController::class, 'logout'])->name('operator.logout');
-Route::post('/operator/material/{material}/remove', [App\Http\Controllers\OperatorController::class, 'remove'])->name('operator.remove');
-Route::post('/operator/material/{material}/dismiss', [App\Http\Controllers\OperatorController::class, 'dismiss'])->name('operator.dismiss');
+Route::get('/operator', [OperatorController::class, 'dashboard'])->name('operator.dashboard');
+Route::post('/operator/login', [OperatorController::class, 'login'])->name('operator.login');
+Route::post('/operator/logout', [OperatorController::class, 'logout'])->name('operator.logout');
+Route::post('/operator/material/{material}/remove', [OperatorController::class, 'remove'])->name('operator.remove');
+Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
 
 // Everything inside a workspace. ResolveWorkspace sets the current tenant
 // from the {workspace} slug (unknown slug → 404) before any scoped query.
 // Declared last so the static routes above win.
 Route::middleware('workspace')->group(function () {
-    Route::get('/{workspace}', [App\Http\Controllers\CoursesController::class, 'index'])->name('courses.index');
-    Route::post('/{workspace}/courses', [App\Http\Controllers\CoursesController::class, 'store'])->name('courses.store');
-    Route::post('/{workspace}/courses/reorder', [App\Http\Controllers\CoursesController::class, 'reorder'])->name('courses.reorder');
-    Route::put('/{workspace}/c/{slug}', [App\Http\Controllers\CoursesController::class, 'update'])->name('courses.update');
-    Route::post('/{workspace}/unlock', [App\Http\Controllers\CoursesController::class, 'unlock'])->name('courses.unlock');
-    Route::post('/{workspace}/recovery-email', [App\Http\Controllers\CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
+    Route::get('/{workspace}', [CoursesController::class, 'index'])->name('courses.index');
+    Route::post('/{workspace}/courses', [CoursesController::class, 'store'])->name('courses.store');
+    Route::post('/{workspace}/courses/reorder', [CoursesController::class, 'reorder'])->name('courses.reorder');
+    Route::put('/{workspace}/c/{slug}', [CoursesController::class, 'update'])->name('courses.update');
+    Route::post('/{workspace}/unlock', [CoursesController::class, 'unlock'])->name('courses.unlock');
+    Route::post('/{workspace}/recovery-email', [CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
 
-    Route::get('/{workspace}/c/{slug}', [App\Http\Controllers\CourseController::class, 'show'])->name('course.show');
-    Route::post('/{workspace}/c/{slug}/upload', [App\Http\Controllers\CourseController::class, 'upload'])->name('course.upload');
+    Route::get('/{workspace}/c/{slug}', [CourseController::class, 'show'])->name('course.show');
+    Route::post('/{workspace}/c/{slug}/upload', [CourseController::class, 'upload'])->name('course.upload');
 
-    Route::delete('/{workspace}/c/{slug}/materials', [App\Http\Controllers\CourseController::class, 'bulkDelete'])->name('course.bulk-delete');
+    Route::delete('/{workspace}/c/{slug}/materials', [CourseController::class, 'bulkDelete'])->name('course.bulk-delete');
 
-    Route::post('/{workspace}/c/{slug}/report/{material}', [App\Http\Controllers\CourseController::class, 'report'])->name('material.report');
+    Route::post('/{workspace}/c/{slug}/report/{material}', [CourseController::class, 'report'])->name('material.report');
 
-    Route::get('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
-    Route::post('/{workspace}/recover', [App\Http\Controllers\WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');
+    Route::get('/{workspace}/recover', [WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
+    Route::post('/{workspace}/recover', [WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');
 });

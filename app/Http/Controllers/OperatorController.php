@@ -27,9 +27,21 @@ class OperatorController extends Controller
         return filled(config('noteshare.operator_secret'));
     }
 
+    /**
+     * Session carries a fingerprint of the secret it was authenticated with.
+     * Verifying it against the CURRENT secret means rotating OPERATOR_SECRET
+     * immediately invalidates every existing operator session (as the
+     * deployment guidance promises) — not just on expiry/manual logout.
+     */
+    private function secretFingerprint(): string
+    {
+        return hash('sha256', (string) config('noteshare.operator_secret'));
+    }
+
     private function authed(): bool
     {
-        return session('operator_ok') === true;
+        return is_string(session('operator_fp'))
+            && hash_equals($this->secretFingerprint(), session('operator_fp'));
     }
 
     /** The dashboard (or the login form when not authenticated). */
@@ -66,7 +78,9 @@ class OperatorController extends Controller
         if ($given !== '' && hash_equals((string) config('noteshare.operator_secret'), $given)) {
             RateLimiter::clear($key);
             $request->session()->regenerate(); // anti-fixation on privilege change
-            session(['operator_ok' => true]);
+            // Bind the session to THIS secret value; rotating it logs the
+            // session out (authed() compares against the current secret).
+            session(['operator_fp' => $this->secretFingerprint()]);
 
             return redirect()->route('operator.dashboard');
         }
@@ -78,7 +92,7 @@ class OperatorController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->forget('operator_ok');
+        $request->session()->forget('operator_fp');
 
         return redirect()->route('operator.dashboard');
     }
@@ -90,12 +104,12 @@ class OperatorController extends Controller
 
         // Blocklist the exact bytes so the same file can't be re-uploaded
         // (anonymous whack-a-mole defense). Hash before the file is deleted.
-        if (Storage::disk('public')->exists($material->stored_path)) {
-            $hash = hash('sha256', Storage::disk('public')->get($material->stored_path));
+        if (Storage::disk('local')->exists($material->stored_path)) {
+            $hash = hash('sha256', Storage::disk('local')->get($material->stored_path));
             BlockedUpload::firstOrCreate(['content_hash' => $hash]);
         }
 
-        Storage::disk('public')->delete($material->stored_path);
+        Storage::disk('local')->delete($material->stored_path);
         $material->delete();
 
         return redirect()->route('operator.dashboard')->with('done', 'File removed.');

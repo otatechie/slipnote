@@ -111,6 +111,20 @@ class Workspace extends Model
     }
 
     /**
+     * Generate a fresh owner secret and its hash without persisting it yet.
+     * Lets the caller avoid retiring the current owner link unless the
+     * replacement link has actually been handed off successfully.
+     *
+     * @return array{0:string,1:string}
+     */
+    public function draftOwnerSecretRotation(): array
+    {
+        $secret = Str::random(40);
+
+        return [$secret, Hash::make($secret)];
+    }
+
+    /**
      * Rotate the owner secret: generate a new one, store only its hash,
      * return the new plaintext (to email). The previous owner link stops
      * working — by design (a recovered/lost link should die). Preserves the

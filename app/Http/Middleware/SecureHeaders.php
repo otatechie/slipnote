@@ -17,6 +17,13 @@ class SecureHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
+        // HSTS in production only — forces HTTPS for a year (incl. subdomains)
+        // so the browser never downgrades to http:// after the first visit.
+        // Dev runs over http://, where this header would be harmful.
+        if (app()->environment('production')) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        }
+
         // CSP in production only — Vite dev server runs off a separate
         // origin we don't want polluting the prod policy.
         if (app()->environment('production')) {

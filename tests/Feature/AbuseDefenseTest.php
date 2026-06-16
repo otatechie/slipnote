@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\BlockedUpload;
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\RateLimiter;
@@ -35,7 +36,7 @@ class AbuseDefenseTest extends TestCase
     {
         parent::setUp();
         $this->setUpWorkspace();
-        Storage::fake('public');
+        Storage::fake('local');
         RateLimiter::clear('upload:127.0.0.1');
         $this->course = Course::create(['code' => 'MATH 251', 'title' => 'Calc', 'slug' => 'math-251']);
     }
@@ -67,11 +68,11 @@ class AbuseDefenseTest extends TestCase
         $material = $this->course->materials()->create([
             'section' => 'notes',
             'original_filename' => 'bad.pdf',
-            'stored_path' => $this->pdf('malicious')->store('materials', 'public'),
+            'stored_path' => $this->pdf('malicious')->store('materials', 'local'),
             'manage_token' => 'tok-'.str_repeat('a', 36),
         ]);
 
-        $this->withSession(['operator_ok' => true])
+        $this->withSession(['operator_fp' => hash('sha256', 'op')])
             ->post(route('operator.remove', $material->id))
             ->assertRedirect();
 
@@ -113,6 +114,6 @@ class AbuseDefenseTest extends TestCase
         $this->post(route('workspaces.store'), ['name' => 'Late Board'])
             ->assertSessionHasErrors(['name']);
 
-        $this->assertNull(\App\Models\Workspace::where('slug', 'late-board')->first());
+        $this->assertNull(Workspace::where('slug', 'late-board')->first());
     }
 }
