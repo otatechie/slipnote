@@ -57,6 +57,7 @@ class CoursesController extends Controller
 
         $used = $workspace->storageBytes();
         $cap = (int) config('noteshare.workspace_storage_bytes');
+        $isOwner = $this->isOwner();
 
         return Inertia::render('CoursesPage', [
             'workspace' => ['name' => $workspace->name, 'slug' => $workspace->slug],
@@ -70,9 +71,10 @@ class CoursesController extends Controller
                 'materials_max_created_at' => $c->materials_max_created_at,
             ]),
             'totalCourses' => Course::count(),
-            'isOwner' => $this->isOwner(),
+            'isOwner' => $isOwner,
             'recoveryAvailable' => ! in_array(config('mail.default'), ['log', 'array', null], true),
             'needsRecoveryEmail' => blank($workspace->recovery_email),
+            'currentRecoveryEmail' => $isOwner ? $workspace->recovery_email : null,
             'storageUsed' => $used,
             'storageCap' => $cap,
             'storagePct' => $cap > 0 ? min(100, (int) round($used / $cap * 100)) : 0,
@@ -152,8 +154,23 @@ class CoursesController extends Controller
         abort_unless($this->isOwner(), 403);
 
         $data = $request->validate([
-            'code' => 'required|string|max:40',
+            // A course code must contain a letter (e.g. "PHYS 101") — blocks
+            // all-numeric junk like "123456". And it must be unique within
+            // THIS board: Course queries are auto-scoped to the current
+            // workspace (WorkspaceScope), so this rule only looks at this
+            // board — other boards keep their own "PHYS 101".
+            'code' => [
+                'required', 'string', 'max:40', 'regex:/[a-zA-Z]/',
+                function ($attr, $value, $fail) {
+                    $exists = Course::whereRaw('lower(trim(code)) = ?', [mb_strtolower(trim($value))])->exists();
+                    if ($exists) {
+                        $fail("This board already has a course called “{$value}”. Pick a different code.");
+                    }
+                },
+            ],
             'title' => 'required|string|max:120',
+        ], [
+            'code.regex' => 'A course code should include letters, like “PHYS 101”.',
         ]);
 
         $base = Str::slug($data['code']) ?: 'course';
@@ -188,8 +205,21 @@ class CoursesController extends Controller
         $course = Course::where('slug', $slug)->firstOrFail();
 
         $data = $request->validate([
-            'code' => 'required|string|max:40',
+            'code' => [
+                'required', 'string', 'max:40', 'regex:/[a-zA-Z]/',
+                function ($attr, $value, $fail) use ($course) {
+                    // Unique within this board, ignoring the course being edited.
+                    $exists = Course::whereRaw('lower(trim(code)) = ?', [mb_strtolower(trim($value))])
+                        ->whereKeyNot($course->id)
+                        ->exists();
+                    if ($exists) {
+                        $fail("This board already has a course called “{$value}”. Pick a different code.");
+                    }
+                },
+            ],
             'title' => 'required|string|max:120',
+        ], [
+            'code.regex' => 'A course code should include letters, like “PHYS 101”.',
         ]);
 
         // Slug is left untouched: classmates' shared /c/{slug} links stay valid.

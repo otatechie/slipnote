@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use RuntimeException;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
 
@@ -78,6 +79,20 @@ class OwnerRecoveryTest extends TestCase
             );
     }
 
+    public function test_owner_panel_exposes_the_current_recovery_email_when_set(): void
+    {
+        $this->workspace->setRecoveryEmail('owner@example.com');
+        $this->unlockOwnerSession();
+
+        $this->get(route('courses.index', $this->wsParams()))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('isOwner', true)
+                ->where('needsRecoveryEmail', false)
+                ->where('currentRecoveryEmail', 'owner@example.com')
+            );
+    }
+
     public function test_recovery_panel_is_hidden_when_mail_is_not_deliverable(): void
     {
         config(['mail.default' => 'log']);
@@ -106,7 +121,7 @@ class OwnerRecoveryTest extends TestCase
         $this->assertFalse($this->workspace->fresh()->verifyOwner($oldSecret));
 
         // Mailed to the STORED address.
-        Mail::assertQueued(OwnerLinkRecovery::class, function ($mail) {
+        Mail::assertSent(OwnerLinkRecovery::class, function ($mail) {
             return $mail->hasTo('owner@example.com');
         });
     }
@@ -119,7 +134,7 @@ class OwnerRecoveryTest extends TestCase
             'email' => 'not-the-owner@example.com',
         ])->assertSessionHas('done', true);
 
-        Mail::assertNothingQueued();
+        Mail::assertNothingSent();
 
         // No-recovery-email workspace: identical outcome.
         [$other] = Workspace::provision('No Email Board');
@@ -128,7 +143,7 @@ class OwnerRecoveryTest extends TestCase
             'email' => 'anyone@example.com',
         ])->assertSessionHas('done', true);
 
-        Mail::assertNothingQueued();
+        Mail::assertNothingSent();
     }
 
     public function test_recovery_only_ever_mails_the_stored_address_not_the_typed_one(): void
@@ -139,7 +154,7 @@ class OwnerRecoveryTest extends TestCase
             'email' => 'real-owner@example.com',
         ]);
 
-        Mail::assertQueued(OwnerLinkRecovery::class, function ($mail) {
+        Mail::assertSent(OwnerLinkRecovery::class, function ($mail) {
             return $mail->hasTo('real-owner@example.com')
                 && ! $mail->hasTo('attacker@evil.com');
         });
@@ -160,7 +175,7 @@ class OwnerRecoveryTest extends TestCase
             'email' => 'owner@example.com',
         ])->assertSessionHas('done', true);
 
-        Mail::assertNothingQueued();
+        Mail::assertNothingSent();
     }
 
     public function test_recovery_is_isolated_between_workspaces(): void
@@ -175,6 +190,22 @@ class OwnerRecoveryTest extends TestCase
             'email' => 'alpha-owner@example.com',
         ]);
 
-        Mail::assertNothingQueued();
+        Mail::assertNothingSent();
+    }
+
+    public function test_mail_failure_does_not_retire_the_existing_owner_link(): void
+    {
+        $this->workspace->setRecoveryEmail('owner@example.com');
+        $oldSecret = $this->ownerSecret;
+
+        Mail::shouldReceive('to->send')
+            ->once()
+            ->andThrow(new RuntimeException('smtp failed'));
+
+        $this->post(route('workspace.recover.store', $this->wsParams()), [
+            'email' => 'owner@example.com',
+        ])->assertSessionHas('done', true);
+
+        $this->assertTrue($this->workspace->fresh()->verifyOwner($oldSecret));
     }
 }

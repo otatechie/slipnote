@@ -22,7 +22,7 @@ class TelegramNotifierTest extends TestCase
     {
         parent::setUp();
         $this->setUpWorkspace();
-        Storage::fake('public');
+        Storage::fake('local');
         $this->course = Course::create([
             'code' => 'PHYS 101',
             'title' => 'Intro Physics',

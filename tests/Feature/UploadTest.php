@@ -23,7 +23,7 @@ class UploadTest extends TestCase
     {
         parent::setUp();
         $this->setUpWorkspace();
-        Storage::fake('public');
+        Storage::fake('local');
         $this->course = Course::create([
             'code' => 'MATH 251',
             'title' => 'Calculus II',
@@ -51,7 +51,7 @@ class UploadTest extends TestCase
         $this->assertSame('notes', $material->section);
         $this->assertSame('lecture.pdf', $material->original_filename);
         $this->assertSame('Alex', $material->uploader_name);
-        Storage::disk('public')->assertExists($material->stored_path);
+        Storage::disk('local')->assertExists($material->stored_path);
     }
 
     public function test_a_file_downloads_via_its_unguessable_token(): void
@@ -59,7 +59,7 @@ class UploadTest extends TestCase
         $material = $this->course->materials()->create([
             'section' => 'notes',
             'original_filename' => 'lecture.pdf',
-            'stored_path' => UploadedFile::fake()->create('lecture.pdf', 10)->store('materials', 'public'),
+            'stored_path' => UploadedFile::fake()->create('lecture.pdf', 10)->store('materials', 'local'),
             'manage_token' => 'tok-'.str_repeat('a', 36),
         ]);
 
@@ -310,16 +310,16 @@ class UploadTest extends TestCase
         $material = $this->course->materials()->create([
             'section' => 'notes',
             'original_filename' => 'a.pdf',
-            'stored_path' => UploadedFile::fake()->create('a.pdf', 10)->store('materials', 'public'),
+            'stored_path' => UploadedFile::fake()->create('a.pdf', 10)->store('materials', 'local'),
             'manage_token' => 'secret-token-value',
         ]);
-        Storage::disk('public')->assertExists($material->stored_path);
+        Storage::disk('local')->assertExists($material->stored_path);
 
         $this->delete(route('material.destroy', ['material' => $material->id, 'token' => 'secret-token-value']))
             ->assertRedirect(route('course.show', $this->wsParams(['slug' => $this->course->slug])));
 
         $this->assertSame(0, Material::count());
-        Storage::disk('public')->assertMissing($material->stored_path);
+        Storage::disk('local')->assertMissing($material->stored_path);
     }
 
     public function test_wrong_token_does_not_delete(): void

@@ -45,7 +45,7 @@
                                 <summary class="flex cursor-pointer list-none items-center gap-1.5 text-[12px] text-muted marker:hidden">
                                     <span class="truncate">
                                         “{{ \Illuminate\Support\Str::limit($reasons->first()->reason, 80) }}”
-                                        @if ($reasons->count() > 1)<span class="text-muted/70">+{{ $reasons->count() - 1 }} more</span>@endif
+                                        @if ($reasons->count() > 1)<span class="text-muted">+{{ $reasons->count() - 1 }} more</span>@endif
                                     </span>
                                     <svg class="size-3 shrink-0 transition group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </summary>
@@ -88,11 +88,11 @@
                             <p class="mt-3 text-[13px] text-ink/80">This clears the reports on this file. The file stays up and visible to everyone.</p>
                             <div class="mt-5 flex items-center justify-end gap-2">
                                 <button type="button" onclick="this.closest('dialog').close()"
-                                        class="inline-flex min-h-10 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/40 hover:text-ink">Cancel</button>
+                                        class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/40 hover:text-ink">Cancel</button>
                                 <form method="POST" action="{{ route('operator.dismiss', $material->id) }}">
                                     @csrf
                                     <button type="submit"
-                                            class="inline-flex min-h-10 cursor-pointer items-center rounded-lg bg-teal px-5 text-[14px] font-semibold text-white transition hover:brightness-110">
+                                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-teal px-5 text-[14px] font-semibold text-white transition hover:brightness-110">
                                         Dismiss reports
                                     </button>
                                 </form>
@@ -109,11 +109,11 @@
                             <p class="mt-3 text-[13px] text-ink/80">This permanently deletes the file and its reports. This can’t be undone.</p>
                             <div class="mt-5 flex items-center justify-end gap-2">
                                 <button type="button" onclick="this.closest('dialog').close()"
-                                        class="inline-flex min-h-10 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/40 hover:text-ink">Cancel</button>
+                                        class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/40 hover:text-ink">Cancel</button>
                                 <form method="POST" action="{{ route('operator.remove', $material->id) }}">
                                     @csrf
                                     <button type="submit"
-                                            class="inline-flex min-h-10 cursor-pointer items-center rounded-lg bg-red-600/90 px-5 text-[14px] font-semibold text-white transition hover:bg-red-600">
+                                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-red-600/90 px-5 text-[14px] font-semibold text-white transition hover:bg-red-600">
                                         Remove file
                                     </button>
                                 </form>

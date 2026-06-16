@@ -160,18 +160,35 @@ class CourseTest extends TestCase
         $this->assertSame(0, Course::count());
     }
 
-    public function test_colliding_codes_get_a_unique_slug(): void
+    public function test_a_duplicate_code_in_the_same_board_is_rejected(): void
     {
         Course::create(['code' => 'PHYS 101', 'title' => 'First', 'slug' => 'phys-101']);
 
         $this->unlockOwnerSession();
 
+        // Same code (case-insensitive) in the same board is blocked.
         $this->post(route('courses.store', $this->wsParams()), [
-            'code' => 'PHYS 101',
+            'code' => 'phys 101',
             'title' => 'Second section',
-        ]);
+        ])->assertSessionHasErrors(['code']);
 
-        $this->assertSame('phys-101-2', Course::where('title', 'Second section')->value('slug'));
+        $this->assertSame(1, Course::count());
+    }
+
+    public function test_distinct_codes_that_slugify_the_same_still_get_a_unique_slug(): void
+    {
+        // "PHYS-101" and "PHYS 101" are different codes but slugify identically;
+        // the unique-slug plumbing must still keep their URLs distinct.
+        Course::create(['code' => 'PHYS 101', 'title' => 'First', 'slug' => 'phys-101']);
+
+        $this->unlockOwnerSession();
+
+        $this->post(route('courses.store', $this->wsParams()), [
+            'code' => 'PHYS-101',
+            'title' => 'Different code',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('phys-101-2', Course::where('title', 'Different code')->value('slug'));
     }
 
     public function test_a_created_course_is_reachable_at_its_page(): void
@@ -244,8 +261,8 @@ class CourseTest extends TestCase
         $m2 = $fresh->materials()->create(['section' => 'notes', 'original_filename' => 'b.pdf', 'stored_path' => 'x/b.pdf']);
         $m2->forceFill(['created_at' => now()])->saveQuietly();
 
-        // Default sort "active": ZZZ 999 (just uploaded) should be first
-        $this->get(route('courses.index', $this->wsParams()))
+        // Sort "active": ZZZ 999 (just uploaded) should be first
+        $this->get(route('courses.index', array_merge($this->wsParams(), ['sort' => 'active'])))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->where('courses.0.code', 'ZZZ 999')

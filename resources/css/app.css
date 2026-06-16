@@ -7,52 +7,261 @@
 @source '../**/*.vue';
 
 @theme {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Strichpunkt Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* SlipNote cream + forest + amber palette — warm library calm:
-       #F9F5F0 warm cream   → page background
-       #F2EAD3 light beige  → cards, panels, surface
-       #E5D9B8 deeper beige → soft borders, quiet panels (sky)
-       #F4991A amber        → buttons & links (primary accent)
-       #344F1F forest green → headings */
-    --color-base: #f2ead3;       /* page background — light beige */
-    --color-surface: #fffdf8;    /* cards / panels — near-white (lifts off beige) */
-    --color-teal: #344f1f;       /* headings — forest green */
-    --color-neon: #f4991a;       /* buttons & links — amber */
-    --color-sky: #e0d4b0;        /* deeper beige — soft borders, quiet panels */
-    --color-ink: #1f1f23;        /* body text — near-black */
-    --color-muted: #6b6b6b;      /* secondary text — mid grey */
+    /* SlipNote warm plum palette:
+       cream page, lighter-cream cards, deep-plum headings, with a
+       rose-plum accent for links & small accents. Source palette is
+       #331D2C / #3F2E3E / #A78295 / #EFE1D1; the mauve and accent are
+       darkened/saturated so links and muted text pass WCAG AA on cream.
+       Token names are kept for stability; values are now semantic:
+       teal = headings, neon = accent, sky = hairline borders. */
+    --color-base: #efe1d1;       /* page background — warm cream (palette) */
+    --color-surface: #f7efe6;    /* cards / panels — lighter cream, lifts off page */
+    --color-teal: #331d2c;       /* headings — darkest plum (palette) */
+    --color-neon: #8a4f6d;       /* links & accents — rose-plum (palette family, saturated for CTA pop) */
+    --color-sky: #dcc9b8;        /* hairline borders, quiet fills — cream-toned */
+    --color-ink: #3f2e3e;        /* body text — wine (palette) */
+    --color-muted: #6e5563;      /* secondary text — darkened mauve, AA-safe on cream */
 }
 
-/* Dark mode — warm near-black chrome with amber as the accent
-   (buttons, links) and pale green for headings. */
+:root {
+    color-scheme: light;
+}
+
+html[data-theme='dark'] {
+    color-scheme: dark;
+}
+
+html[data-theme='dark'],
+html[data-theme='system'][data-system-theme='dark'] {
+    --color-base: #1f1e1d;       /* warm near-black — page (Claude-style greige, not pure black) */
+    --color-surface: #2e2d2a;    /* one value-step up — cards/panels (elevation by lightness) */
+    --color-teal: #f5f3f0;       /* warm near-white — headings */
+    --color-neon: #cf92ad;       /* rose-plum accent — used sparingly for links & small accents */
+    --color-sky: #3a3836;        /* subtle warm value-step border — not a colored hairline */
+    --color-ink: #e8e6e3;        /* warm off-white — body text */
+    --color-muted: #bcb8b2;      /* warm grey — secondary text, AA-safe even at /70 */
+}
+
 @media (prefers-color-scheme: dark) {
-    :root {
-        --color-base: #16140f;       /* near-black with faint warm tint */
-        --color-surface: #211e16;    /* lifted neutral — cards/panels */
-        --color-teal: #a3c585;       /* pale green — headings */
-        --color-neon: #f4991a;       /* amber — buttons & links */
-        --color-sky: #383326;        /* warm slate — borders, fills */
-        --color-ink: #ededee;        /* near-white — body text */
-        --color-muted: #a3a3aa;      /* muted grey — secondary text */
+    :root:not([data-theme]),
+    html[data-theme='system'] {
+        color-scheme: dark;
     }
 
-    /* Inputs use bg-base to pop against beige cards in light mode. In dark
-       mode that's near-black-on-near-black inside cards; lift the field to
-       a brighter warm neutral AND give it a visible border so the field
-       boundary reads clearly (the Tailwind border-sky/30 is too faint here). */
-    input.bg-base, select.bg-base, textarea.bg-base {
-        background-color: #2a261c;
-        border-color: #4a4434;
+    html:not([data-theme]),
+    html[data-theme='system'] {
+        --color-base: #1f1e1d;       /* warm near-black — page (Claude-style greige, not pure black) */
+        --color-surface: #2e2d2a;    /* one value-step up — cards/panels (elevation by lightness) */
+        --color-teal: #f5f3f0;       /* warm near-white — headings */
+        --color-neon: #cf92ad;       /* rose-plum accent — used sparingly for links & small accents */
+        --color-sky: #3a3836;        /* subtle warm value-step border — not a colored hairline */
+        --color-ink: #e8e6e3;        /* warm off-white — body text */
+        --color-muted: #bcb8b2;      /* warm grey — secondary text, AA-safe even at /70 */
     }
 }
 
-/* Amber (#f4991a) is a light accent: white text on it fails contrast in
-   both modes. Force near-black text on every amber CTA so the label stays
-   legible. Applies to .text-white buttons (the standard CTA) regardless of
-   colour scheme. */
-.bg-neon.text-white,
-.bg-neon .text-white {
-    color: #1f1410;
+/* Inputs use bg-base to pop against cards in light mode. In dark mode
+   bg-base equals the page, so inside a raised card a field needs to read
+   as recessed: drop it a value-step BELOW the card and give it a visible
+   warm border (the Tailwind border-sky/30 is too faint here). */
+html[data-theme='dark'] input.bg-base,
+html[data-theme='dark'] select.bg-base,
+html[data-theme='dark'] textarea.bg-base,
+html[data-theme='system'][data-system-theme='dark'] input.bg-base,
+html[data-theme='system'][data-system-theme='dark'] select.bg-base,
+html[data-theme='system'][data-system-theme='dark'] textarea.bg-base {
+    background-color: #191817;
+    border-color: #3a3836;
+}
+
+/* The landing hero forces a white background in light mode. In dark mode fall
+   back to the page color so the near-white headline stays readable. The neon
+   shape texture has no baked-in background (transparent), so it floats over
+   either background and stays visible in both modes. Keyed to data-theme (the
+   app's real dark switch), not Tailwind's prefers-color-scheme dark: variant. */
+html[data-theme='dark'] .hero-bg,
+html[data-theme='system'][data-system-theme='dark'] .hero-bg {
+    background-color: var(--color-base);
+}
+
+/* File-type tags in the hero mock. Colour-coded (PDF red / PPTX amber) with
+   theme-aware fills + text. Defined in CSS keyed to data-theme (the app's real
+   dark switch) rather than Tailwind's prefers-color-scheme dark: variant, so
+   they track the in-app theme toggle and not just the OS setting. */
+.filetag-pdf {
+    background-color: color-mix(in srgb, #fb2c36 20%, transparent);
+    color: #9f0712; /* red-800 */
+}
+.filetag-pptx {
+    background-color: color-mix(in srgb, #f59e0b 25%, transparent);
+    color: #7b3306; /* amber-900 */
+}
+
+html[data-theme='dark'] .filetag-pdf,
+html[data-theme='system'][data-system-theme='dark'] .filetag-pdf {
+    background-color: color-mix(in srgb, #fb2c36 28%, transparent);
+    color: #ffc9c9; /* red-200 */
+}
+html[data-theme='dark'] .filetag-pptx,
+html[data-theme='system'][data-system-theme='dark'] .filetag-pptx {
+    background-color: color-mix(in srgb, #f59e0b 30%, transparent);
+    color: #ffe08a; /* warm amber-200 */
+}
+
+/* Bottom edge vignette — fades the hero into the section below so there is
+   no hard horizontal seam. Colour matches each theme's page background. */
+.hero-vignette {
+    background-image: linear-gradient(to bottom, transparent, #ffffff);
+}
+
+html[data-theme='dark'] .hero-vignette,
+html[data-theme='system'][data-system-theme='dark'] .hero-vignette {
+    background-image: linear-gradient(to bottom, transparent, var(--color-base));
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) input.bg-base,
+    :root:not([data-theme]) select.bg-base,
+    :root:not([data-theme]) textarea.bg-base,
+    html[data-theme='system'] input.bg-base,
+    html[data-theme='system'] select.bg-base,
+    html[data-theme='system'] textarea.bg-base {
+        background-color: #191817;
+        border-color: #3a3836;
+    }
+}
+
+/* Primary buttons hardcode text-white on bg-neon. In dark mode the accent
+   is light rose-plum, so white labels fail contrast (2.7:1). Flip those
+   labels to dark plum (6.8:1 on the accent) — dark mode only. */
+html[data-theme='dark'] .bg-neon.text-white,
+html[data-theme='system'][data-system-theme='dark'] .bg-neon.text-white {
+    color: #1f1e1d;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .bg-neon.text-white,
+    html[data-theme='system'] .bg-neon.text-white {
+        color: #1f1e1d;
+    }
+}
+
+/* Destructive / error UI uses literal Tailwind red & amber, tuned for the
+   light cream page. Those values are fixed — they don't track the theme — so
+   on the dark greige page the near-white red-50 hovers flash bright and the
+   amber/red text goes muddy. Re-tone them for dark, keyed to data-theme (the
+   app's real switch), light mode untouched. Mixin pattern matches the
+   file-type tags above. */
+html[data-theme='dark'] .hover\:bg-red-50:hover,
+html[data-theme='system'][data-system-theme='dark'] .hover\:bg-red-50:hover {
+    background-color: color-mix(in srgb, #fb2c36 18%, transparent);
+}
+html[data-theme='dark'] .hover\:text-red-600:hover,
+html[data-theme='system'][data-system-theme='dark'] .hover\:text-red-600:hover {
+    color: #ffa2a2; /* red-300 — legible on dark */
+}
+
+/* The "board full" card: light-pink panel → tinted-red on dark. */
+html[data-theme='dark'] .border-red-200,
+html[data-theme='dark'] .border-red-300,
+html[data-theme='system'][data-system-theme='dark'] .border-red-200,
+html[data-theme='system'][data-system-theme='dark'] .border-red-300 {
+    border-color: color-mix(in srgb, #fb2c36 35%, transparent);
+}
+html[data-theme='dark'] .bg-red-50,
+html[data-theme='system'][data-system-theme='dark'] .bg-red-50 {
+    background-color: color-mix(in srgb, #fb2c36 12%, transparent);
+}
+html[data-theme='dark'] .text-red-700,
+html[data-theme='system'][data-system-theme='dark'] .text-red-700 {
+    color: #ffc9c9; /* red-200 */
+}
+
+/* Active section filter pill. Light mode fills with teal (dark plum) + white
+   label. In dark mode teal becomes near-white, so a white label on it vanishes.
+   Re-fill with the rose-plum accent and flip the label dark, mirroring the
+   .bg-neon.text-white rule. Scoped to .section-pill.bg-teal so it only hits the
+   ACTIVE pill (bg-teal is only present when active). */
+html[data-theme='dark'] .section-pill.bg-teal,
+html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal {
+    background-color: var(--color-neon);
+    color: #1f1e1d;
+}
+html[data-theme='dark'] .section-pill.bg-teal .bg-white\/25,
+html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal .bg-white\/25 {
+    background-color: rgba(31, 30, 29, 0.18);
+    color: #1f1e1d;
+}
+
+/* Course file-count chip. In light mode it's a plum-tinted pill (teal = dark
+   plum). In dark mode teal becomes near-white, so the chip goes pure grey and
+   the page loses all accent. Retint it to the rose-plum accent in dark only.
+   Scoped to .file-count-chip so headings/banners that also use teal stay put. */
+html[data-theme='dark'] .file-count-chip,
+html[data-theme='system'][data-system-theme='dark'] .file-count-chip {
+    border-color: color-mix(in srgb, var(--color-neon) 40%, transparent);
+    background-color: color-mix(in srgb, var(--color-neon) 15%, transparent);
+    color: var(--color-neon);
+}
+
+/* Static error/warning text — lift to brighter tints so they pass on dark. */
+html[data-theme='dark'] .text-red-600,
+html[data-theme='system'][data-system-theme='dark'] .text-red-600 {
+    color: #ff8d8d;
+}
+html[data-theme='dark'] .text-amber-600,
+html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
+    color: #fcc56b;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .hover\:bg-red-50:hover,
+    html[data-theme='system'] .hover\:bg-red-50:hover {
+        background-color: color-mix(in srgb, #fb2c36 18%, transparent);
+    }
+    :root:not([data-theme]) .hover\:text-red-600:hover,
+    html[data-theme='system'] .hover\:text-red-600:hover {
+        color: #ffa2a2;
+    }
+    :root:not([data-theme]) .border-red-200,
+    :root:not([data-theme]) .border-red-300,
+    html[data-theme='system'] .border-red-200,
+    html[data-theme='system'] .border-red-300 {
+        border-color: color-mix(in srgb, #fb2c36 35%, transparent);
+    }
+    :root:not([data-theme]) .bg-red-50,
+    html[data-theme='system'] .bg-red-50 {
+        background-color: color-mix(in srgb, #fb2c36 12%, transparent);
+    }
+    :root:not([data-theme]) .text-red-700,
+    html[data-theme='system'] .text-red-700 {
+        color: #ffc9c9;
+    }
+    :root:not([data-theme]) .text-red-600,
+    html[data-theme='system'] .text-red-600 {
+        color: #ff8d8d;
+    }
+    :root:not([data-theme]) .text-amber-600,
+    html[data-theme='system'] .text-amber-600 {
+        color: #fcc56b;
+    }
+    :root:not([data-theme]) .file-count-chip,
+    html[data-theme='system'] .file-count-chip {
+        border-color: color-mix(in srgb, var(--color-neon) 40%, transparent);
+        background-color: color-mix(in srgb, var(--color-neon) 15%, transparent);
+        color: var(--color-neon);
+    }
+    :root:not([data-theme]) .section-pill.bg-teal,
+    html[data-theme='system'] .section-pill.bg-teal {
+        background-color: var(--color-neon);
+        color: #1f1e1d;
+    }
+    :root:not([data-theme]) .section-pill.bg-teal .bg-white\/25,
+    html[data-theme='system'] .section-pill.bg-teal .bg-white\/25 {
+        background-color: rgba(31, 30, 29, 0.18);
+        color: #1f1e1d;
+    }
 }

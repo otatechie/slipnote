@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\OwnerLinkRecovery;
 use App\Tenancy\Tenancy;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -33,9 +34,15 @@ class WorkspaceRecoveryController extends Controller
         RateLimiter::hit($key, 600);
 
         if ($workspace->recoveryEmailMatches($data['email'])) {
-            $secret = $workspace->rotateOwnerSecret();
+            [$secret, $hash] = $workspace->draftOwnerSecretRotation();
             $ownerUrl = route('courses.index', ['workspace' => $workspace->slug]).'?owner='.$secret;
-            Mail::to($workspace->recovery_email)->queue(new OwnerLinkRecovery($workspace->name, $ownerUrl));
+
+            try {
+                Mail::to($workspace->recovery_email)->send(new OwnerLinkRecovery($workspace->name, $ownerUrl));
+                $workspace->forceFill(['owner_secret_hash' => $hash])->save();
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
 
         return back()->with('done', true);
