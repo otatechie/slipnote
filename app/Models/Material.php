@@ -9,14 +9,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Material extends Model
 {
     /**
-     * The four sections a material can belong to.
+     * The sections a material can belong to.
      * Keyed by stored value, value is the human label.
      */
     public const SECTIONS = [
         'notes' => 'Notes',
         'slides' => 'Slides',
         'past_papers' => 'Past Papers',
-        'announcements' => 'Announcements',
     ];
 
     protected $fillable = [

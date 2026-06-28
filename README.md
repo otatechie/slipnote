@@ -2,7 +2,7 @@
 
 A dead-simple materials board for students. No accounts, no login — anyone
 with the link can browse, download, and contribute course files across four
-sections: **Notes, Slides, Past Papers, Announcements**.
+sections: **Notes, Slides, Past Papers**.
 
 **Workspaces (multi-tenant).** The site root (`/`) lets anyone create or
 open a *workspace* — an isolated board with its own courses, owner secret,
@@ -80,7 +80,8 @@ cp .env.example .env        # if .env is missing
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
-php artisan storage:link     # required: downloads serve from public/storage
+# No storage:link needed — uploads live on the private disk and downloads
+# stream through the app, never from a web-served directory.
 
 npm run build                # or `npm run dev` for hot reload
 php artisan serve

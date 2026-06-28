@@ -132,6 +132,11 @@ function unlockOwner() {
     })
 }
 
+// Leave owner mode on this device (useful on shared computers).
+function lockBoard() {
+    router.post('/' + props.workspace.slug + '/lock', {}, { preserveScroll: true })
+}
+
 // Storage display
 const mbUsed = computed(() => {
     const v = props.storageUsed
@@ -139,7 +144,7 @@ const mbUsed = computed(() => {
 })
 const mbCap = computed(() => Math.round(props.storageCap / 1048576))
 const storageTone = computed(() => {
-    if (props.storagePct >= 90) return 'text-red-600'
+    if (props.storagePct >= 90) return 'text-danger'
     if (props.storagePct >= 75) return 'text-neon'
     return 'text-muted'
 })
@@ -231,44 +236,63 @@ function persistOrder() {
     <AppLayout>
         <div class="mx-auto w-full max-w-3xl flex-1 px-5 pb-10 pt-10" @keydown.escape.window="sheet = false">
 
-            <header class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <a href="/start"
-                        class="group mb-1.5 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted transition hover:text-neon">
-                        <svg aria-hidden="true"
-                            class="size-4 shrink-0 transition-transform duration-200 group-hover:-translate-y-0.5"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
-                            <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        </svg>
-                        SlipNote
-                    </a>
-                    <h1 class="text-3xl font-bold tracking-tight text-ink">{{ workspace.name }}</h1>
-                    <p class="mt-1.5 text-[15px] text-muted">
-                        <template v-if="totalCourses > 0">Pick a course to browse and share materials.</template>
-                        <template v-else>Your board's courses live here — add one to get started.</template>
-                    </p>
-                </div>
-                <div class="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-                    <button type="button" @click="share" :class="[
-                        'inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-4 py-2.5 text-[14px] font-semibold shadow-sm transition sm:w-auto sm:justify-start',
-                        totalCourses === 0
-                            ? 'border-sky bg-surface text-muted hover:bg-sky/40'
-                            : 'border-teal/30 bg-surface text-teal hover:bg-sky/40',
-                    ]">
-                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1" />
-                            <path d="M12 9a3 3 0 0 0-4.5-.4L4.9 11.2a3 3 0 1 0 4.2 4.2l1-1" />
-                        </svg>
-                        <span v-if="!shareCopied">Share board</span>
-                        <span v-else>Link copied ✓</span>
-                    </button>
-                    <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
-                        class="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
-                        <span class="text-lg leading-none">+</span> New course
-                    </button>
+            <header class="mb-7">
+                <!-- Title block owns the full width so the board name never wraps
+                     against the action cluster. -->
+                <a href="/start"
+                    class="group mb-1.5 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted transition hover:text-neon">
+                    <svg aria-hidden="true"
+                        class="size-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5" />
+                        <path d="M12 19l-7-7 7-7" />
+                    </svg>
+                    All boards
+                </a>
+                <h1 class="text-3xl font-bold tracking-tight text-ink">{{ workspace.name }}</h1>
+                <p class="mt-1.5 text-[15px] text-muted">
+                    <template v-if="totalCourses > 0">Pick a course to browse and share materials.</template>
+                    <template v-else>Your board's courses live here — add one to get started.</template>
+                </p>
+
+                <!-- Actions on their own row: actions left, owner-mode status right. -->
+                <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <!-- Share leads nowhere on an empty board, so it appears once there's a course to find. -->
+                        <button v-if="totalCourses > 0" type="button" @click="share"
+                            class="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40 sm:w-auto sm:justify-start">
+                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1" />
+                                <path d="M12 9a3 3 0 0 0-4.5-.4L4.9 11.2a3 3 0 1 0 4.2 4.2l1-1" />
+                            </svg>
+                            <span v-if="!shareCopied">Share board</span>
+                            <span v-else>Link copied ✓</span>
+                        </button>
+                        <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
+                            class="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
+                            <span class="text-lg leading-none">+</span> New course
+                        </button>
+                    </div>
+                    <!-- Owner-mode status (quiet — it's a state, not an action) + the
+                         button that ends it, grouped so "Lock" has context. -->
+                    <span v-if="isOwner"
+                        class="inline-flex items-center gap-2 self-start rounded-full border border-sky py-1 pl-3 pr-1 text-[12px] font-medium text-muted sm:ml-auto sm:self-auto">
+                        <span class="flex items-center gap-1.5">
+                            <span class="size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
+                            Owner mode
+                        </span>
+                        <button type="button" @click="lockBoard" title="Leave owner mode on this device"
+                            class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-sky bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink transition hover:bg-sky/40">
+                            <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="4" y="9" width="12" height="8" rx="1.5" />
+                                <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
+                            </svg>
+                            Lock
+                        </button>
+                    </span>
                 </div>
             </header>
 
@@ -292,8 +316,6 @@ function persistOrder() {
                             class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
                             <span class="text-lg leading-none">+</span> New course
                         </button>
-                        <p class="mt-3 text-[12px] text-muted/80">Add a course first, then share the board with your
-                            class.</p>
                     </template>
                     <template v-else>
                         <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
@@ -310,7 +332,7 @@ function persistOrder() {
                 <div v-if="totalCourses > 3" class="mb-4 flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch" :placeholder="`Search ${totalCourses} courses…`"
                         aria-label="Search courses"
-                        class="box-border h-12 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                        class="box-border h-12 w-full min-w-0 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
                     <div class="relative">
                         <select v-model="localSort" aria-label="Sort courses"
                             class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
@@ -438,14 +460,14 @@ function persistOrder() {
                         <form @submit.prevent="submitCourse" class="flex flex-col gap-3.5">
                             <div>
                                 <label for="code" class="mb-1 block text-[13px] font-semibold text-ink">
-                                    Course code <span class="text-red-500" aria-hidden="true">*</span>
+                                    Course code <span class="text-danger" aria-hidden="true">*</span>
                                 </label>
                                 <p class="mb-1.5 text-[12px] text-muted">The short code your class uses.</p>
                                 <input id="code" type="text" v-model="courseForm.code" placeholder="e.g. PHYS 101"
                                     ref="codeField" required :aria-invalid="!!courseForm.errors.code"
                                     class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                                 <span v-if="courseForm.errors.code" role="alert"
-                                    class="mt-1.5 block text-[13px] text-red-600">{{ courseForm.errors.code }}</span>
+                                    class="mt-1.5 block text-[13px] text-danger">{{ courseForm.errors.code }}</span>
                                 <span v-else-if="codeDuplicate" class="mt-1.5 block text-[13px] text-amber-600">This
                                     board already has a course with this code.</span>
                                 <span v-else-if="codeLooksOff" class="mt-1.5 block text-[13px] text-amber-600">A course
@@ -453,7 +475,7 @@ function persistOrder() {
                             </div>
                             <div>
                                 <label for="ctitle" class="mb-1 block text-[13px] font-semibold text-ink">
-                                    Title <span class="text-red-500" aria-hidden="true">*</span>
+                                    Title <span class="text-danger" aria-hidden="true">*</span>
                                 </label>
                                 <p class="mb-1.5 text-[12px] text-muted">The full course name.</p>
                                 <input id="ctitle" type="text" v-model="courseForm.title"
@@ -461,7 +483,7 @@ function persistOrder() {
                                     :aria-invalid="!!courseForm.errors.title"
                                     class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                                 <span v-if="courseForm.errors.title" role="alert"
-                                    class="mt-1.5 block text-[13px] text-red-600">{{ courseForm.errors.title }}</span>
+                                    class="mt-1.5 block text-[13px] text-danger">{{ courseForm.errors.title }}</span>
                             </div>
                             <button type="submit" :disabled="courseForm.processing"
                                 class="mt-1 cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
@@ -471,9 +493,11 @@ function persistOrder() {
                     </div>
                 </div>
 
-                <!-- Recovery email nudge -->
+                <!-- Recovery email nudge. Prominent only on an empty board where
+                     nothing competes; once courses exist it stays quiet so it
+                     doesn't out-weigh the course list. -->
                 <div v-if="recoveryAvailable" class="mt-8 rounded-xl border px-5 py-4"
-                    :class="needsRecoveryEmail ? 'border-neon/40 bg-neon/5' : 'border-sky bg-surface/50'">
+                    :class="(needsRecoveryEmail && totalCourses === 0) ? 'border-neon/40 bg-neon/5' : 'border-sky bg-surface/50'">
                     <p v-if="flash.recoverySaved" role="status"
                        class="mb-3 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
                         <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
@@ -506,13 +530,13 @@ function persistOrder() {
                     <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2 sm:flex-row">
                         <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
                             :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New email, or leave blank to remove'"
-                            class="h-11 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:h-9">
+                            class="h-11 w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:h-9 sm:flex-1">
                         <button type="submit" :disabled="recoveryForm.processing"
-                            class="h-11 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:h-9">
+                            class="h-11 w-full shrink-0 cursor-pointer rounded-lg border border-neon/50 px-4 text-[13px] font-semibold text-neon transition hover:bg-neon/10 disabled:opacity-60 sm:h-9 sm:w-auto">
                             Save
                         </button>
                     </form>
-                    <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-red-600">{{
+                    <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{
                         errors.recoveryEmail[0]
                         }}</span>
                     <p v-if="needsRecoveryEmail" class="mt-2 text-[11px] text-muted/80">Only used to recover this board
@@ -551,7 +575,7 @@ function persistOrder() {
                                 autocapitalize="off" spellcheck="false" placeholder="owner-… or https://…"
                                 aria-describedby="ownerInputNote"
                                 :aria-invalid="!!errors.ownerInput"
-                                class="h-11 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:h-9">
+                                class="h-11 min-w-0 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:h-9">
                             <button type="submit" :disabled="unlockForm.processing"
                                 class="h-11 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:h-9">
                                 {{ unlockForm.processing ? 'Unlocking…' : 'Unlock' }}
