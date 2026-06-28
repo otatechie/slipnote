@@ -226,7 +226,7 @@ watch(() => props.materials, () => { selected.value = [] })
 <template>
     <Head :title="course.code + ' · ' + workspace.name" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-3xl flex-1 px-5 pb-10 pt-10">
+        <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-10 pt-10">
 
             <header class="mb-7">
                 <Link :href="courseListUrl()"
@@ -250,10 +250,10 @@ watch(() => props.materials, () => { selected.value = [] })
                 Owner mode — you can remove any file.
             </p>
 
-            <!-- Course created — confirm + nudge first upload -->
+            <!-- Course created — confirmation only; the empty-state card owns the next-step CTA. -->
             <div v-if="flash.created"
                  class="mb-5 rounded-lg border border-neon/40 bg-neon/10 px-4 py-3 text-sm font-medium text-ink">
-                {{ flash.created }} Add your first files below, then share the board with your class.
+                {{ flash.created }}
             </div>
 
             <!-- Upload receipt -->
@@ -274,7 +274,7 @@ watch(() => props.materials, () => { selected.value = [] })
                     <input type="search" v-model="localSearch"
                            :placeholder="`Search ${resultCount} ${resultCount === 1 ? 'file' : 'files'} by name…`"
                            aria-label="Search files"
-                           class="box-border h-12 w-full flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                           class="box-border h-12 w-full min-w-0 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     <div class="relative w-full sm:w-auto">
                         <select v-model="localSort" aria-label="Sort files"
                                 class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
@@ -329,7 +329,7 @@ watch(() => props.materials, () => { selected.value = [] })
                  empty section stubs. Only when nothing's uploaded and no
                  filter is active. -->
             <div v-if="resultCount === 0 && !isFiltered"
-                 class="rounded-2xl border border-sky/30 bg-surface px-6 py-12 text-center shadow-sm">
+                 class="my-auto rounded-2xl border border-sky/30 bg-surface px-6 py-12 text-center shadow-sm">
                 <p class="text-[16px] font-semibold text-ink">No files yet</p>
                 <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
                     Be the first to add notes, slides, or past papers for
@@ -411,7 +411,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                         <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
                                         <input type="hidden" name="_method" value="DELETE">
                                         <button type="submit" aria-label="Delete file"
-                                                class="cursor-pointer rounded-full p-2 text-muted transition hover:bg-red-50 hover:text-red-600">
+                                                class="cursor-pointer rounded-full p-2 text-muted transition hover:bg-danger/10 hover:text-danger">
                                             <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H7a1 1 0 01-1-1V6"/>
                                             </svg>
@@ -422,7 +422,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                         @click="openReport(material)"
                                         aria-label="Report this file"
                                         title="Report this file"
-                                        class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted/60 transition hover:bg-red-50 hover:text-red-600">
+                                        class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted/60 transition hover:bg-danger/10 hover:text-danger">
                                     <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M5 17V3.5M5 4h9l-2 3 2 3H5"/>
                                     </svg>
@@ -440,16 +440,17 @@ watch(() => props.materials, () => { selected.value = [] })
             <!-- Upload section -->
             <section id="add-file" class="mt-7 scroll-mt-6">
                 <!-- Board full -->
-                <div v-if="storageFull" class="rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-center">
-                    <p class="text-[14px] font-semibold text-red-700">This board is full</p>
-                    <p class="mt-1 text-[13px] text-red-600">
+                <div v-if="storageFull" class="rounded-2xl border border-danger/30 bg-danger/5 px-6 py-5 text-center">
+                    <p class="text-[14px] font-semibold text-danger">This board is full</p>
+                    <p class="mt-1 text-[13px] text-danger">
                         Ask the owner to delete old files before new uploads can go up.
                     </p>
                 </div>
 
                 <template v-else>
-                    <!-- FAB -->
-                    <button v-if="!uploadOpen" type="button" @click="uploadOpen = true"
+                    <!-- FAB — only once files exist; on an empty course the
+                         empty-state card's "Add the first file" is the sole CTA. -->
+                    <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
                             aria-label="Add a file"
                             class="fixed bottom-6 right-6 z-20 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-neon text-2xl font-bold text-white shadow-lg transition hover:brightness-125">
                         +
@@ -479,7 +480,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                        placeholder="Ask your course rep"
                                        :aria-invalid="!!errors.passphrase"
                                        class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                                <span v-if="errors.passphrase" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.passphrase[0] }}</span>
+                                <span v-if="errors.passphrase" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.passphrase[0] }}</span>
                             </div>
 
                             <!-- Title — only meaningful for a single file -->
@@ -490,7 +491,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                        placeholder="e.g. Week 7 quiz solutions"
                                        :aria-invalid="!!errors.title"
                                        class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                                <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.title[0] }}</span>
+                                <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
                             </div>
 
                             <!-- Section -->
@@ -510,13 +511,13 @@ watch(() => props.materials, () => { selected.value = [] })
                                        placeholder="e.g. Alex"
                                        :aria-invalid="!!errors.uploaderName"
                                        class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                                <span v-if="errors.uploaderName" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.uploaderName[0] }}</span>
+                                <span v-if="errors.uploaderName" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.uploaderName[0] }}</span>
                             </div>
 
                             <!-- Files -->
                             <div>
                                 <span class="mb-1.5 block text-[13px] font-semibold text-ink">
-                                    Files <span class="text-red-500" aria-hidden="true">*</span>
+                                    Files <span class="text-danger" aria-hidden="true">*</span>
                                 </span>
                                 <!-- Native input is visually hidden; the label below
                                      drives it so the browser's "No file chosen" text
@@ -540,12 +541,12 @@ watch(() => props.materials, () => { selected.value = [] })
                                             class="flex items-center gap-2 text-[12px] text-ink">
                                             <span class="min-w-0 flex-1 truncate">{{ f.name }}</span>
                                             <span class="shrink-0 tabular-nums"
-                                                  :class="f.size > MAX_FILE_BYTES ? 'font-semibold text-red-600' : 'text-muted'">
+                                                  :class="f.size > MAX_FILE_BYTES ? 'font-semibold text-danger' : 'text-muted'">
                                                 {{ fileSize(f.size) }}<template v-if="f.size > MAX_FILE_BYTES"> · too big</template>
                                             </span>
                                             <button type="button" @click="removeFile(i)"
                                                     :aria-label="`Remove ${f.name}`"
-                                                    class="-my-2 -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-red-50 hover:text-red-600">
+                                                    class="-my-2 -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger">
                                                 <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
                                                     <path d="M4 4l8 8M12 4l-8 8"/>
                                                 </svg>
@@ -553,8 +554,8 @@ watch(() => props.materials, () => { selected.value = [] })
                                         </li>
                                     </ul>
                                 </div>
-                                <span v-if="errors.files" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors.files[0] }}</span>
-                                <span v-if="errors['files.0']" role="alert" class="mt-1.5 block text-[13px] text-red-600">{{ errors['files.0'] }}</span>
+                                <span v-if="errors.files" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.files[0] }}</span>
+                                <span v-if="errors['files.0']" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors['files.0'] }}</span>
                             </div>
 
                             <button type="submit" :disabled="uploadForm.processing || uploadForm.files.length === 0 || hasOversizedFile"
@@ -578,7 +579,7 @@ watch(() => props.materials, () => { selected.value = [] })
                             <p v-if="uploadForm.files.length === 0" class="-mt-1 text-center text-[12px] text-muted">
                                 Choose at least one file to upload.
                             </p>
-                            <p v-else-if="hasOversizedFile" class="-mt-1 text-center text-[12px] text-red-600">
+                            <p v-else-if="hasOversizedFile" class="-mt-1 text-center text-[12px] text-danger">
                                 Remove the file over 10&nbsp;MB to upload.
                             </p>
                         </form>

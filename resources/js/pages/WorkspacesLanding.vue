@@ -49,6 +49,7 @@ function recover() {
 // Owner receipt
 const saved = ref(false)
 const copied = ref(false)
+const downloaded = ref(false)
 
 function copyOwnerLink() {
     window.copyText(flash.value.ownerUrl).then(() => {
@@ -71,6 +72,8 @@ function downloadTxt() {
     a.click()
     URL.revokeObjectURL(a.href)
     saved.value = true
+    downloaded.value = true
+    setTimeout(() => { downloaded.value = false }, 2000)
 }
 
 function proceed() {
@@ -111,18 +114,17 @@ function forget(ws) {
             <template v-if="flash.ownerUrl">
                 <div class="rounded-2xl border border-neon/40 bg-neon/10 p-5 sm:p-6">
                     <p class="text-[15px] font-bold text-neon">"{{ flash.createdName }}" is ready 🎉</p>
-                    <p class="mt-1.5 text-[13px] text-ink">
-                        <span class="font-semibold">Save your owner link: shown once, not recoverable.</span>
-                        It controls this board.
+                    <p class="mt-1.5 text-[13px] text-muted">
+                        You can add a recovery email later to get it back if you lose it.
                     </p>
 
                     <div class="mt-4">
-                        <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-red-600">
+                        <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-danger">
                             🔒 Private owner link: never share this
                         </p>
-                        <p class="w-full cursor-text break-all rounded-lg border border-red-300 bg-red-50 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all"
+                        <p class="w-full cursor-text break-all rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all"
                            @click="$event.target.select?.() || window.getSelection().selectAllChildren($event.target)">{{ flash.ownerUrl }}</p>
-                        <p class="mt-1.5 text-[11px] text-red-600">Anyone who has this link can control or delete the board. Keep it to yourself.</p>
+                        <p class="mt-1.5 text-[11px] text-danger">Anyone with this link can control or delete the board.</p>
                     </div>
 
                     <div class="mt-2.5 flex gap-2">
@@ -133,7 +135,8 @@ function forget(ws) {
                         </button>
                         <button type="button" @click="downloadTxt"
                                 class="h-9 flex-1 cursor-pointer rounded-lg border border-neon/50 text-[13px] font-semibold text-neon transition hover:bg-neon/10">
-                            Download .txt
+                            <span v-if="!downloaded">Download .txt</span>
+                            <span v-else>Saved ✓</span>
                         </button>
                     </div>
 
@@ -154,7 +157,7 @@ function forget(ws) {
                     <button type="button" @click="proceed" :disabled="!saved"
                             class="mt-4 w-full rounded-lg py-3.5 text-[15px] font-bold transition
                                    enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:shadow-sm enabled:hover:brightness-125
-                                   disabled:cursor-not-allowed disabled:border disabled:border-dashed disabled:border-sky disabled:bg-base disabled:text-muted/60">
+                                   disabled:cursor-not-allowed disabled:border disabled:border-dashed disabled:border-sky disabled:bg-base disabled:text-muted">
                         <span v-if="saved">Continue to {{ flash.createdName }}</span>
                         <span v-else>Tick the box above to continue</span>
                     </button>
@@ -172,7 +175,7 @@ function forget(ws) {
                            class="w-full rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
 
                     <div class="mt-2 text-[12px]">
-                        <span v-if="errors.name" role="alert" class="text-red-600">{{ errors.name[0] }}</span>
+                        <span v-if="errors.name" role="alert" class="text-danger">{{ errors.name[0] }}</span>
                         <span v-else-if="slugPreview" class="text-muted">
                             Your link: <span class="font-semibold text-ink">/{{ slugPreview }}</span>
                         </span>
@@ -196,7 +199,7 @@ function forget(ws) {
                         <input id="openName" type="text" v-model="openForm.openName"
                                aria-label="Board name"
                                placeholder="Computer Science - Level 100"
-                               class="h-11 w-full flex-1 rounded-lg border border-sky bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                               class="h-11 w-full min-w-0 flex-1 rounded-lg border border-sky bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="openForm.processing"
                                 class="h-11 w-full shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:w-auto">
                             Open
