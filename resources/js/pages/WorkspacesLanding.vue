@@ -199,9 +199,9 @@ function forget(ws) {
                         <input id="openName" type="text" v-model="openForm.openName"
                                aria-label="Board name"
                                placeholder="Computer Science - Level 100"
-                               class="h-11 w-full min-w-0 flex-1 rounded-lg border border-sky bg-base px-3.5 text-[14px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                               class="w-full min-w-0 flex-1 rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="openForm.processing"
-                                class="h-11 w-full shrink-0 cursor-pointer rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:w-auto">
+                                class="w-full shrink-0 cursor-pointer rounded-lg bg-neon px-5 py-3 text-[15px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:w-auto">
                             Open
                         </button>
                     </form>
