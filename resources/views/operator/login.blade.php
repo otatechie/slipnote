@@ -12,7 +12,7 @@
                placeholder="Operator secret"
                class="w-full rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
         @error('secret')
-            <span role="alert" class="text-[13px] text-red-600">{{ $message }}</span>
+            <span role="alert" class="text-[13px] text-danger">{{ $message }}</span>
         @enderror
         <button type="submit"
                 class="cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125">
