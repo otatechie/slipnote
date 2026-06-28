@@ -530,9 +530,9 @@ function persistOrder() {
                     <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2 sm:flex-row">
                         <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
                             :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New email, or leave blank to remove'"
-                            class="h-11 w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:h-9 sm:flex-1">
+                            class="w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
                         <button type="submit" :disabled="recoveryForm.processing"
-                            class="h-11 w-full shrink-0 cursor-pointer rounded-lg border border-neon/50 px-4 text-[13px] font-semibold text-neon transition hover:bg-neon/10 disabled:opacity-60 sm:h-9 sm:w-auto">
+                            class="w-full shrink-0 cursor-pointer rounded-lg border border-neon/50 px-4 py-2.5 text-[13px] font-semibold text-neon transition hover:bg-neon/10 disabled:opacity-60 sm:w-auto">
                             Save
                         </button>
                     </form>
@@ -575,9 +575,9 @@ function persistOrder() {
                                 autocapitalize="off" spellcheck="false" placeholder="owner-… or https://…"
                                 aria-describedby="ownerInputNote"
                                 :aria-invalid="!!errors.ownerInput"
-                                class="h-11 min-w-0 flex-1 rounded-lg border border-sky/30 bg-base px-3 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:h-9">
+                                class="min-w-0 flex-1 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                             <button type="submit" :disabled="unlockForm.processing"
-                                class="h-11 shrink-0 cursor-pointer rounded-lg bg-neon px-4 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:h-9">
+                                class="shrink-0 cursor-pointer rounded-lg bg-neon px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
                                 {{ unlockForm.processing ? 'Unlocking…' : 'Unlock' }}
                             </button>
                         </form>

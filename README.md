@@ -186,9 +186,13 @@ For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
 
 - Owners can edit and reorder courses, but there is **no workspace edit/
   delete UI** (a workspace, once made, stays). One owner secret per
-  workspace owns everything *in that workspace*; lose it and owner control
-  is unrecoverable (same trade-off as the per-file delete token).
-- No accounts. The owner secret / per-file token are the only credentials;
-  no admin/bulk moderation, no soft-delete/restore (hard delete is permanent).
+  workspace owns everything *in that workspace*. Lose it and owner control
+  is gone **unless** a recovery email was set (see *Owner recovery* above);
+  with no recovery email it's unrecoverable, the same trade-off as the
+  per-file delete token.
+- No accounts. The owner secret / per-file token are the only credentials.
+  Bulk moderation exists only as owner bulk-delete on a course page and the
+  operator kill-switch; there is no soft-delete/restore (hard delete is
+  permanent).
 - No pagination; search keeps long lists manageable at expected volume.
 - Telegram config is still global (`.env`), not per-workspace — deferred.
