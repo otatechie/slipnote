@@ -17,7 +17,7 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
 
 - **Anonymous upload** — pick a section, optional "what is this?" title and
   your name, attach one or several files at once. PDF / Word / PowerPoint /
-  image, up to 10 MB each. Selected files list with a per-file remove and a
+  image, up to 25 MB each. Selected files list with a per-file remove and a
   running count; files that would exceed the workspace cap are skipped while
   the rest save. A shared title applies only to a single-file upload.
 - **Uploader delete** — each upload gets a secret token; the success banner
@@ -55,6 +55,12 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   find-fast student mental model at a full semester's volume (~60+ files).
 - **Quick-jump nav** — sticky section pills with live counts.
 - **Collapsible upload form** so the (mostly read-only) page leads with content.
+- **Dark mode** — an in-app theme toggle (icon-only) on every browser-facing
+  page, persisted in `localStorage` and defaulting to the OS
+  `prefers-color-scheme`. Destructive/warning UI (red/amber) is retoned for
+  dark, and file-count chips and the active section pill take a plum accent so
+  the palette isn't grey-on-grey. Custom Strichpunkt Sans typeface throughout.
+- **Mobile-optimised** across the landing, workspace, and course pages.
 - Accessible: WCAG AA contrast, `aria` wiring on form errors, actionable
   empty states.
 
@@ -97,7 +103,8 @@ Lose the owner link and the board is unrecoverable — unless the owner has
 opted into recovery by setting a **recovery email** (owner-mode only). The
 email is encrypted at rest. Visit `/<workspace>/recover`, enter that email,
 and the workspace's owner secret is rotated and a fresh owner link is
-emailed back; the previous link stops working. The recovery page renders
+emailed back (HTML with a plain-text part); the previous link stops working.
+The recovery page renders
 identical responses whether the email matches or not (no enumeration), and
 is rate-limited to prevent guessing. Hidden entirely when the mail driver
 is `log` or `array` — don't promise recovery the install can't deliver.
@@ -105,11 +112,12 @@ is `log` or `array` — don't promise recovery the install can't deliver.
 ## Tests
 
 ```bash
+php artisan test                          # full suite (108 passing)
 php artisan test tests/Feature/UploadTest.php
 ```
 
-Covers upload (valid / oversized / wrong-type), HTML-stripping of user input,
-optional title, file-type bucketing, and search/sort behavior.
+`UploadTest` covers upload (valid / oversized / wrong-type), HTML-stripping of
+user input, optional title, file-type bucketing, and search/sort behavior.
 
 `WorkspaceIsolationTest.php` is the security crux — it proves workspace A
 cannot read, reach, or mutate workspace B's data. `OwnerRecoveryTest.php`
@@ -130,8 +138,12 @@ a workspace via the `InteractsWithWorkspace` trait.
   whether the email matches or not (no enumeration).
 - **HTTP security headers** applied globally via `SecureHeaders` middleware:
   `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`,
-  `Referrer-Policy: strict-origin-when-cross-origin`, restrictive
-  `Permissions-Policy`.
+  `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive
+  `Permissions-Policy`. In **production only**, it also sets HSTS
+  (`max-age=31536000; includeSubDomains`) and a locked-down
+  `Content-Security-Policy` (`default-src 'self'`, fonts from
+  `fonts.bunny.net`) — both omitted in dev, where the Vite dev server and
+  plain `http://` would break under them.
 - **Per-workspace session keys** (`ws_owner_{id}`, `ws_upload_ok_{id}`) so
   unlocking one workspace never leaks into another in the same browser.
 - **Workspace isolation** enforced at the query layer by the

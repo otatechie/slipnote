@@ -180,7 +180,7 @@ class CourseController extends Controller
             'uploaderName' => 'nullable|string|max:60',
             'passphrase' => 'nullable|string',
             'files' => 'required|array|min:1|max:20',
-            'files.*' => 'file|max:10240|mimes:pdf,docx,pptx,png,jpg,jpeg',
+            'files.*' => 'file|max:25600|mimes:pdf,docx,pptx,png,jpg,jpeg',
         ]);
 
         // Per-IP upload throttle: blunts automated abuse / mass dumping while
