@@ -61,8 +61,8 @@ const materialsBySection = computed(() => {
 
 const isFiltered = computed(() => localSearch.value.trim() !== '' || localSection.value !== '')
 
-// Hard per-file limit, mirrors the server's `max:10240` (KB) upload rule.
-const MAX_FILE_BYTES = 10 * 1024 * 1024
+// Hard per-file limit, mirrors the server's `max:25600` (KB) upload rule.
+const MAX_FILE_BYTES = 25 * 1024 * 1024
 
 function fileSize(bytes) {
     if (bytes < 1024) return bytes + ' B'
@@ -530,7 +530,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                     </svg>
                                     {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
                                 </label>
-                                <p class="mt-1.5 text-xs text-muted">PDF, Word, PowerPoint, or image · up to 10&nbsp;MB each · pick several at once</p>
+                                <p class="mt-1.5 text-xs text-muted">PDF, Word, PowerPoint, or image · up to 25&nbsp;MB each · pick several at once</p>
                                 <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg border border-teal/20 bg-teal/5 px-3 py-2.5">
                                     <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-teal/70">
                                         {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected

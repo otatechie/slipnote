@@ -145,7 +145,7 @@ class UploadTest extends TestCase
 
     public function test_it_rejects_a_file_that_is_too_large(): void
     {
-        $big = UploadedFile::fake()->create('huge.pdf', 12000, 'application/pdf'); // 12 MB > 10 MB cap
+        $big = UploadedFile::fake()->create('huge.pdf', 30000, 'application/pdf'); // 30 MB > 25 MB cap
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
