@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Support\RecentWorkspaces;
-use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -12,16 +11,6 @@ use Inertia\Inertia;
 
 class CoursesController extends Controller
 {
-    private function workspace()
-    {
-        return app(Tenancy::class)->current();
-    }
-
-    private function isOwner(): bool
-    {
-        return session($this->workspace()->ownerSessionKey()) === true;
-    }
-
     public function index(Request $request)
     {
         $workspace = $this->workspace();
