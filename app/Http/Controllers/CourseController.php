@@ -7,7 +7,6 @@ use App\Models\Course;
 use App\Models\Material;
 use App\Services\TelegramNotifier;
 use App\Support\RecentWorkspaces;
-use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -16,16 +15,6 @@ use Inertia\Inertia;
 
 class CourseController extends Controller
 {
-    private function workspace()
-    {
-        return app(Tenancy::class)->current();
-    }
-
-    private function isOwner(): bool
-    {
-        return session($this->workspace()->ownerSessionKey()) === true;
-    }
-
     public function show(Request $request, string $workspaceSlug, string $slug)
     {
         $workspace = $this->workspace();
@@ -193,7 +182,7 @@ class CourseController extends Controller
 
         // Fail closed: if the free-space probe errors (returns false), treat
         // it as zero space rather than waving the upload through.
-        $free = disk_free_space(storage_path('app/public'));
+        $free = disk_free_space(storage_path('app/private'));
         if ($free === false || $free < (int) config('noteshare.min_free_disk_bytes')) {
             return back()->withErrors(['files' => 'The site is at capacity — please try again later.']);
         }

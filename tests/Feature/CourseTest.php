@@ -103,6 +103,16 @@ class CourseTest extends TestCase
         $this->assertTrue(session($this->workspace->ownerSessionKey()));
     }
 
+    public function test_owner_can_lock_the_board_to_leave_owner_mode(): void
+    {
+        $this->unlockOwnerSession();
+        $this->assertTrue(session($this->workspace->ownerSessionKey()));
+
+        $this->post(route('courses.lock', $this->wsParams()))->assertRedirect();
+
+        $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
+    }
+
     public function test_a_wrong_owner_secret_is_rejected_and_does_not_unlock(): void
     {
         $this->post(
