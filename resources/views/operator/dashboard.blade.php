@@ -29,7 +29,7 @@
                     <div class="min-w-0 flex-1">
                         <p class="flex items-center gap-2 text-[14px] font-semibold text-teal">
                             <span class="truncate">{{ $material->displayName() }}</span>
-                            <span class="shrink-0 text-[12px] font-semibold tabular-nums text-red-600/80"
+                            <span class="shrink-0 text-[12px] font-semibold tabular-nums text-danger/90"
                                   title="{{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}">
                                 {{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}
                             </span>

@@ -7,7 +7,7 @@
 @source '../**/*.vue';
 
 @theme {
-    --font-sans: 'Strichpunkt Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'Pliant', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
     /* SlipNote warm plum palette:
@@ -24,6 +24,7 @@
     --color-sky: #dcc9b8;        /* hairline borders, quiet fills — cream-toned */
     --color-ink: #3f2e3e;        /* body text — wine (palette) */
     --color-muted: #6e5563;      /* secondary text — darkened mauve, AA-safe on cream */
+    --color-danger: #a4313f;     /* destructive/danger — warm garnet, sits in the plum family, AA on cream */
 }
 
 :root {
@@ -43,6 +44,7 @@ html[data-theme='system'][data-system-theme='dark'] {
     --color-sky: #3a3836;        /* subtle warm value-step border — not a colored hairline */
     --color-ink: #e8e6e3;        /* warm off-white — body text */
     --color-muted: #bcb8b2;      /* warm grey — secondary text, AA-safe even at /70 */
+    --color-danger: #f0808a;     /* warm coral-red — reads as alarm, separates from the pink accent */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,6 +62,7 @@ html[data-theme='system'][data-system-theme='dark'] {
         --color-sky: #3a3836;        /* subtle warm value-step border — not a colored hairline */
         --color-ink: #e8e6e3;        /* warm off-white — body text */
         --color-muted: #bcb8b2;      /* warm grey — secondary text, AA-safe even at /70 */
+        --color-danger: #f0808a;     /* warm coral-red — reads as alarm, separates from the pink accent */
     }
 }
 
@@ -149,37 +152,6 @@ html[data-theme='system'][data-system-theme='dark'] .bg-neon.text-white {
     }
 }
 
-/* Destructive / error UI uses literal Tailwind red & amber, tuned for the
-   light cream page. Those values are fixed — they don't track the theme — so
-   on the dark greige page the near-white red-50 hovers flash bright and the
-   amber/red text goes muddy. Re-tone them for dark, keyed to data-theme (the
-   app's real switch), light mode untouched. Mixin pattern matches the
-   file-type tags above. */
-html[data-theme='dark'] .hover\:bg-red-50:hover,
-html[data-theme='system'][data-system-theme='dark'] .hover\:bg-red-50:hover {
-    background-color: color-mix(in srgb, #fb2c36 18%, transparent);
-}
-html[data-theme='dark'] .hover\:text-red-600:hover,
-html[data-theme='system'][data-system-theme='dark'] .hover\:text-red-600:hover {
-    color: #ffa2a2; /* red-300 — legible on dark */
-}
-
-/* The "board full" card: light-pink panel → tinted-red on dark. */
-html[data-theme='dark'] .border-red-200,
-html[data-theme='dark'] .border-red-300,
-html[data-theme='system'][data-system-theme='dark'] .border-red-200,
-html[data-theme='system'][data-system-theme='dark'] .border-red-300 {
-    border-color: color-mix(in srgb, #fb2c36 35%, transparent);
-}
-html[data-theme='dark'] .bg-red-50,
-html[data-theme='system'][data-system-theme='dark'] .bg-red-50 {
-    background-color: color-mix(in srgb, #fb2c36 12%, transparent);
-}
-html[data-theme='dark'] .text-red-700,
-html[data-theme='system'][data-system-theme='dark'] .text-red-700 {
-    color: #ffc9c9; /* red-200 */
-}
-
 /* Active section filter pill. Light mode fills with teal (dark plum) + white
    label. In dark mode teal becomes near-white, so a white label on it vanishes.
    Re-fill with the rose-plum accent and flip the label dark, mirroring the
@@ -207,43 +179,14 @@ html[data-theme='system'][data-system-theme='dark'] .file-count-chip {
     color: var(--color-neon);
 }
 
-/* Static error/warning text — lift to brighter tints so they pass on dark. */
-html[data-theme='dark'] .text-red-600,
-html[data-theme='system'][data-system-theme='dark'] .text-red-600 {
-    color: #ff8d8d;
-}
+/* Static warning text (amber) — lift to a brighter tint so it passes on dark.
+   (Red error/danger text now uses the theme-aware --color-danger token.) */
 html[data-theme='dark'] .text-amber-600,
 html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     color: #fcc56b;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .hover\:bg-red-50:hover,
-    html[data-theme='system'] .hover\:bg-red-50:hover {
-        background-color: color-mix(in srgb, #fb2c36 18%, transparent);
-    }
-    :root:not([data-theme]) .hover\:text-red-600:hover,
-    html[data-theme='system'] .hover\:text-red-600:hover {
-        color: #ffa2a2;
-    }
-    :root:not([data-theme]) .border-red-200,
-    :root:not([data-theme]) .border-red-300,
-    html[data-theme='system'] .border-red-200,
-    html[data-theme='system'] .border-red-300 {
-        border-color: color-mix(in srgb, #fb2c36 35%, transparent);
-    }
-    :root:not([data-theme]) .bg-red-50,
-    html[data-theme='system'] .bg-red-50 {
-        background-color: color-mix(in srgb, #fb2c36 12%, transparent);
-    }
-    :root:not([data-theme]) .text-red-700,
-    html[data-theme='system'] .text-red-700 {
-        color: #ffc9c9;
-    }
-    :root:not([data-theme]) .text-red-600,
-    html[data-theme='system'] .text-red-600 {
-        color: #ff8d8d;
-    }
     :root:not([data-theme]) .text-amber-600,
     html[data-theme='system'] .text-amber-600 {
         color: #fcc56b;
