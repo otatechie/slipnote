@@ -168,8 +168,7 @@ function forget(ws) {
             <template v-else>
                 <form @submit.prevent="create"
                       class="rounded-2xl border border-sky bg-surface p-5 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:p-6">
-                    <label for="name" class="mb-1.5 block text-[13px] font-semibold text-ink">Board name</label>
-                    <p class="mb-2 text-[12px] text-muted">Use your class level or year; it holds that group's courses.</p>
+                    <label for="name" class="mb-2 block text-[13px] font-semibold text-ink">Board name</label>
                     <input id="name" type="text" v-model="createForm.name"
                            placeholder="Computer Science - Level 100" autofocus
                            class="w-full rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
@@ -197,20 +196,20 @@ function forget(ws) {
                     <p class="text-[13px] text-ink">Already made one? Your saved link is the fastest way back, or find it by name:</p>
                     <form @submit.prevent="open" class="mx-auto mt-2.5 flex max-w-sm flex-col gap-2 sm:flex-row">
                         <input id="openName" type="text" v-model="openForm.openName"
-                               aria-label="Board name"
-                               placeholder="Computer Science - Level 100"
+                               aria-label="Board name to open"
+                               placeholder="Find a board by name…"
                                class="w-full min-w-0 flex-1 rounded-lg border border-sky bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="openForm.processing"
                                 class="w-full shrink-0 cursor-pointer rounded-lg bg-neon px-5 py-3 text-[15px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60 sm:w-auto">
                             Open
                         </button>
                     </form>
-                    <span v-if="errors.openName" role="alert" class="mt-2 block text-[13px] text-muted">{{ errors.openName[0] }}</span>
+                    <span v-if="errors.openName" role="alert" class="mt-2 block text-[13px] text-danger">{{ errors.openName[0] }}</span>
                     <div class="mt-3 border-t border-sky/40 pt-3">
                         <p class="text-[12px] text-muted">
                             Lost your owner link?
                             <button type="button" @click="recover" :disabled="!recoveryUrl()"
-                                    class="cursor-pointer font-semibold text-neon transition hover:underline disabled:cursor-not-allowed disabled:text-muted/50 disabled:no-underline">
+                                    class="cursor-pointer font-semibold text-neon transition hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline">
                                 Recover it with this board name
                             </button>
                         </p>
