@@ -18,9 +18,9 @@
             document.documentElement.style.colorScheme = resolved
         })()
     </script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Pliant:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    {{-- Pliant is self-hosted (see @font-face in app.css): keeps the prod CSP
+         happy (font-src 'self') and no visitor IPs go to Google. --}}
+    <link rel="preload" href="/fonts/pliant-variable.woff2" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @inertiaHead
 </head>
