@@ -26,6 +26,7 @@ class Material extends Model
         'uploader_name',
         'manage_token',
         'file_size',
+        'content_hash',
     ];
 
     protected $casts = [
@@ -46,6 +47,30 @@ class Material extends Model
             'material' => $this->id,
             'token' => $this->manage_token,
         ]);
+    }
+
+    /**
+     * Extensions safe to serve inline (Content-Disposition: inline) for
+     * in-browser preview. Kept narrow — arbitrary uploads served inline
+     * (e.g. HTML) would be an XSS vector. The download route enforces this
+     * same list before honouring ?view=1.
+     */
+    public const PREVIEWABLE = ['pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
+
+    public function isPreviewable(): bool
+    {
+        $ext = strtolower(pathinfo($this->original_filename, PATHINFO_EXTENSION));
+
+        return in_array($ext, self::PREVIEWABLE, true);
+    }
+
+    public function previewUrl(): ?string
+    {
+        if (! filled($this->manage_token) || ! $this->isPreviewable()) {
+            return null;
+        }
+
+        return route('material.download', ['token' => $this->manage_token, 'view' => 1]);
     }
 
     public function course(): BelongsTo

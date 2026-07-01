@@ -26,6 +26,8 @@
                 <li>The <strong>workspace name</strong> you typed and the slug derived from it.</li>
                 <li>The <strong>course code and title</strong> the owner created.</li>
                 <li>An <strong>uploader name</strong> if you typed one (optional, free text).</li>
+                <li>A <strong>content fingerprint</strong> (SHA-256 hash) of each file, used to skip duplicate uploads and to stop files the operator removed from being re-uploaded. Fingerprints of operator-removed files are kept after the file itself is gone; a fingerprint can't be turned back into the file.</li>
+                <li>If you <strong>report a file</strong>: the report reason and your IP address, used only to review the report.</li>
                 <li>An optional <strong>recovery email</strong> if the owner opts in. It is stored encrypted at rest and used only to send a fresh owner link when requested.</li>
                 <li>Standard <strong>server logs</strong> (IP address, request path, timestamp), used for security and debugging, not analytics.</li>
                 <li>A <strong>session cookie</strong> to remember owner-mode unlocks and passphrase entries within a single visit.</li>

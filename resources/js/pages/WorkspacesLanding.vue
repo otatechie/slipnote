@@ -59,6 +59,14 @@ function copyOwnerLink() {
     }).catch(() => {})
 }
 
+const shareCopied = ref(false)
+function copyShareLink() {
+    window.copyText(flash.value.createdUrl).then(() => {
+        shareCopied.value = true
+        setTimeout(() => { shareCopied.value = false }, 2000)
+    }).catch(() => {})
+}
+
 function downloadTxt() {
     const name = flash.value.createdName
     const body =
@@ -99,13 +107,13 @@ function forget(ws) {
                 <template v-if="flash.ownerUrl">
                     <h1 class="text-3xl font-bold tracking-tight text-ink">Save your owner link</h1>
                     <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
-                        Your board is created. Keep the link below; it's shown only once.
+                        It's shown only once — copy it or download it before you continue.
                     </p>
                 </template>
                 <template v-else>
                     <h1 class="text-3xl font-bold tracking-tight text-ink">Create your board</h1>
                     <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
-                        A board is one shared space for your class. Everyone drops their notes, slides and past papers in. No account, no password.
+                        The board where your class keeps its notes, slides and past papers. One link, no accounts, no passwords.
                     </p>
                 </template>
             </header>
@@ -142,10 +150,18 @@ function forget(ws) {
 
                     <div class="mt-4">
                         <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-teal">
-                            ✓ Share this with classmates
+                            🔗 Share this with classmates
                         </p>
-                        <a :href="flash.createdUrl"
-                           class="block w-full break-all rounded-lg border border-sky bg-surface px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink hover:border-neon">{{ flash.createdUrl }}</a>
+                        <!-- Not a live link on purpose: navigating away here would
+                             discard the owner link, which is shown only once. -->
+                        <div class="flex gap-2">
+                            <p class="min-w-0 flex-1 cursor-text break-all rounded-lg border border-sky bg-surface px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all">{{ flash.createdUrl }}</p>
+                            <button type="button" @click="copyShareLink"
+                                    class="shrink-0 cursor-pointer self-stretch rounded-lg border border-teal/40 px-3.5 text-[13px] font-semibold text-teal transition hover:bg-sky/40">
+                                <span v-if="!shareCopied">Copy</span>
+                                <span v-else>✓</span>
+                            </button>
+                        </div>
                     </div>
 
                     <label class="mt-5 flex items-start gap-2.5 text-[13px] text-ink">
@@ -192,9 +208,33 @@ function forget(ws) {
                     </p>
                 </form>
 
-                <div class="mt-7 rounded-2xl border border-sky bg-surface px-5 py-5 text-center shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-6">
-                    <p class="text-[13px] text-ink">Already made one? Your saved link is the fastest way back, or find it by name:</p>
-                    <form @submit.prevent="open" class="mx-auto mt-2.5 flex max-w-sm flex-col gap-2 sm:flex-row">
+                <!-- Recent boards first among the "returning user" paths — one click
+                     beats retyping a name. -->
+                <div v-if="props.recent.length" class="mt-7 rounded-2xl border border-sky bg-surface px-5 py-4 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-6">
+                    <p class="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Your recent boards</p>
+                    <ul class="divide-y divide-sky/30">
+                        <li v-for="ws in props.recent" :key="ws.slug"
+                            class="flex items-center justify-between gap-3 py-2">
+                            <a :href="'/' + ws.slug"
+                               class="min-w-0 flex-1 truncate text-[14px] font-medium text-neon hover:underline">
+                                {{ ws.name }}
+                            </a>
+                            <button type="button" @click="forget(ws)"
+                                    :aria-label="`Remove ${ws.name} from this list`"
+                                    class="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[12px] text-muted/70 transition hover:bg-sky/40 hover:text-ink">
+                                Remove
+                            </button>
+                        </li>
+                    </ul>
+                    <p class="mt-2 text-[11px] text-muted/80">
+                        Saved on this browser only. Removing clears the shortcut; the board stays.
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-sky bg-surface px-5 py-5 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-6"
+                     :class="props.recent.length ? 'mt-4' : 'mt-7'">
+                    <p class="text-[13px] font-semibold text-ink">Already made one? Find it by name:</p>
+                    <form @submit.prevent="open" class="mt-2.5 flex flex-col gap-2 sm:flex-row">
                         <input id="openName" type="text" v-model="openForm.openName"
                                aria-label="Board name to open"
                                placeholder="Find a board by name…"
@@ -213,32 +253,10 @@ function forget(ws) {
                                 Recover it with this board name
                             </button>
                         </p>
-                        <p class="mt-1 text-[11px] text-muted/80">
-                            <span v-if="recoveryUrl()">We'll take you to the recovery page for this board.</span>
-                            <span v-else>Type your board name in the field above first.</span>
+                        <p v-if="!recoveryUrl()" class="mt-1 text-[11px] text-muted/80">
+                            Type your board name in the field above first.
                         </p>
                     </div>
-                </div>
-
-                <div v-if="props.recent.length" class="mt-4 rounded-2xl border border-sky bg-surface px-5 py-4 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-6">
-                    <p class="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Your recent boards</p>
-                    <ul class="divide-y divide-sky/30">
-                        <li v-for="ws in props.recent" :key="ws.slug"
-                            class="flex items-center justify-between gap-3 py-2">
-                            <a :href="'/' + ws.slug"
-                               class="min-w-0 flex-1 truncate text-[14px] font-medium text-neon hover:underline">
-                                {{ ws.name }}
-                            </a>
-                            <button type="button" @click="forget(ws)"
-                                    :aria-label="`Remove ${ws.name} from this list`"
-                                    class="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[12px] text-muted/70 transition hover:bg-sky/40 hover:text-ink">
-                                Remove
-                            </button>
-                        </li>
-                    </ul>
-                    <p class="mt-2 text-[11px] text-muted/80">
-                        Saved on this browser only, not synced or shared. Removing one just clears the shortcut here; the board stays.
-                    </p>
                 </div>
             </template>
         </div>
