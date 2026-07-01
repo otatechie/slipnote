@@ -6,6 +6,24 @@
 @source '../**/*.js';
 @source '../**/*.vue';
 
+/* Pliant, self-hosted (public/fonts). Variable 100–900 + italic — served
+   from our own origin so the production CSP (font-src 'self') allows it
+   and no visitor IPs leak to a font CDN. */
+@font-face {
+    font-family: 'Pliant';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/pliant-variable.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'Pliant';
+    font-style: italic;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/fonts/pliant-variable-italic.woff2') format('woff2');
+}
+
 @theme {
     --font-sans: 'Pliant', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
