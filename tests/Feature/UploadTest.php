@@ -98,9 +98,9 @@ class UploadTest extends TestCase
             'section' => 'slides',
             'uploaderName' => 'Sam',
             'files' => [
-                UploadedFile::fake()->create('wk1.pdf', 50, 'application/pdf'),
-                UploadedFile::fake()->create('wk2.pdf', 50, 'application/pdf'),
-                UploadedFile::fake()->create('wk3.pdf', 50, 'application/pdf'),
+                UploadedFile::fake()->createWithContent('wk1.pdf', 'week one'),
+                UploadedFile::fake()->createWithContent('wk2.pdf', 'week two'),
+                UploadedFile::fake()->createWithContent('wk3.pdf', 'week three'),
             ],
         ])->assertRedirect();
 
@@ -117,8 +117,8 @@ class UploadTest extends TestCase
             'section' => 'notes',
             'title' => 'My title',
             'files' => [
-                UploadedFile::fake()->create('a.pdf', 50, 'application/pdf'),
-                UploadedFile::fake()->create('b.pdf', 50, 'application/pdf'),
+                UploadedFile::fake()->createWithContent('a.pdf', 'alpha'),
+                UploadedFile::fake()->createWithContent('b.pdf', 'bravo'),
             ],
         ])->assertRedirect();
 
@@ -133,8 +133,10 @@ class UploadTest extends TestCase
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
             'files' => [
-                UploadedFile::fake()->create('fits.pdf', 600, 'application/pdf'),   // 600 KB — fits
-                UploadedFile::fake()->create('toobig.pdf', 600, 'application/pdf'), // would exceed remaining
+                // Distinct content so the second is skipped for SIZE, not as a
+                // duplicate — 600 KB each, both padded to size with unique text.
+                UploadedFile::fake()->createWithContent('fits.pdf', 'A'.str_repeat('a', 600 * 1024 - 1)),
+                UploadedFile::fake()->createWithContent('toobig.pdf', 'B'.str_repeat('b', 600 * 1024 - 1)),
             ],
         ])->assertRedirect();
 
@@ -229,6 +231,29 @@ class UploadTest extends TestCase
             ->assertInertia(fn ($page) => $page
                 ->has('materials', 1)
                 ->where('materials.0.original_filename', 'optimization-lecture.pdf')
+            );
+    }
+
+    public function test_multi_word_search_matches_across_filename_separators(): void
+    {
+        $this->course->materials()->create(['section' => 'past_papers', 'title' => null, 'original_filename' => 'past_papers_2023.pdf', 'stored_path' => 'x/p.pdf']);
+        $this->course->materials()->create(['section' => 'notes', 'title' => 'Week_1_notes', 'original_filename' => 'w1.pdf', 'stored_path' => 'x/w.pdf']);
+        $this->course->materials()->create(['section' => 'notes', 'title' => 'Limits', 'original_filename' => 'c.pdf', 'stored_path' => 'x/c.pdf']);
+
+        // "past paper" (space) must find "past_papers_2023.pdf" (underscores).
+        $this->get(route('course.show', array_merge($this->wsParams(['slug' => $this->course->slug]), ['search' => 'past paper'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('materials', 1)
+                ->where('materials.0.original_filename', 'past_papers_2023.pdf')
+            );
+
+        // Terms can match title and filename independently ("week 1" → Week_1_notes).
+        $this->get(route('course.show', array_merge($this->wsParams(['slug' => $this->course->slug]), ['search' => 'week 1'])))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('materials', 1)
+                ->where('materials.0.title', 'Week_1_notes')
             );
     }
 
@@ -453,5 +478,129 @@ class UploadTest extends TestCase
         ])->assertRedirect();
 
         $this->assertTrue(Hash::check('sesame', $this->workspace->fresh()->upload_passphrase));
+    }
+
+    public function test_it_skips_a_file_already_on_the_board(): void
+    {
+        $bytes = str_repeat('PDFDATA', 500);
+        $first = UploadedFile::fake()->createWithContent('paper.pdf', $bytes);
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'past_papers', 'uploaderName' => 'Ada', 'files' => [$first],
+        ])->assertRedirect();
+        $this->assertSame(1, Material::count());
+
+        // Same bytes, different name → rejected as a duplicate, nothing created.
+        $dup = UploadedFile::fake()->createWithContent('paper-copy.pdf', $bytes);
+        $this->post($this->uploadUrl(), [
+            'section' => 'past_papers', 'uploaderName' => 'Bo', 'files' => [$dup],
+        ])->assertSessionHasErrors('files');
+
+        $this->assertSame(1, Material::count());
+    }
+
+    public function test_two_identical_files_in_one_batch_de_dupe(): void
+    {
+        $bytes = str_repeat('SAME', 800);
+        $a = UploadedFile::fake()->createWithContent('a.pdf', $bytes);
+        $b = UploadedFile::fake()->createWithContent('b.pdf', $bytes);
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes', 'uploaderName' => 'Cy', 'files' => [$a, $b],
+        ])->assertRedirect();
+
+        // Only one stored despite two identical files in the same upload.
+        $this->assertSame(1, Material::count());
+    }
+
+    public function test_same_bytes_in_a_different_course_is_allowed(): void
+    {
+        $bytes = str_repeat('X', 1000);
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes', 'uploaderName' => 'Di',
+            'files' => [UploadedFile::fake()->createWithContent('x.pdf', $bytes)],
+        ])->assertRedirect();
+
+        $other = Course::create(['code' => 'PHYS 101', 'title' => 'Physics', 'slug' => 'phys-101']);
+        $this->post(route('course.upload', $this->wsParams(['slug' => $other->slug])), [
+            'section' => 'notes', 'uploaderName' => 'Di',
+            'files' => [UploadedFile::fake()->createWithContent('x.pdf', $bytes)],
+        ])->assertRedirect();
+
+        // Dedup is per-course: the same file is fine in a second course.
+        $this->assertSame(2, Material::count());
+    }
+
+    public function test_pdf_serves_inline_with_view_param(): void
+    {
+        $material = $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'lecture.pdf',
+            'stored_path' => UploadedFile::fake()->create('lecture.pdf', 10)->store('materials', 'local'),
+            'manage_token' => 'tok-'.str_repeat('p', 37),
+        ]);
+
+        $inline = $this->get(route('material.download', ['token' => $material->manage_token, 'view' => 1]));
+        $inline->assertOk();
+        $this->assertStringContainsString('inline', $inline->headers->get('content-disposition'));
+
+        // Without ?view it still downloads as an attachment.
+        $attachment = $this->get(route('material.download', ['token' => $material->manage_token]));
+        $this->assertStringContainsString('attachment', $attachment->headers->get('content-disposition'));
+    }
+
+    public function test_non_previewable_type_ignores_view_param(): void
+    {
+        // A .docx must never be served inline even with ?view=1.
+        $material = $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'essay.docx',
+            'stored_path' => UploadedFile::fake()->create('essay.docx', 10)->store('materials', 'local'),
+            'manage_token' => 'tok-'.str_repeat('d', 37),
+        ]);
+
+        $res = $this->get(route('material.download', ['token' => $material->manage_token, 'view' => 1]));
+        $this->assertStringContainsString('attachment', $res->headers->get('content-disposition'));
+    }
+
+    public function test_it_zips_all_files_in_a_section(): void
+    {
+        foreach (['a.pdf', 'b.pdf'] as $name) {
+            $this->course->materials()->create([
+                'section' => 'past_papers',
+                'original_filename' => $name,
+                'stored_path' => UploadedFile::fake()->create($name, 5)->store('materials', 'local'),
+                'manage_token' => 'tok-'.str_repeat($name[0], 37),
+            ]);
+        }
+        // A file in another section must NOT be included.
+        $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'note.pdf',
+            'stored_path' => UploadedFile::fake()->create('note.pdf', 5)->store('materials', 'local'),
+            'manage_token' => 'tok-'.str_repeat('n', 37),
+        ]);
+
+        $res = $this->get(route('course.download-section', $this->wsParams([
+            'slug' => $this->course->slug,
+            'section' => 'past_papers',
+        ])));
+
+        $res->assertOk();
+        $res->assertHeader('content-type', 'application/zip');
+        $res->assertDownload('math-251-past-papers.zip');
+    }
+
+    public function test_section_zip_404s_for_an_empty_or_unknown_section(): void
+    {
+        // No files uploaded yet.
+        $this->get(route('course.download-section', $this->wsParams([
+            'slug' => $this->course->slug, 'section' => 'notes',
+        ])))->assertNotFound();
+
+        // Bogus section key.
+        $this->get(route('course.download-section', $this->wsParams([
+            'slug' => $this->course->slug, 'section' => 'bogus',
+        ])))->assertNotFound();
     }
 }

@@ -8,6 +8,9 @@ const props = defineProps({
     course: Object,
     isOwner: Boolean,
     storageFull: Boolean,
+    storageUsed: Number,
+    storageCap: Number,
+    storagePct: Number,
     passphraseNeeded: Boolean,
     sections: Object,   // { notes: 'Notes', slides: 'Slides', ... }
     sectionCounts: Object,
@@ -59,6 +62,11 @@ const materialsBySection = computed(() => {
     return map
 })
 
+// "Download all" — zips a whole section (the exam-time need). Plain GET link.
+function sectionZipUrl(key) {
+    return '/' + props.workspace.slug + '/c/' + props.course.slug + '/download/' + key
+}
+
 const isFiltered = computed(() => localSearch.value.trim() !== '' || localSection.value !== '')
 
 // Hard per-file limit, mirrors the server's `max:25600` (KB) upload rule.
@@ -69,6 +77,18 @@ function fileSize(bytes) {
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB'
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
+
+// Storage meter — owner-only. Mirrors the workspace-level indicator on CoursesPage.
+const mbUsed = computed(() => {
+    const v = props.storageUsed
+    return (v / 1048576).toFixed(v >= 10485760 ? 0 : 1)
+})
+const mbCap = computed(() => Math.round(props.storageCap / 1048576))
+const storageTone = computed(() => {
+    if (props.storagePct >= 90) return 'text-danger'
+    if (props.storagePct >= 75) return 'text-neon'
+    return 'text-muted'
+})
 
 const hasOversizedFile = computed(() =>
     uploadForm.files.some(f => f.size > MAX_FILE_BYTES))
@@ -228,27 +248,50 @@ watch(() => props.materials, () => { selected.value = [] })
     <AppLayout>
         <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-10 pt-10">
 
-            <header class="mb-7">
-                <Link :href="courseListUrl()"
-                      class="group mb-1.5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-neon transition hover:underline">
-                    <svg aria-hidden="true"
-                         class="size-5 shrink-0 transition-transform duration-200 group-hover:-translate-x-1"
-                         viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M13 9a1 1 0 0 1-1-1V4.707a.707.707 0 0 0-1.207-.5l-6.94 6.94a1.207 1.207 0 0 0 0 1.707l6.94 6.94a.707.707 0 0 0 1.207-.5V16a1 1 0 0 1 1-1h2a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1z"/>
-                        <path d="M20 9v6"/>
-                    </svg>
-                    <span>{{ workspace.name }}</span>
-                </Link>
-                <h1 class="text-3xl font-bold tracking-tight text-ink">{{ course.code }}</h1>
-                <p class="mt-1.5 text-[15px] text-muted">{{ course.title }}</p>
+            <header class="mb-7 flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <Link :href="courseListUrl()"
+                          class="group mb-1.5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-neon transition hover:underline">
+                        <svg aria-hidden="true"
+                             class="size-5 shrink-0 transition-transform duration-200 group-hover:-translate-x-1"
+                             viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M13 9a1 1 0 0 1-1-1V4.707a.707.707 0 0 0-1.207-.5l-6.94 6.94a1.207 1.207 0 0 0 0 1.707l6.94 6.94a.707.707 0 0 0 1.207-.5V16a1 1 0 0 1 1-1h2a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1z"/>
+                            <path d="M20 9v6"/>
+                        </svg>
+                        <span>{{ workspace.name }}</span>
+                    </Link>
+                    <h1 class="text-3xl font-bold tracking-tight text-ink">{{ course.code }}</h1>
+                    <p class="mt-1.5 text-[15px] text-muted">{{ course.title }}</p>
+                </div>
+                <!-- Page action anchored to the title row (desktop only — on mobile
+                     the FAB below covers it from the thumb zone). Hidden when the
+                     board is full (can't upload) and on an empty course, where the
+                     empty-state card's CTA is the sole invitation. -->
+                <button v-if="!storageFull && resultCount > 0" type="button" @click="uploadOpen = true"
+                        class="mt-7 hidden shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-neon px-5 py-2.5 text-[14px] font-semibold text-white shadow-sm transition hover:brightness-125 sm:inline-flex">
+                    <span class="text-lg leading-none">+</span> Add file
+                </button>
             </header>
 
             <!-- Owner mode — quiet inline note, not a full banner -->
-            <p v-if="isOwner" class="mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
-                <span class="inline-block size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
-                Owner mode — you can remove any file.
-            </p>
+            <div v-if="isOwner" class="mb-5">
+                <p class="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
+                    <span class="inline-block size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
+                    Owner mode — you can remove any file.
+                </p>
+                <!-- Storage meter — makes the soft per-board cap legible before uploads bounce. -->
+                <div v-if="storageUsed > 0" class="mt-1.5 flex items-center gap-2">
+                    <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">
+                        <div class="h-full rounded-full transition-all"
+                             :class="storagePct >= 90 ? 'bg-danger' : storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
+                             :style="{ width: storagePct + '%' }"></div>
+                    </div>
+                    <p class="text-[11px]" :class="storageTone">
+                        {{ mbUsed }} of {{ mbCap }} MB used<template v-if="storagePct >= 90"> · delete old files to free space</template>
+                    </p>
+                </div>
+            </div>
 
             <!-- Course created — confirmation only; the empty-state card owns the next-step CTA. -->
             <div v-if="flash.created"
@@ -269,15 +312,18 @@ watch(() => props.materials, () => { selected.value = [] })
             </div>
 
             <!-- Sticky filter bar — only useful once the course has files -->
-            <div v-if="resultCount > 0" class="sticky top-0 z-30 -mx-5 mb-5 space-y-3 bg-base/95 px-5 py-3 backdrop-blur">
+            <!-- Static on phones: stacked search+sort+pills would pin ~170px of
+                 chrome over a small viewport, and the bulk bar's offset assumes
+                 the desktop height. Sticky from sm up. -->
+            <div v-if="resultCount > 0" class="z-30 -mx-5 mb-5 space-y-3 bg-base/95 px-5 py-3 backdrop-blur sm:sticky sm:top-0">
                 <div class="flex flex-col gap-2 sm:flex-row">
-                    <input type="search" v-model="localSearch"
+                    <input type="text" inputmode="search" v-model="localSearch"
                            :placeholder="`Search ${resultCount} ${resultCount === 1 ? 'file' : 'files'} by name…`"
                            aria-label="Search files"
-                           class="box-border h-12 w-full min-w-0 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                           class="box-border w-full min-w-0 flex-1 appearance-none rounded-lg border border-sky bg-surface px-3.5 py-3 text-[15px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     <div class="relative w-full sm:w-auto">
                         <select v-model="localSort" aria-label="Sort files"
-                                class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                class="box-border w-full appearance-none rounded-lg border border-sky bg-surface py-3 pl-3.5 pr-10 text-[15px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                             <option value="newest">Newest first</option>
                             <option value="oldest">Oldest first</option>
                             <option value="az">A–Z</option>
@@ -342,8 +388,10 @@ watch(() => props.materials, () => { selected.value = [] })
             </div>
 
             <!-- Bulk action bar (owner, selection active) -->
+            <!-- top-2 on phones (filter bar is static there); below the sticky
+                 filter bar's desktop height from sm up. -->
             <div v-if="isOwner && selectedCount > 0"
-                 class="sticky top-[116px] z-20 mb-4 flex flex-col gap-2 rounded-xl border border-sky bg-surface px-4 py-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                 class="sticky top-2 z-20 mb-4 flex flex-col gap-2 rounded-xl border border-sky bg-surface px-4 py-2.5 shadow-sm sm:top-29 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div class="flex items-center gap-3">
                     <input type="checkbox"
                            :checked="allSelected"
@@ -372,9 +420,18 @@ watch(() => props.materials, () => { selected.value = [] })
             <template v-for="(label, key) in sections" :key="key">
                 <template v-if="materialsBySection[key]?.length > 0">
                     <section :id="'sec-' + key" class="mb-4 scroll-mt-20 rounded-2xl border border-sky/30 bg-surface px-4 py-5 shadow-md ring-1 ring-black/3 sm:px-6">
-                        <h2 class="mb-3.5 text-xs font-bold uppercase tracking-[0.06em] text-muted">
-                            {{ label }}
-                        </h2>
+                        <div class="mb-3.5 flex items-center justify-between gap-3">
+                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">
+                                {{ label }}
+                            </h2>
+                            <a v-if="sectionCounts[key] > 1" :href="sectionZipUrl(key)"
+                               class="inline-flex shrink-0 items-center gap-1 text-[12px] font-semibold text-neon hover:underline">
+                                <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
+                                </svg>
+                                Download all ({{ sectionCounts[key] }})
+                            </a>
+                        </div>
                         <div v-for="material in materialsBySection[key]" :key="material.id"
                              class="flex items-center justify-between gap-3 border-b border-sky/60 py-3 first:pt-0 last:border-0 last:pb-0"
                              :class="isSelected(material.id) ? 'bg-teal/5 -mx-4 px-4 sm:-mx-6 sm:px-6' : ''">
@@ -386,12 +443,27 @@ watch(() => props.materials, () => { selected.value = [] })
                                        :aria-label="`Select ${material.displayName} to delete`"
                                        title="Select to delete"
                                        class="mt-1 size-4 shrink-0 cursor-pointer accent-teal">
-                                <span class="mt-0.5 shrink-0 rounded bg-sky/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted"
+                                <!-- Type badge hidden on phones — the row width goes to the
+                                     filename; the extension is usually in the name anyway. -->
+                                <span class="mt-0.5 hidden shrink-0 rounded bg-sky/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted sm:inline"
                                       :title="material.fileTypeLabel + ' file'">
                                     {{ material.fileTypeLabel }}
                                 </span>
                                 <div class="min-w-0">
-                                    <a v-if="material.download_url" :href="material.download_url"
+                                    <!-- Title opens the preview (look inside — the library mental model);
+                                         the ↗ icon signals it opens in a new tab so it isn't a silent
+                                         trapdoor. Non-previewable types (docx/ppt) have no preview, so the
+                                         title downloads and shows no icon. The pill stays the download action. -->
+                                    <a v-if="material.preview_url" :href="material.preview_url"
+                                       target="_blank" rel="noopener"
+                                       :title="`Preview ${material.displayName} (opens in a new tab)`"
+                                       class="flex items-center gap-1 text-[15px] font-semibold text-neon hover:underline">
+                                        <span class="truncate">{{ material.displayName }}</span>
+                                        <svg aria-hidden="true" class="size-3.5 shrink-0 text-neon/70" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M8 5H5v10h10v-3M12 4h4v4M16 4l-7 7" />
+                                        </svg>
+                                    </a>
+                                    <a v-else-if="material.download_url" :href="material.download_url"
                                        class="block truncate text-[15px] font-semibold text-neon hover:underline">
                                         {{ material.displayName }}
                                     </a>
@@ -410,9 +482,9 @@ watch(() => props.materials, () => { selected.value = [] })
                                           @submit="confirmDelete">
                                         <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
                                         <input type="hidden" name="_method" value="DELETE">
-                                        <button type="submit" aria-label="Delete file"
-                                                class="cursor-pointer rounded-full p-2 text-muted transition hover:bg-danger/10 hover:text-danger">
-                                            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <button type="submit" aria-label="Delete file" title="Delete file"
+                                                class="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted/60 transition hover:bg-danger/10 hover:text-danger">
+                                            <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a1 1 0 01-1 1H7a1 1 0 01-1-1V6"/>
                                             </svg>
                                         </button>
@@ -427,9 +499,15 @@ watch(() => props.materials, () => { selected.value = [] })
                                         <path d="M5 17V3.5M5 4h9l-2 3 2 3H5"/>
                                     </svg>
                                 </button>
+                                <!-- Icon-only on mobile so the filename keeps its width;
+                                     text pill from sm up. -->
                                 <a v-if="!selectedCount && material.download_url" :href="material.download_url"
-                                   class="rounded-full bg-neon px-3.5 py-1.5 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-125">
-                                    Download
+                                   aria-label="Download" title="Download"
+                                   class="flex size-11 items-center justify-center rounded-full bg-neon text-white shadow-sm transition hover:brightness-125 sm:h-auto sm:w-auto sm:px-3.5 sm:py-1.5">
+                                    <svg aria-hidden="true" class="size-4 sm:hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
+                                    </svg>
+                                    <span class="hidden text-[13px] font-semibold sm:inline">Download</span>
                                 </a>
                             </div>
                         </div>
@@ -448,19 +526,13 @@ watch(() => props.materials, () => { selected.value = [] })
                 </div>
 
                 <template v-else>
-                    <!-- FAB — only once files exist; on an empty course the
-                         empty-state card's "Add the first file" is the sole CTA. -->
+                    <!-- Mobile-only FAB — bottom-right thumb zone. On phones the
+                         header pill is out of reach and scrolls away; this is the
+                         standard mobile counterpart to the desktop header action. -->
                     <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
                             aria-label="Add a file"
-                            class="fixed bottom-6 right-6 z-20 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-neon text-2xl font-bold text-white shadow-lg transition hover:brightness-125">
+                            class="fixed bottom-6 right-6 z-20 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-neon text-2xl font-bold text-white shadow-lg transition hover:brightness-125 sm:hidden">
                         +
-                    </button>
-
-                    <!-- Collapsed button — hidden on an empty course, where the
-                         empty-state card's "Add the first file" is the CTA. -->
-                    <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
-                            class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-teal/50 bg-surface px-6 py-4 text-[15px] font-semibold text-neon shadow-sm transition hover:bg-sky/30">
-                        <span class="text-lg leading-none">+</span> Add a file
                     </button>
 
                     <!-- Expanded form -->

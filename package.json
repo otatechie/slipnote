@@ -17,6 +17,7 @@
     "dependencies": {
         "@inertiajs/vue3": "^3.2.0",
         "@vitejs/plugin-vue": "^6.0.7",
+        "qrcode": "^1.5.4",
         "vue": "^3.5.34"
     }
 }

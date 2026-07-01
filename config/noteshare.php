@@ -50,6 +50,6 @@ return [
 
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.
-    'legal_updated' => '2026-06-15',
+    'legal_updated' => '2026-07-01',
 
 ];

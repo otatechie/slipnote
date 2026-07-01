@@ -39,9 +39,14 @@ class CourseController extends Controller
 
         $query = $course->materials();
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")->orWhere('original_filename', 'like', "%{$search}%");
-            });
+            // Each word must match title or filename, so "past paper" finds
+            // "past_papers_2023.pdf" — separators in filenames shouldn't hide
+            // files from the natural query.
+            foreach (preg_split('/\s+/', $search) as $term) {
+                $query->where(function ($q) use ($term) {
+                    $q->where('title', 'like', "%{$term}%")->orWhere('original_filename', 'like', "%{$term}%");
+                });
+            }
         }
         if ($activeSection !== '' && isset(Material::SECTIONS[$activeSection])) {
             $query->where('section', $activeSection);
@@ -65,12 +70,14 @@ class CourseController extends Controller
             'fileTypeLabel' => $m->fileTypeLabel(),
             'uploader_name' => $m->uploader_name,
             // "just now" reads better than "0 seconds ago" for fresh uploads.
+            // Short units ("28m ago") keep the meta line from truncating on phones.
             'created_at_human' => $m->created_at->diffInSeconds() < 45
                 ? 'just now'
-                : $m->created_at->diffForHumans(),
+                : $m->created_at->diffForHumans(short: true),
             'download_url' => filled($m->manage_token)
                 ? route('material.download', ['token' => $m->manage_token])
                 : null,
+            'preview_url' => $m->previewUrl(),
             'delete_url' => route('material.destroy', ['material' => $m->id, 'token' => 'owner']),
             'manage_url' => $m->manageUrl(),
             'title' => $m->title,
@@ -81,6 +88,9 @@ class CourseController extends Controller
             'course' => ['id' => $course->id, 'code' => $course->code, 'title' => $course->title, 'slug' => $course->slug],
             'isOwner' => $this->isOwner(),
             'storageFull' => $workspace->storageFull(),
+            'storageUsed' => $storageUsed = $workspace->storageBytes(),
+            'storageCap' => $storageCap = (int) config('noteshare.workspace_storage_bytes'),
+            'storagePct' => $storageCap > 0 ? min(100, (int) round($storageUsed / $storageCap * 100)) : 0,
             'passphraseNeeded' => filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true,
             'sections' => Material::SECTIONS,
             'sectionCounts' => $sectionCounts,
@@ -90,6 +100,67 @@ class CourseController extends Controller
             'sort' => $sort,
             'activeSection' => $activeSection,
         ]);
+    }
+
+    /**
+     * Stream every file in one section as a zip. Anonymous, like single
+     * downloads — anyone with the board link can grab the whole section
+     * (the real exam-time need: "all the past papers", not twelve clicks).
+     * Built into a temp file then streamed and deleted after send.
+     */
+    public function downloadSection(string $workspaceSlug, string $slug, string $section)
+    {
+        abort_unless(isset(Material::SECTIONS[$section]), 404);
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+
+        $materials = $course->materials()
+            ->where('section', $section)
+            ->latest()
+            ->get();
+
+        abort_if($materials->isEmpty(), 404);
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'slipzip');
+        $zip = new \ZipArchive;
+        $zip->open($zipPath, \ZipArchive::OVERWRITE);
+
+        // De-collide duplicate filenames inside the archive; skip files that
+        // vanished from disk rather than failing the whole download.
+        $used = [];
+        $added = 0;
+        foreach ($materials as $material) {
+            $realPath = Storage::disk('local')->path($material->stored_path);
+            if (! is_file($realPath)) {
+                continue;
+            }
+
+            $name = $material->original_filename;
+            if (isset($used[$name])) {
+                $ext = pathinfo($name, PATHINFO_EXTENSION);
+                $base = pathinfo($name, PATHINFO_FILENAME);
+                $name = $ext !== '' ? "{$base} ({$used[$name]}).{$ext}" : "{$base} ({$used[$name]})";
+                $used[$material->original_filename]++;
+            } else {
+                $used[$name] = 1;
+            }
+
+            $zip->addFile($realPath, $name);
+            $added++;
+        }
+        $zip->close();
+
+        if ($added === 0) {
+            @unlink($zipPath);
+            abort(404);
+        }
+
+        $sectionLabel = Str::slug(Material::SECTIONS[$section]);
+        $filename = "{$course->slug}-{$sectionLabel}.zip";
+
+        return response()
+            ->download($zipPath, $filename)
+            ->deleteFileAfterSend(true);
     }
 
     public function bulkDelete(Request $request, string $workspaceSlug, string $slug)
@@ -218,12 +289,29 @@ class CourseController extends Controller
         $created = [];
         $skipped = 0;
         $blocked = 0;
+        $duplicate = 0;
+        $duplicateName = null;
+        // Hashes already present in this course, plus any added this batch, so
+        // two identical files in one upload also de-dupe against each other.
+        $seenHashes = $course->materials()->whereNotNull('content_hash')->pluck('content_hash')->flip();
 
         foreach ($files as $file) {
-            // Refuse files the operator previously removed (exact-content match).
             $hash = hash_file('sha256', $file->getRealPath());
+
+            // Refuse files the operator previously removed (exact-content match).
             if (BlockedUpload::where('content_hash', $hash)->exists()) {
                 $blocked++;
+
+                continue;
+            }
+
+            // Skip a file already on this board (same bytes). Prevents the
+            // natural entropy of five copies of one past paper under different
+            // names on an anonymous board.
+            if ($seenHashes->has($hash)) {
+                $duplicate++;
+                $duplicateName ??= $course->materials()->where('content_hash', $hash)->value('title')
+                    ?? $course->materials()->where('content_hash', $hash)->value('original_filename');
 
                 continue;
             }
@@ -235,6 +323,7 @@ class CourseController extends Controller
                 continue;
             }
             $remaining -= $size;
+            $seenHashes->put($hash, true);
 
             $material = $course->materials()->create([
                 'section' => $data['section'],
@@ -244,6 +333,7 @@ class CourseController extends Controller
                 'uploader_name' => $uploaderName,
                 'manage_token' => Str::random(40),
                 'file_size' => $size,
+                'content_hash' => $hash,
             ]);
 
             dispatch(fn () => app(TelegramNotifier::class)->notifyUpload($material))->afterResponse();
@@ -251,8 +341,16 @@ class CourseController extends Controller
         }
 
         if (count($created) === 0) {
-            if ($blocked > 0 && $skipped === 0) {
+            if ($blocked > 0 && $skipped === 0 && $duplicate === 0) {
                 return back()->withErrors(['files' => 'That file was removed by the site operator and can’t be re-uploaded.']);
+            }
+
+            if ($duplicate > 0 && $skipped === 0 && $blocked === 0) {
+                $where = $duplicateName ? " as \"{$duplicateName}\"" : '';
+
+                return back()->withErrors(['files' => $duplicate === 1
+                    ? "That file is already on this board{$where}."
+                    : 'Those files are already on this board.']);
             }
 
             return back()->withErrors(['files' => 'This board is full — ask the owner to delete old files.']);
@@ -260,6 +358,11 @@ class CourseController extends Controller
 
         $count = count($created);
         $message = $count === 1 ? 'File added.' : "{$count} files added.";
+        if ($duplicate > 0) {
+            $message .= $duplicate === 1
+                ? ' 1 skipped — already on the board.'
+                : " {$duplicate} skipped — already on the board.";
+        }
         if ($skipped > 0) {
             $message .= " {$skipped} skipped — board is full.";
         }

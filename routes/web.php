@@ -7,6 +7,7 @@ use App\Http\Controllers\WorkspaceRecoveryController;
 use App\Http\Controllers\WorkspacesController;
 use App\Models\Material;
 use App\Models\Workspace;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -33,10 +34,21 @@ Route::view('/terms', 'legal.terms')->name('terms');
 // random manage_token, not a sequential id, so files can't be enumerated
 // across workspaces by guessing /download/1, /download/2, … Declared
 // BEFORE the /{workspace} catch-all so "download" isn't read as a slug.
-Route::get('/download/{token}', function (string $token) {
+Route::get('/download/{token}', function (Request $request, string $token) {
     $material = Material::where('manage_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
+
+    // ?view=1 serves the file inline (Content-Disposition: inline) so students
+    // can preview before downloading. Only PDFs and images are ever served
+    // inline — serving arbitrary uploads (e.g. HTML) inline would be an XSS
+    // vector. Everything else falls through to a normal attachment download.
+    if ($request->boolean('view') && $material->isPreviewable()) {
+        return Storage::disk('local')->response(
+            $material->stored_path,
+            $material->original_filename,
+        );
+    }
 
     return Storage::disk('local')->download(
         $material->stored_path,
@@ -91,6 +103,7 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/recovery-email', [CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
 
     Route::get('/{workspace}/c/{slug}', [CourseController::class, 'show'])->name('course.show');
+    Route::get('/{workspace}/c/{slug}/download/{section}', [CourseController::class, 'downloadSection'])->name('course.download-section');
     Route::post('/{workspace}/c/{slug}/upload', [CourseController::class, 'upload'])->name('course.upload');
 
     Route::delete('/{workspace}/c/{slug}/materials', [CourseController::class, 'bulkDelete'])->name('course.bulk-delete');

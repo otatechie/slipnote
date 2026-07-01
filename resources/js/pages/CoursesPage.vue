@@ -55,6 +55,25 @@ function share() {
     }).catch(() => { })
 }
 
+// QR code — for the "get the notes here" moment in a room. Generated lazily
+// (dynamic import keeps the qrcode lib out of the initial bundle).
+const qrDataUrl = ref('')
+const qrOpen = ref(false)
+async function toggleQr() {
+    if (qrOpen.value) { qrOpen.value = false; return }
+    if (!qrDataUrl.value) {
+        const QR = (await import('qrcode')).default
+        qrDataUrl.value = await QR.toDataURL(workspaceUrl.value, { width: 512, margin: 2 })
+    }
+    qrOpen.value = true
+}
+function downloadQr() {
+    const a = document.createElement('a')
+    a.href = qrDataUrl.value
+    a.download = props.workspace.slug + '-qr.png'
+    a.click()
+}
+
 // Course create / edit sheet. editing holds the course being edited, or
 // null when the sheet is creating a new course.
 const sheet = ref(false)
@@ -113,7 +132,14 @@ function submitCourse() {
     }
 }
 
-// Recovery email form
+// Recovery email form. The nudge collapses to one row once courses exist
+// (so it can't out-weigh the course list); it starts open on an empty board
+// and whenever there's feedback to show (save confirmation / error).
+const recoveryOpen = ref(
+    props.totalCourses === 0
+    || !!page.props.flash?.recoverySaved
+    || !!page.props.errors?.recoveryEmail,
+)
 const recoveryForm = useForm({ recoveryEmail: '' })
 function saveRecoveryEmail() {
     recoveryForm.post('/' + props.workspace.slug + '/recovery-email', {
@@ -252,16 +278,18 @@ function persistOrder() {
                 </a>
                 <h1 class="text-3xl font-bold tracking-tight text-ink">{{ workspace.name }}</h1>
                 <p class="mt-1.5 text-[15px] text-muted">
-                    <template v-if="totalCourses > 0">Pick a course to browse and share materials.</template>
+                    <template v-if="totalCourses > 0">Pick a course to find what you need — or add what you have.</template>
                     <template v-else>Your board's courses live here — add one to get started.</template>
                 </p>
 
                 <!-- Actions on their own row: actions left, owner-mode status right. -->
                 <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <!-- Wrapping row on mobile (Share + QR pair up; New course takes the
+                         next line) instead of three stacked full-width buttons. -->
+                    <div class="flex flex-wrap gap-2 sm:items-center">
                         <!-- Share leads nowhere on an empty board, so it appears once there's a course to find. -->
                         <button v-if="totalCourses > 0" type="button" @click="share"
-                            class="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40 sm:w-auto sm:justify-start">
+                            class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40 sm:flex-none sm:justify-start">
                             <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                                 stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1" />
@@ -270,8 +298,17 @@ function persistOrder() {
                             <span v-if="!shareCopied">Share board</span>
                             <span v-else>Link copied ✓</span>
                         </button>
+                        <!-- QR for the "get the notes here" moment in a lecture hall. -->
+                        <button v-if="totalCourses > 0" type="button" @click="toggleQr"
+                            :aria-expanded="qrOpen" aria-label="Show QR code for this board"
+                            class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40 sm:flex-none sm:justify-start">
+                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
+                            </svg>
+                            <span>QR code</span>
+                        </button>
                         <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
-                            class="inline-flex w-full shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125 sm:w-auto">
+                            class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125 sm:flex-none">
                             <span class="text-lg leading-none">+</span> New course
                         </button>
                     </div>
@@ -309,8 +346,8 @@ function persistOrder() {
                     <template v-if="isOwner">
                         <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
                             A course is one class — like <span class="font-semibold text-ink">PHYS 101</span> or
-                            <span class="font-semibold text-ink">CS 250</span>. Add one and
-                            classmates can drop their notes, slides, and past papers into it.
+                            <span class="font-semibold text-ink">CS 250</span>. Add one and it becomes
+                            the place your classmates' notes, slides and past papers live.
                         </p>
                         <button type="button" @click="openCreate"
                             class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
@@ -454,7 +491,7 @@ function persistOrder() {
                             </button>
                         </div>
                         <p v-if="!editing" class="mb-5 text-[13px] leading-relaxed text-muted">
-                            Add a class so people can upload to it — like PHYS 101 or CS 250.
+                            Add a class — like PHYS 101 or CS 250 — so its materials have a home.
                         </p>
                         <div v-else class="mb-5"></div>
                         <form @submit.prevent="submitCourse" class="flex flex-col gap-3.5">
@@ -493,54 +530,96 @@ function persistOrder() {
                     </div>
                 </div>
 
-                <!-- Recovery email nudge. Prominent only on an empty board where
-                     nothing competes; once courses exist it stays quiet so it
-                     doesn't out-weigh the course list. -->
-                <div v-if="recoveryAvailable" class="mt-8 rounded-xl border px-5 py-4"
-                    :class="(needsRecoveryEmail && totalCourses === 0) ? 'border-neon/40 bg-neon/5' : 'border-sky bg-surface/50'">
-                    <p v-if="flash.recoverySaved" role="status"
-                       class="mb-3 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
-                        <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
-                        {{ flash.recoverySaved }}
-                    </p>
-                    <template v-if="needsRecoveryEmail">
-                        <p class="text-[13px] font-semibold text-ink">No recovery email set</p>
-                        <p class="mt-1 text-[12px] text-muted">
-                            Add a recovery email so we can send your owner link back if you lose it.
-                        </p>
-                    </template>
-                    <template v-else>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <p class="text-[13px] font-semibold text-ink">Recovery email is set</p>
-                            <span v-if="currentRecoveryEmail"
-                                class="inline-flex rounded-full border border-sky bg-base px-2.5 py-0.5 text-[11px] font-medium text-muted">
-                                {{ currentRecoveryEmail }}
-                            </span>
-                        </div>
-                        <p class="mt-1 text-[12px] text-muted">
-                            Lose your owner link and we'll email a fresh one. Anyone with that inbox can control this
-                            board.
-                        </p>
-                        <Link :href="recoveryUrl()"
-                            class="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-neon transition hover:underline">
-                            Recover owner link
-                            <span aria-hidden="true">›</span>
-                        </Link>
-                    </template>
-                    <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
-                            :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New email, or leave blank to remove'"
-                            class="w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
-                        <button type="submit" :disabled="recoveryForm.processing"
-                            class="w-full shrink-0 cursor-pointer rounded-lg border border-neon/50 px-4 py-2.5 text-[13px] font-semibold text-neon transition hover:bg-neon/10 disabled:opacity-60 sm:w-auto">
-                            Save
+                <!-- QR code overlay — scan-to-open for a room full of students. -->
+                <div v-if="qrOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Board QR code" @keydown.escape.window="qrOpen = false">
+                    <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="qrOpen = false"></div>
+                    <div class="relative flex w-full max-w-xs flex-col items-center rounded-2xl bg-surface px-6 pb-6 pt-11 shadow-xl">
+                        <button type="button" @click="qrOpen = false" aria-label="Close"
+                            class="absolute right-3 top-3 flex size-9 cursor-pointer items-center justify-center rounded-lg text-muted transition hover:bg-sky/40 hover:text-ink">
+                            <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                                <path d="M5 5l10 10M15 5L5 15" />
+                            </svg>
                         </button>
-                    </form>
-                    <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{
-                        errors.recoveryEmail[0]
-                        }}</span>
-                    <p v-if="needsRecoveryEmail" class="mt-2 text-[11px] text-muted/80">Only used to recover this board
-                        — never shared.</p>
+                        <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR code for this board" class="size-52 rounded-xl bg-white p-2 shadow-sm" />
+                        <p class="mt-4 text-[13px] font-semibold text-ink">Scan to open this board</p>
+                        <p class="mt-1 w-full break-all text-center text-[12px] text-muted">{{ workspaceUrl }}</p>
+                        <button type="button" @click="downloadQr"
+                            class="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neon px-3 py-2 text-[13px] font-bold text-white transition hover:brightness-125">
+                            Download QR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recovery email nudge. Prominent only on an empty board where
+                     nothing competes; once courses exist it collapses to a one-row
+                     disclosure (same idiom as "Manage this board") so it doesn't
+                     out-weigh the course list. -->
+                <div v-if="recoveryAvailable" class="mt-8 overflow-hidden rounded-xl border transition-colors"
+                    :class="(needsRecoveryEmail && totalCourses === 0) ? 'border-neon/40 bg-neon/5' : 'border-sky bg-surface/50'">
+                    <button v-if="totalCourses > 0" type="button" @click="recoveryOpen = !recoveryOpen"
+                        class="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-3 text-left transition hover:bg-sky/30"
+                        :aria-expanded="recoveryOpen" aria-controls="recoveryPanel">
+                        <span class="flex flex-col">
+                            <span class="text-[13px] font-semibold text-ink">
+                                {{ needsRecoveryEmail ? 'No recovery email set' : 'Recovery email is set' }}
+                            </span>
+                            <span v-if="!recoveryOpen" class="text-[12px] text-muted">
+                                {{ needsRecoveryEmail
+                                    ? 'Add one so we can send your owner link back if you lose it.'
+                                    : 'Lose your owner link and we\'ll email a fresh one.' }}
+                            </span>
+                        </span>
+                        <svg aria-hidden="true" class="size-4 shrink-0 text-muted transition-transform"
+                             :class="recoveryOpen ? 'rotate-180' : ''"
+                             viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div v-if="recoveryOpen" id="recoveryPanel" class="px-5 pb-4" :class="totalCourses === 0 ? 'pt-4' : 'pt-1'">
+                        <p v-if="flash.recoverySaved" role="status"
+                           class="mb-3 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
+                            <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
+                            {{ flash.recoverySaved }}
+                        </p>
+                        <template v-if="needsRecoveryEmail">
+                            <p v-if="totalCourses === 0" class="text-[13px] font-semibold text-ink">No recovery email set</p>
+                            <p class="mt-1 text-[12px] text-muted">
+                                Add a recovery email so we can send your owner link back if you lose it.
+                            </p>
+                        </template>
+                        <template v-else>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p v-if="totalCourses === 0" class="text-[13px] font-semibold text-ink">Recovery email is set</p>
+                                <span v-if="currentRecoveryEmail"
+                                    class="inline-flex rounded-full border border-sky bg-base px-2.5 py-0.5 text-[11px] font-medium text-muted">
+                                    {{ currentRecoveryEmail }}
+                                </span>
+                            </div>
+                            <p class="mt-1 text-[12px] text-muted">
+                                Lose your owner link and we'll email a fresh one. Anyone with that inbox can control this
+                                board.
+                            </p>
+                            <Link :href="recoveryUrl()"
+                                class="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-neon transition hover:underline">
+                                Recover owner link
+                                <span aria-hidden="true">›</span>
+                            </Link>
+                        </template>
+                        <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2 sm:flex-row">
+                            <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
+                                :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New email, or leave blank to remove'"
+                                class="w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
+                            <button type="submit" :disabled="recoveryForm.processing"
+                                class="w-full shrink-0 cursor-pointer rounded-lg border border-neon/50 px-4 py-2.5 text-[13px] font-semibold text-neon transition hover:bg-neon/10 disabled:opacity-60 sm:w-auto">
+                                Save
+                            </button>
+                        </form>
+                        <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{
+                            errors.recoveryEmail[0]
+                            }}</span>
+                        <p v-if="needsRecoveryEmail" class="mt-2 text-[11px] text-muted/80">Only used to recover this board
+                            — never shared.</p>
+                    </div>
                 </div>
             </template>
 
@@ -590,11 +669,17 @@ function persistOrder() {
                 </div>
             </template>
 
-            <!-- Storage indicator -->
-            <p v-if="storageUsed > 0" class="mx-auto mt-8 max-w-sm text-center text-[11px]" :class="storageTone">
-                Storage: {{ mbUsed }} of {{ mbCap }} MB used ({{ storagePct }}%)
-                <template v-if="storagePct >= 90"> · delete old files to free space</template>
-            </p>
+            <!-- Storage indicator — same compact meter as the course page. -->
+            <div v-if="storageUsed > 0" class="mt-8 flex items-center justify-center gap-2">
+                <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">
+                    <div class="h-full rounded-full transition-all"
+                         :class="storagePct >= 90 ? 'bg-danger' : storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
+                         :style="{ width: storagePct + '%' }"></div>
+                </div>
+                <p class="text-[11px]" :class="storageTone">
+                    {{ mbUsed }} of {{ mbCap }} MB used<template v-if="storagePct >= 90"> · delete old files to free space</template>
+                </p>
+            </div>
         </div>
     </AppLayout>
 </template>
