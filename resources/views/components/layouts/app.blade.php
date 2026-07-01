@@ -42,17 +42,17 @@
                 <p class="flex items-center gap-1.5 text-[13px] font-semibold text-muted">
                     Made with <svg class="size-3.5 fill-none stroke-current text-teal" viewBox="0 0 20 20" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17.25C10 17.25 2 12 2 6.5A4.5 4.5 0 0 1 10 3.914 4.5 4.5 0 0 1 18 6.5C18 12 10 17.25 10 17.25Z"/></svg> SlipNote
                 </p>
-                <p class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
+                <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
                     <a href="{{ route('privacy') }}" class="hover:text-neon">Privacy</a>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <a href="{{ route('terms') }}" class="hover:text-neon">Terms</a>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <a href="https://github.com/otatechie/slipnote" class="hover:text-neon" target="_blank" rel="noopener noreferrer">GitHub</a>
-                </p>
-                <button type="button"
-                        data-theme-toggle
-                        aria-label="Switch theme mode"
-                        class="group inline-flex cursor-pointer items-center justify-center rounded-full border border-sky bg-surface p-2 text-muted transition hover:border-neon hover:text-neon">
+                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    <button type="button"
+                            data-theme-toggle
+                            aria-label="Switch theme mode"
+                            class="group inline-flex cursor-pointer items-center justify-center rounded-full border border-sky bg-surface p-1.5 text-muted transition hover:border-neon hover:text-neon">
                     <svg aria-hidden="true" data-theme-icon="system" class="size-4 group-data-[active-theme=light]:hidden group-data-[active-theme=dark]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>
                     </svg>
@@ -62,7 +62,8 @@
                     <svg aria-hidden="true" data-theme-icon="dark" class="hidden size-4 group-data-[active-theme=dark]:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/>
                     </svg>
-                </button>
+                    </button>
+                </div>
                 <p class="text-[12px] text-muted">&copy; {{ date('Y') }} SlipNote</p>
             </div>
         </footer>

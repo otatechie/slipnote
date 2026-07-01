@@ -1,6 +1,6 @@
 <x-layouts.app
-    title="Share course notes with classmates"
-    description="A free, no-account board for sharing course materials. One link, your whole class, no logins, no setup."
+    title="Never ask “who has the notes?” again"
+    description="The free, no-login board where your class keeps its notes, slides and past papers. One link, no accounts, no setup."
     :indexable="true">
 
     <x-slot:head>
@@ -8,12 +8,16 @@
 
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="SlipNote">
-        <meta property="og:title" content="SlipNote: Share course notes with classmates">
-        <meta property="og:description" content="A free, no-account board for sharing course materials. One link, your whole class.">
+        <meta property="og:title" content="SlipNote: Never ask “who has the notes?” again">
+        <meta property="og:description" content="One link for your whole class's notes, slides and past papers. Free, no accounts, no setup.">
         <meta property="og:url" content="{{ url('/') }}">
-        <meta name="twitter:card" content="summary">
-        <meta name="twitter:title" content="SlipNote: Share course notes with classmates">
-        <meta name="twitter:description" content="A free, no-account board for sharing course materials. One link, your whole class.">
+        <meta property="og:image" content="{{ url('/og.png') }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="SlipNote: Never ask “who has the notes?” again">
+        <meta name="twitter:description" content="One link for your whole class's notes, slides and past papers. Free, no accounts, no setup.">
+        <meta name="twitter:image" content="{{ url('/og.png') }}">
 
         <script type="application/ld+json">
         {
@@ -28,14 +32,12 @@
                 "price": "0",
                 "priceCurrency": "USD"
             },
-            "description": "A free, no-account board for sharing course materials."
+            "description": "The free, no-login board where your class keeps its notes, slides and past papers."
         }
         </script>
     </x-slot:head>
 
     <section class="hero-bg relative isolate flex-1 overflow-hidden bg-white">
-        <div class="hero-texture pointer-events-none absolute inset-0 -z-10" aria-hidden="true"
-             style="background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900'%3E%3Cdefs%3E%3ClinearGradient id='a' x1='0' x2='0' y1='1' y2='0'%3E%3Cstop offset='0' stop-color='%230FF'/%3E%3Cstop offset='1' stop-color='%23CF6'/%3E%3C/linearGradient%3E%3ClinearGradient id='b' x1='0' x2='0' y1='0' y2='1'%3E%3Cstop offset='0' stop-color='%23F00'/%3E%3Cstop offset='1' stop-color='%23FC0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg fill='none' stroke-miterlimit='10'%3E%3Cg stroke='url(%23a)' stroke-opacity='0.55'%3E%3Cpath stroke-width='2' d='M1409 581 1450.35 511 1490 581z'/%3E%3Ccircle stroke-width='4' cx='500' cy='100' r='40'/%3E%3Cpath stroke-width='3' d='M400.86 735.5h-83.73c0-23.12 18.74-41.87 41.87-41.87S400.86 712.38 400.86 735.5z'/%3E%3Ccircle stroke-width='2' cx='180' cy='560' r='22'/%3E%3Cpath stroke-width='2' d='M760 250 780 215 800 250z'/%3E%3Crect stroke-width='2' x='1230' y='120' width='46' height='46' transform='rotate(18 1253 143)'/%3E%3Cpath stroke-width='2' d='M960 690 985 647 1010 690z'/%3E%3C/g%3E%3Cg stroke='url(%23b)' stroke-opacity='0.5'%3E%3Cpath stroke-width='4' d='M149.8 345.2 118.4 389.8 149.8 434.4 181.2 389.8z'/%3E%3Crect stroke-width='6' x='1039' y='709' width='100' height='100'/%3E%3Cpath stroke-width='4' d='M1426.8 132.4 1405.7 168.8 1363.7 168.8 1342.7 132.4 1363.7 96 1405.7 96z'/%3E%3Ccircle stroke-width='3' cx='620' cy='820' r='30'/%3E%3Cpath stroke-width='2' d='M300 160 318 128 336 160z'/%3E%3Crect stroke-width='2' x='830' y='470' width='34' height='34' transform='rotate(-12 847 487)'/%3E%3Cpath stroke-width='2' d='M1500 760 1520 725 1540 760z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E&quot;);background-position:center;background-repeat:no-repeat;background-size:cover;"></div>
         <div class="hero-vignette pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40" aria-hidden="true"></div>
         <header class="relative px-4 pt-4 sm:px-5 sm:pt-6">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-sky/80 bg-surface/85 px-3 py-2.5 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur sm:px-6 sm:py-3">
@@ -71,8 +73,8 @@
                         </span>
                     </h1>
                     <p class="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-muted sm:mt-7 sm:text-[17px] lg:mx-0">
-                        Make a board for your class, add a space for each course, and
-                        share one link. Everyone adds slides, past papers and notes.
+                        Stop asking “who has the notes?” in the group chat. One board
+                        for your class, a space for each course, one link everyone keeps.
                     </p>
                     <div class="mt-5 flex flex-col items-center gap-2.5 sm:mt-8 sm:flex-row sm:justify-center sm:gap-3.5 lg:justify-start">
                         <a href="{{ route('start') }}"
@@ -96,7 +98,7 @@
                             <span class="h-2.5 w-2.5 rounded-full bg-red-400/70" aria-hidden="true"></span>
                             <span class="h-2.5 w-2.5 rounded-full bg-yellow-400/70" aria-hidden="true"></span>
                             <span class="h-2.5 w-2.5 rounded-full bg-green-400/70" aria-hidden="true"></span>
-                            <span class="ml-2 truncate text-[12px] text-muted">slipnote.app/cs-level-100/c/cs-101</span>
+                            <span class="ml-2 truncate text-[12px] text-muted">slipnote.co/cs-level-100/c/cs-101</span>
                         </div>
                         <div class="flex items-start justify-between gap-3 px-4 py-4 sm:px-5">
                             <div class="min-w-0">
@@ -139,8 +141,8 @@
             <ol class="grid gap-5 sm:grid-cols-3">
                 @foreach ([
                     [
-                        'title' => 'Create your board',
-                        'body' => 'Name it for your class and add a space for each course.',
+                        'title' => 'Name your board',
+                        'body' => 'Make one for your class and add a space for each course.',
                         // duotone: solid document body + solid plus badge
                         'icon' => '<path class="opacity-40" d="M6 2h7l6 6v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M13 2l6 6h-6V2z"/><circle cx="17" cy="17" r="5"/><path d="M17 14.6v4.8M14.6 17h4.8" stroke="white" stroke-width="2" stroke-linecap="round"/>',
                     ],
@@ -151,7 +153,7 @@
                         'icon' => '<path class="opacity-40" d="M7.6 10.6l8.8-4.9 1.5 2.6-8.8 4.9zM9.1 11.1l8.8 4.9-1.5 2.6-8.8-4.9z"/><circle cx="6" cy="12" r="3.4"/><circle cx="18" cy="5" r="3.4"/><circle cx="18" cy="19" r="3.4"/>',
                     ],
                     [
-                        'title' => 'Everyone uploads',
+                        'title' => 'Everyone chips in',
                         'body' => 'Classmates open a course and add slides, papers and notes.',
                         // duotone: solid tray + solid arrow
                         'icon' => '<path class="opacity-40" d="M3 14h18v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 3l5 5h-3.2v6.5h-3.6V8H7z"/>',
@@ -169,10 +171,16 @@
                 @endforeach
             </ol>
 
-            <p class="mt-8 text-center text-[13px] text-muted sm:mt-14">
-                PDFs, Word, PowerPoint &amp; images · sorted into sections ·
-                upload with or without your name · only you get the private owner link
-            </p>
+            <ul class="mt-8 flex flex-wrap items-center justify-center gap-2 sm:mt-14">
+                @foreach ([
+                    'PDFs, Word, PowerPoint & images',
+                    'Sorted into sections',
+                    'Name optional',
+                    'Private owner link',
+                ] as $chip)
+                    <li class="rounded-full border border-sky bg-base px-3.5 py-1.5 text-[12.5px] font-medium text-muted">{{ $chip }}</li>
+                @endforeach
+            </ul>
         </div>
     </section>
 
@@ -185,6 +193,9 @@
                 <p class="mt-3 max-w-lg text-[15px] leading-relaxed text-muted sm:mt-4 sm:text-[16px]">
                     Group chats are great for talking, but files get buried fast.
                     SlipNote keeps sharing just as easy (drop a file in) while keeping everything findable a week later.
+                </p>
+                <p class="mt-4 text-[13px] font-medium text-muted sm:mt-5">
+                    Free · open source · no accounts, ever
                 </p>
             </div>
 

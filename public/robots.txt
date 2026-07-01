@@ -3,4 +3,8 @@
 # kept out of search engines.
 User-agent: *
 Allow: /$
+Allow: /og.png$
+Allow: /sitemap.xml$
 Disallow: /
+
+Sitemap: https://slipnote.co/sitemap.xml
