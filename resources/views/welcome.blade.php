@@ -37,7 +37,7 @@
         </script>
     </x-slot:head>
 
-    <section class="hero-bg relative isolate flex-1 overflow-hidden bg-white">
+    <section class="hero-bg nb-paper relative isolate flex-1 overflow-hidden bg-white">
         <div class="hero-vignette pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40" aria-hidden="true"></div>
         <header class="relative px-4 pt-4 sm:px-5 sm:pt-6">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-sky/80 bg-surface/85 px-3 py-2.5 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur sm:px-6 sm:py-3">
@@ -46,14 +46,10 @@
                     SlipNote
                 </a>
 
-                <nav class="hidden items-center gap-6 text-[14px] font-medium text-muted md:flex">
-                    <a href="#how" class="transition hover:text-neon">How it works</a>
-                    <a href="#why" class="transition hover:text-neon">Why SlipNote</a>
-                    <a href="{{ route('privacy') }}" class="transition hover:text-neon">Privacy</a>
-                </nav>
-
+                {{-- No nav links: it's a one-scroll page and Privacy lives in the
+                     footer, so the header's only job is the CTA. --}}
                 <a href="{{ route('start') }}"
-                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white transition hover:brightness-110 sm:px-4 sm:py-2.5 sm:text-[13px]">
+                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white shadow-[0_3px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_1px_0_0_var(--color-teal)] active:translate-y-0.5 active:shadow-none sm:px-4 sm:py-2.5 sm:text-[13px]">
                     <span class="sm:hidden">Create board</span>
                     <span class="hidden sm:inline">Create your board</span>
                 </a>
@@ -63,12 +59,14 @@
         <section class="relative px-4 pt-6 pb-10 sm:px-5 sm:pt-14 sm:pb-20">
             <div class="mx-auto grid max-w-6xl items-center gap-9 sm:gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
                 <div class="text-center lg:text-left">
-                    <h1 class="text-[34px] font-bold leading-[1.02] tracking-[-0.03em] text-teal sm:text-[52px] lg:text-[58px]">
+                    <h1 class="text-[34px] font-bold leading-[1.06] tracking-[-0.03em] text-teal sm:text-[52px] lg:text-[58px]">
                         Your whole class's notes,
                         <span class="relative inline-block text-neon sm:whitespace-nowrap">
                             in one link.
-                            <svg class="absolute -bottom-2 left-0 w-full text-neon" height="12" viewBox="0 0 240 12" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                                <path d="M3 8 Q 40 2 80 6 T 160 5 T 237 6" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                            {{-- thick marker underline, double-stroked like a real pen pass --}}
+                            <svg class="pointer-events-none absolute -bottom-3 left-0 w-full text-neon" height="16" viewBox="0 0 240 16" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                                <path d="M4 9 Q 34 3 74 7 T 148 6 T 236 7" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                                <path d="M10 13 Q 50 8 95 11 T 200 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
                             </svg>
                         </span>
                     </h1>
@@ -76,24 +74,22 @@
                         Stop asking “who has the notes?” in the group chat. One board
                         for your class, a space for each course, one link everyone keeps.
                     </p>
-                    <div class="mt-5 flex flex-col items-center gap-2.5 sm:mt-8 sm:flex-row sm:justify-center sm:gap-3.5 lg:justify-start">
+                    <div class="mt-5 flex flex-col items-center sm:mt-8 lg:items-start">
                         <a href="{{ route('start') }}"
                            class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_var(--color-teal)] active:translate-y-1 active:shadow-none sm:w-auto">
                             Create your board
                         </a>
-                        <a href="#how"
-                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full border-2 border-sky bg-surface px-7 py-3 text-[15px] font-bold text-ink transition hover:border-neon hover:text-neon sm:w-auto">
-                            See how it works
-                        </a>
                     </div>
-                    <p class="mt-3 text-[13px] font-medium text-muted">
-                        No account, no setup · takes under a minute
+                    <p class="mt-3 font-hand text-[19px] text-muted lg:-rotate-1 lg:pl-1">
+                        no account, no setup — takes under a minute ✓
                     </p>
                 </div>
 
-                <div class="group relative mx-auto w-full max-w-md lg:max-w-none" role="img" aria-label="Example board: the Computer Science Level 100 class, showing its CS 101 course with three shared files (a quiz solution, lecture slides and a past paper), each downloadable.">
-                    <div class="pointer-events-none absolute inset-2 -z-10 -rotate-1 rounded-2xl border border-sky bg-surface sm:-rotate-3" aria-hidden="true"></div>
-                    <div class="overflow-hidden rounded-2xl border border-sky bg-surface text-left shadow-[0_18px_50px_-22px_rgba(0,0,0,0.3)] transition-transform duration-300 rotate-1 group-hover:rotate-0 sm:rotate-2" aria-hidden="true">
+                <div class="group relative mx-auto w-full max-w-md lg:max-w-none" role="img" aria-label="Example board: the Computer Science Level 100 class, showing its CS 101 course with three shared files (a quiz solution, lecture slides and a past paper), with a Download-all option for the whole section.">
+                    {{-- masking tape holding the screenshot to the page --}}
+                    <span class="nb-tape -left-6 -top-3 z-10 -rotate-45" aria-hidden="true"></span>
+                    <span class="nb-tape -right-6 -top-3 z-10 rotate-45" aria-hidden="true"></span>
+                    <div class="overflow-hidden rounded-lg border border-sky bg-surface text-left shadow-[0_18px_50px_-22px_rgba(0,0,0,0.3)] transition-transform duration-300 rotate-1 group-hover:rotate-0 sm:rotate-2" aria-hidden="true">
                         <div class="flex items-center gap-1.5 border-b border-sky px-4 py-3">
                             <span class="h-2.5 w-2.5 rounded-full bg-red-400/70" aria-hidden="true"></span>
                             <span class="h-2.5 w-2.5 rounded-full bg-yellow-400/70" aria-hidden="true"></span>
@@ -105,7 +101,7 @@
                                 <p class="text-[11px] font-semibold text-muted">CS · Level 100</p>
                                 <p class="mt-0.5 text-[14px] font-bold text-teal sm:text-[15px]">CS 101 · Intro to Computer Science</p>
                             </div>
-                            <span class="hidden text-[12.5px] text-muted sm:block">24 contributors</span>
+                            <span class="hidden text-[12.5px] font-semibold text-neon sm:block">↓ Download all (3)</span>
                         </div>
                         <ul class="divide-y divide-sky border-t border-sky">
                             @foreach ([
@@ -138,34 +134,31 @@
                     </svg>
                 </span>
             </h2>
-            <ol class="grid gap-5 sm:grid-cols-3">
+            <ol class="grid gap-7 pt-4 sm:grid-cols-3 sm:gap-6">
                 @foreach ([
                     [
                         'title' => 'Name your board',
                         'body' => 'Make one for your class and add a space for each course.',
-                        // duotone: solid document body + solid plus badge
-                        'icon' => '<path class="opacity-40" d="M6 2h7l6 6v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M13 2l6 6h-6V2z"/><circle cx="17" cy="17" r="5"/><path d="M17 14.6v4.8M14.6 17h4.8" stroke="white" stroke-width="2" stroke-linecap="round"/>',
+                        'tint' => 'nb-tint-rose',
+                        'tilt' => '-rotate-[1.5deg]',
                     ],
                     [
                         'title' => 'Share the link',
                         'body' => 'Drop it in your class group chat. That\'s it.',
-                        // duotone: solid nodes + solid connector bars
-                        'icon' => '<path class="opacity-40" d="M7.6 10.6l8.8-4.9 1.5 2.6-8.8 4.9zM9.1 11.1l8.8 4.9-1.5 2.6-8.8-4.9z"/><circle cx="6" cy="12" r="3.4"/><circle cx="18" cy="5" r="3.4"/><circle cx="18" cy="19" r="3.4"/>',
+                        'tint' => 'nb-tint-sky',
+                        'tilt' => 'rotate-1',
                     ],
                     [
                         'title' => 'Everyone chips in',
                         'body' => 'Classmates open a course and add slides, papers and notes.',
-                        // duotone: solid tray + solid arrow
-                        'icon' => '<path class="opacity-40" d="M3 14h18v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 3l5 5h-3.2v6.5h-3.6V8H7z"/>',
+                        'tint' => 'nb-tint-amber',
+                        'tilt' => '-rotate-1',
                     ],
-                ] as $step)
-                    <li class="rounded-3xl border border-sky bg-base px-5 py-5 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-9 sm:py-10">
-                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-neon/10 text-neon sm:h-12 sm:w-12">
-                            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
-                                {!! $step['icon'] !!}
-                            </svg>
-                        </span>
-                        <p class="mt-4 text-[18px] font-semibold leading-[1.1] tracking-[-0.02em] text-teal sm:mt-6 sm:text-[30px]">{{ $step['title'] }}</p>
+                ] as $i => $step)
+                    <li class="nb-sticky {{ $step['tint'] }} {{ $step['tilt'] }} relative px-6 pb-8 pt-7 transition-transform duration-200 hover:rotate-0 sm:px-8 sm:pb-10 sm:pt-9">
+                        <span class="nb-tape -top-3 left-1/2 -translate-x-1/2 -rotate-2" aria-hidden="true"></span>
+                        <span class="font-hand text-[34px] font-bold leading-none text-neon sm:text-[40px]" aria-hidden="true">{{ $i + 1 }}.</span>
+                        <p class="mt-2 text-[18px] font-semibold leading-[1.1] tracking-[-0.02em] text-teal sm:mt-3 sm:text-[26px]">{{ $step['title'] }}</p>
                         <p class="mt-2.5 text-[15px] leading-relaxed text-muted">{{ $step['body'] }}</p>
                     </li>
                 @endforeach
@@ -174,11 +167,12 @@
             <ul class="mt-8 flex flex-wrap items-center justify-center gap-2 sm:mt-14">
                 @foreach ([
                     'PDFs, Word, PowerPoint & images',
-                    'Sorted into sections',
-                    'Name optional',
+                    '"Download all" before exams',
+                    'Preview before you download',
+                    'QR code for the lecture hall',
                     'Private owner link',
                 ] as $chip)
-                    <li class="rounded-full border border-sky bg-base px-3.5 py-1.5 text-[12.5px] font-medium text-muted">{{ $chip }}</li>
+                    <li class="rounded-sm border border-dashed border-sky bg-base px-3.5 py-1 font-hand text-[17px] text-muted odd:rotate-1 even:-rotate-1">{{ $chip }}</li>
                 @endforeach
             </ul>
         </div>
@@ -194,45 +188,38 @@
                     Group chats are great for talking, but files get buried fast.
                     SlipNote keeps sharing just as easy (drop a file in) while keeping everything findable a week later.
                 </p>
-                <p class="mt-4 text-[13px] font-medium text-muted sm:mt-5">
-                    Free · open source · no accounts, ever
+                <p class="mt-4 font-hand text-[20px] text-neon sm:mt-5 lg:-rotate-1">
+                    free · open source · no accounts, ever
                 </p>
             </div>
 
-            <div class="grid gap-5 sm:grid-cols-2">
+            <div class="grid gap-6 pt-3 sm:grid-cols-2">
                 @foreach ([
                     [
                         'title' => 'Works anywhere',
                         'body' => 'Opens in any browser on any phone or laptop — nothing to install.',
-                        // duotone: solid bolt + faded disc
-                        'icon' => '<circle class="opacity-40" cx="12" cy="12" r="10"/><path d="M13 4 6.5 13.2H11l-1 6.8 7-9.5h-4.4z"/>',
+                        'tilt' => '-rotate-1',
                     ],
                     [
                         'title' => 'Always findable',
-                        'body' => 'The newest files sit right on top, so nothing scrolls out of reach weeks later.',
-                        // duotone: solid bars + faded panel
-                        'icon' => '<rect class="opacity-40" x="3" y="3" width="18" height="18" rx="3"/><circle cx="7.5" cy="8" r="1.4"/><rect x="10.5" y="7" width="7.5" height="2" rx="1"/><circle cx="7.5" cy="12" r="1.4"/><rect x="10.5" y="11" width="7.5" height="2" rx="1"/><circle cx="7.5" cy="16" r="1.4"/><rect x="10.5" y="15" width="7.5" height="2" rx="1"/>',
+                        'body' => 'The newest files sit on top and search finds the rest — nothing scrolls out of reach weeks later.',
+                        'tilt' => 'rotate-1',
                     ],
                     [
                         'title' => 'Share on your terms',
                         'body' => 'Add your name or stay anonymous — your call on every file you upload.',
-                        // duotone: solid lock body + faded open shackle
-                        'icon' => '<path class="opacity-40" d="M9 10V7a4.5 4.5 0 0 1 8.5-2l-2.6 1.1A1.8 1.8 0 0 0 11.4 7v3z"/><rect x="4" y="10" width="13" height="11" rx="2.5"/>',
+                        'tilt' => 'rotate-1',
                     ],
                     [
                         'title' => 'Safer ownership',
                         'body' => 'One person owns the board, with a private link to recover access anytime.',
-                        // duotone: faded shield + solid check
-                        'icon' => '<path class="opacity-40" d="M12 2.5l8 3.2V11c0 5-3.3 8.4-8 10-4.7-1.6-8-5-8-10V5.7z"/><path d="M8.5 11.5l2.4 2.4 4.4-4.6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+                        'tilt' => '-rotate-1',
                     ],
                 ] as $benefit)
-                    <div class="rounded-3xl border border-sky bg-base px-5 py-6 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-7 sm:py-8">
-                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-neon/10 text-neon">
-                            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="currentColor" aria-hidden="true">
-                                {!! $benefit['icon'] !!}
-                            </svg>
-                        </span>
-                        <p class="mt-5 text-[17px] font-semibold text-teal">{{ $benefit['title'] }}</p>
+                    {{-- pinned index card --}}
+                    <div class="{{ $benefit['tilt'] }} relative rounded-lg border border-sky bg-base px-5 pb-6 pt-7 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] transition-transform duration-200 hover:rotate-0 sm:px-7 sm:pb-8 sm:pt-9">
+                        <span class="nb-pin" aria-hidden="true"></span>
+                        <p class="text-[17px] font-semibold text-teal">{{ $benefit['title'] }}</p>
                         <p class="mt-2.5 text-[14px] leading-relaxed text-muted">{{ $benefit['body'] }}</p>
                     </div>
                 @endforeach
@@ -240,8 +227,10 @@
         </div>
     </section>
 
-    <section class="border-t border-sky px-4 py-10 sm:px-5 sm:py-20">
-        <div class="mx-auto max-w-5xl rounded-[2rem] border border-sky bg-surface px-5 py-6 shadow-[0_8px_24px_-22px_rgba(51,29,44,0.3)] sm:px-8 sm:py-10">
+    <section class="nb-paper border-t border-sky px-4 py-12 sm:px-5 sm:py-24">
+        <div class="nb-sticky nb-tint-rose relative mx-auto max-w-5xl -rotate-1 px-5 py-7 sm:px-10 sm:py-12">
+            <span class="nb-tape -top-3 left-8 -rotate-6" aria-hidden="true"></span>
+            <span class="nb-tape -top-3 right-8 rotate-3" aria-hidden="true"></span>
             <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
                 <div>
                     <h2 class="max-w-xl text-[24px] font-semibold leading-[1.08] tracking-[-0.03em] text-teal sm:text-[34px]">

@@ -23,10 +23,20 @@
     font-display: swap;
     src: url('/fonts/pliant-variable-italic.woff2') format('woff2');
 }
+/* Handwriting face for the notebook-style homepage annotations. Only the
+   welcome page uses it, so browsers fetch it only there. */
+@font-face {
+    font-family: 'Caveat';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url('/fonts/caveat-variable.woff2') format('woff2');
+}
 
 @theme {
     --font-sans: 'Pliant', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-hand: 'Caveat', 'Comic Sans MS', cursive;
 
     /* SlipNote warm plum palette:
        cream page, lighter-cream cards, deep-plum headings, with a
@@ -235,4 +245,103 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     textarea {
         font-size: 16px;
     }
+}
+
+/* ---------------------------------------------------------------------------
+   Notebook homepage (welcome page only). Everything derives from the theme
+   tokens via color-mix, so light and dark mode both read as "paper".
+--------------------------------------------------------------------------- */
+
+/* Faint ruled lines, like a notebook page. */
+.nb-paper {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 35px,
+        color-mix(in srgb, var(--color-teal) 8%, transparent) 35px,
+        color-mix(in srgb, var(--color-teal) 8%, transparent) 36px
+    );
+}
+
+/* A strip of translucent masking tape. Position with utilities. */
+.nb-tape {
+    position: absolute;
+    width: 92px;
+    height: 24px;
+    background: color-mix(in srgb, var(--color-neon) 26%, transparent);
+    border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    opacity: 0.9;
+}
+
+/* Sticky note: slight bottom-right curl + folded corner.
+   Sticky notes are colored paper — they don't have a dark mode. The tints
+   below are fixed pastels, and the palette vars are re-pinned to their
+   light values inside so text utilities stay readable on the paper. */
+.nb-sticky {
+    --color-teal: #331d2c;
+    --color-ink: #3f2e3e;
+    --color-muted: #6e5563;
+    --color-neon: #8a4f6d;
+    position: relative;
+    border-radius: 2px 2px 22px 2px;
+    /* A sticky lies almost flat: shallow, faint shadow on light paper.
+       The dark desk needs more depth to separate — see overrides below. */
+    box-shadow: 0 5px 9px -7px rgba(51, 29, 44, 0.35);
+}
+html[data-theme='dark'] .nb-sticky,
+html[data-theme='system'][data-system-theme='dark'] .nb-sticky {
+    box-shadow: 0 10px 16px -12px rgba(0, 0, 0, 0.65);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .nb-sticky,
+    html[data-theme='system'] .nb-sticky {
+        box-shadow: 0 10px 16px -12px rgba(0, 0, 0, 0.65);
+    }
+}
+.nb-sticky::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 22px;
+    height: 22px;
+    border-bottom-right-radius: 22px;
+    background: linear-gradient(
+        315deg,
+        rgba(30, 20, 28, 0.14) 0%,
+        rgba(30, 20, 28, 0.04) 44%,
+        transparent 52%
+    );
+}
+
+/* Fixed pastel paper — the classic sticky pack. */
+.nb-tint-rose  { background-color: #f2dce6; }
+.nb-tint-sky   { background-color: #dfe9f2; }
+.nb-tint-amber { background-color: #f7ecc4; }
+
+/* Inside a sticky, neon is the light-mode plum, so primary buttons keep
+   their white label even when the app theme is dark. */
+html[data-theme='dark'] .nb-sticky .bg-neon.text-white,
+html[data-theme='system'][data-system-theme='dark'] .nb-sticky .bg-neon.text-white {
+    color: #fff;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .nb-sticky .bg-neon.text-white,
+    html[data-theme='system'] .nb-sticky .bg-neon.text-white {
+        color: #fff;
+    }
+}
+
+/* Index-card pushpin. */
+.nb-pin {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    transform: translateX(-50%);
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, white 45%, var(--color-neon)), var(--color-neon) 60%);
+    box-shadow: 0 3px 4px -1px rgba(0, 0, 0, 0.4);
 }
