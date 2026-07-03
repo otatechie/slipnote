@@ -3,6 +3,8 @@
 # kept out of search engines.
 User-agent: *
 Allow: /$
+Allow: /privacy$
+Allow: /terms$
 Allow: /og.png$
 Allow: /sitemap.xml$
 Disallow: /
