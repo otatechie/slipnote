@@ -28,11 +28,16 @@
             <p class="text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
         </div>
         <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
+            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Courses</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['courses']) }}</p>
+            <p class="text-[12px] text-muted">+{{ $stats['courses_week'] }} this week</p>
+        </div>
+        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
             <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Files</p>
             <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['files']) }}</p>
             <p class="text-[12px] text-muted">+{{ $stats['files_week'] }} this week</p>
         </div>
-        <div class="col-span-2 rounded-xl border border-sky/40 bg-surface px-4 py-3">
+        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
             <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Storage</p>
             <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['storage_mb'], 1) }} <span class="text-[16px] font-semibold text-muted">MB</span></p>
             <p class="text-[12px] text-muted">across all boards</p>

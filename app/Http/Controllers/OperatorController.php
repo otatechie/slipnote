@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlockedUpload;
+use App\Models\Course;
 use App\Models\Material;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
@@ -66,6 +67,8 @@ class OperatorController extends Controller
         $stats = [
             'workspaces' => Workspace::count(),
             'workspaces_week' => Workspace::where('created_at', '>=', now()->subDays(7))->count(),
+            'courses' => Course::count(),
+            'courses_week' => Course::where('created_at', '>=', now()->subDays(7))->count(),
             'files' => Material::count(),
             'files_week' => Material::where('created_at', '>=', now()->subDays(7))->count(),
             'storage_mb' => round(Material::sum('file_size') / 1_048_576, 1),
