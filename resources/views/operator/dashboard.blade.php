@@ -90,7 +90,12 @@
                     {{-- Content: file + board + reasons. Course info in teal. --}}
                     <div class="min-w-0 flex-1">
                         <p class="flex items-center gap-2 text-[14px] font-semibold text-teal">
-                            <span class="truncate">{{ $material->displayName() }}</span>
+                            @if (filled($material->manage_token))
+                                <a href="{{ route('material.download', ['token' => $material->manage_token]) }}"
+                                   class="truncate underline decoration-teal/30 decoration-dashed underline-offset-4 transition hover:decoration-teal/70">{{ $material->displayName() }}</a>
+                            @else
+                                <span class="truncate">{{ $material->displayName() }}</span>
+                            @endif
                             <span class="shrink-0 text-[12px] font-semibold tabular-nums text-danger/90"
                                   title="{{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}">
                                 {{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}
@@ -123,14 +128,9 @@
                         @endif
                     </div>
 
-                    {{-- Actions: inline top-right on desktop, equal-width bar on mobile --}}
-                    <div class="grid shrink-0 grid-cols-3 items-center gap-1.5 sm:flex sm:gap-1.5">
-                        @if (filled($material->manage_token))
-                            <a href="{{ route('material.download', ['token' => $material->manage_token]) }}"
-                               class="inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-sky/40 bg-base px-3 text-[13px] font-semibold text-teal transition hover:bg-sky/40 sm:h-8 sm:text-[12px]">
-                                View
-                            </a>
-                        @endif
+                    {{-- Actions: inline top-right on desktop, equal-width bar on mobile.
+                         View lives on the filename link above. --}}
+                    <div class="grid shrink-0 grid-cols-2 items-center gap-1.5 sm:flex sm:gap-1.5">
                         <button type="button" onclick="document.getElementById('dismiss-{{ $material->id }}').showModal()"
                                 class="inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-md border border-sky/40 bg-base px-3 text-[13px] font-semibold text-muted transition hover:bg-sky/40 sm:h-8 sm:w-auto sm:text-[12px]">
                             Dismiss
