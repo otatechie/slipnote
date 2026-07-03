@@ -147,3 +147,12 @@ For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
   kill-switch; no soft-delete/restore (hard delete is permanent).
 - No pagination; search keeps long lists manageable.
 - Telegram config is global (`.env`), not per-workspace — deferred.
+
+## Roadmap
+
+- **Deadlines** — a per-board section answering "when is it due?" the way files
+  answer "who has the notes?". Title, course, date, optional note; anyone with
+  the link adds, the owner removes; sorted soonest-first with a countdown on
+  the nearest, past items sink; `.ics` download per item. Deliberately no
+  reminders, notifications or recurrence — the board is the single shared
+  source of truth, your calendar app does the nagging.
