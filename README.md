@@ -17,7 +17,8 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
 - **Anonymous upload** — pick a section, optional title and your name, attach
   one or several files at once. PDF / Word / PowerPoint / image, up to 25 MB
   each. Files that would exceed the workspace cap are skipped while the rest
-  save.
+  save. Identical files already on the board (matched by content hash) are
+  skipped as duplicates.
 - **Uploader delete** — each upload gets a secret token; the success banner
   shows a one-time "Remove it" link. Holding the token is the only credential.
 - **Owner mode** — visit `/<workspace>?owner=SECRET` to unlock a per-row
@@ -35,8 +36,18 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   **Dismiss** false reports.
 - **Anonymous download** — files grouped by section with file-type icons,
   addressed by an unguessable per-file token (not a sequential id).
-- **Live search + sort** — filter by title and filename; sort Newest / Oldest /
-  A–Z.
+- **Download a whole section** — one streamed zip per section (Notes / Slides /
+  Past Papers), the exam-week "give me all the past papers" case.
+- **In-browser preview** — click a file's title to open PDFs and images inline
+  (`?view=1`); other types download. Gated to safe types so uploads can't be
+  served inline as an XSS vector.
+- **QR code** — every board link has a scannable QR with a downloadable PNG for
+  slides and handouts.
+- **Live search + sort** — multi-word, separator-tolerant search over title and
+  filename (so "past paper" finds `past_papers_2023.pdf`); sort Newest / Oldest
+  / A–Z.
+- **Storage meter** — owners see how much of the workspace cap is used before
+  uploads start bouncing.
 - Dark mode, mobile-optimised, and accessible (WCAG AA contrast, `aria` on
   form errors).
 

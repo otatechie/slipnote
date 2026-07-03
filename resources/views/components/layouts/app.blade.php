@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ ($title ?? null) ? $title.' · SlipNote' : 'SlipNote' }}</title>
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+    <link rel="apple-touch-icon" href="/favicon-192.png">
     @if ($description ?? null)
         <meta name="description" content="{{ $description }}">
     @endif
@@ -28,9 +31,9 @@
         })()
     </script>
     {{ $head ?? '' }}
-    {{-- Pliant is self-hosted (see @font-face in app.css): keeps the prod CSP
-         happy (font-src 'self') and no visitor IPs go to Google. --}}
-    <link rel="preload" href="/fonts/pliant-variable.woff2" as="font" type="font/woff2" crossorigin>
+    {{-- TikTok Sans is self-hosted (see @font-face in app.css): keeps the prod
+         CSP happy (font-src 'self') and no visitor IPs go to Google. --}}
+    <link rel="preload" href="/fonts/tiktoksans-variable.woff2" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="m-0 bg-base font-sans text-ink">

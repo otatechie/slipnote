@@ -38,7 +38,7 @@ function requestRecovery() {
             <!-- Success state (identical response to prevent enumeration) -->
             <div v-if="flash.done" class="rounded-3xl border border-sky/30 bg-surface p-6 shadow-sm sm:p-7">
                 <div class="flex items-center gap-3">
-                    <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-neon/15 text-neon">
+                    <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal/10 text-teal">
                         <svg class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <path d="M4 10.5 8 14l8-8" />
                         </svg>
@@ -60,7 +60,7 @@ function requestRecovery() {
                         Back to board
                     </Link>
                     <Link :href="'/' + workspace.slug + '/recover'"
-                          class="inline-flex flex-1 items-center justify-center rounded-lg border border-sky bg-surface px-4 py-2.5 text-[14px] font-semibold text-muted transition hover:border-neon hover:text-neon">
+                          class="inline-flex flex-1 items-center justify-center rounded-lg border border-sky bg-surface px-4 py-2.5 text-[14px] font-semibold text-muted transition hover:border-teal hover:text-teal">
                         Try another email
                     </Link>
                 </div>

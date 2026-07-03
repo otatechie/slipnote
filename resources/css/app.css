@@ -6,22 +6,15 @@
 @source '../**/*.js';
 @source '../**/*.vue';
 
-/* Pliant, self-hosted (public/fonts). Variable 100–900 + italic — served
-   from our own origin so the production CSP (font-src 'self') allows it
-   and no visitor IPs leak to a font CDN. */
+/* TikTok Sans, self-hosted (public/fonts). Variable 300–900 — served from our
+   own origin so the production CSP (font-src 'self') allows it and no visitor
+   IPs leak to a font CDN. */
 @font-face {
-    font-family: 'Pliant';
+    font-family: 'TikTok Sans';
     font-style: normal;
-    font-weight: 100 900;
+    font-weight: 300 900;
     font-display: swap;
-    src: url('/fonts/pliant-variable.woff2') format('woff2');
-}
-@font-face {
-    font-family: 'Pliant';
-    font-style: italic;
-    font-weight: 100 900;
-    font-display: swap;
-    src: url('/fonts/pliant-variable-italic.woff2') format('woff2');
+    src: url('/fonts/tiktoksans-variable.woff2') format('woff2');
 }
 /* Handwriting face for the notebook-style homepage annotations. Only the
    welcome page uses it, so browsers fetch it only there. */
@@ -34,25 +27,26 @@
 }
 
 @theme {
-    --font-sans: 'Pliant', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    --font-sans: 'TikTok Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-hand: 'Caveat', 'Comic Sans MS', cursive;
 
-    /* SlipNote warm plum palette:
-       cream page, lighter-cream cards, deep-plum headings, with a
-       rose-plum accent for links & small accents. Source palette is
-       #331D2C / #3F2E3E / #A78295 / #EFE1D1; the mauve and accent are
-       darkened/saturated so links and muted text pass WCAG AA on cream.
-       Token names are kept for stability; values are now semantic:
+    /* SlipNote varsity palette: teal + orange + charcoal on off-white.
+       Source palette is #FF9E20 / #215E61 / #1D2128 / #F4F2F2. The orange is
+       used bright in dark mode but burnt (#b45309) in light mode so links and
+       button labels pass WCAG AA — #FF9E20 with white text fails badly.
+       Token names are kept for stability; values are semantic:
        teal = headings, neon = accent, sky = hairline borders. */
-    --color-base: #efe1d1;       /* page background — warm cream (palette) */
-    --color-surface: #f7efe6;    /* cards / panels — lighter cream, lifts off page */
-    --color-teal: #331d2c;       /* headings — darkest plum (palette) */
-    --color-neon: #8a4f6d;       /* links & accents — rose-plum (palette family, saturated for CTA pop) */
-    --color-sky: #dcc9b8;        /* hairline borders, quiet fills — cream-toned */
-    --color-ink: #3f2e3e;        /* body text — wine (palette) */
-    --color-muted: #6e5563;      /* secondary text — darkened mauve, AA-safe on cream */
-    --color-danger: #a4313f;     /* destructive/danger — warm garnet, sits in the plum family, AA on cream */
+    --color-base: #f5f3ee;       /* page background — barely-warm off-white: keeps a hint of paper
+                                    without the yellow cast that dulls the teal accent */
+    --color-surface: #ffffff;    /* cards / panels — pure white, lifts cleanly off the off-white page */
+    --color-teal: #1a565a;       /* headings + link/accent — deep teal, slightly deeper for punch */
+    --color-neon: #ff9e20;       /* PRIMARY button fill — bright orange (palette). Buttons use
+                                    a DARK label (see .bg-neon.text-white override) for 7.8:1. */
+    --color-sky: #e3ddd0;        /* hairline borders, quiet fills — soft warm-grey */
+    --color-ink: #1d2128;        /* body text — charcoal (palette) */
+    --color-muted: #5b6a63;      /* secondary text — warm teal-grey, AA-safe on cream */
+    --color-danger: #b91c1c;     /* destructive/danger — clear red, separated from the orange accent */
 }
 
 :root {
@@ -65,14 +59,14 @@ html[data-theme='dark'] {
 
 html[data-theme='dark'],
 html[data-theme='system'][data-system-theme='dark'] {
-    --color-base: #1f1e1d;       /* warm near-black — page (Claude-style greige, not pure black) */
-    --color-surface: #2e2d2a;    /* one value-step up — cards/panels (elevation by lightness) */
-    --color-teal: #f5f3f0;       /* warm near-white — headings */
-    --color-neon: #cf92ad;       /* rose-plum accent — used sparingly for links & small accents */
-    --color-sky: #3a3836;        /* subtle warm value-step border — not a colored hairline */
-    --color-ink: #e8e6e3;        /* warm off-white — body text */
-    --color-muted: #bcb8b2;      /* warm grey — secondary text, AA-safe even at /70 */
-    --color-danger: #f0808a;     /* warm coral-red — reads as alarm, separates from the pink accent */
+    --color-base: #1d2128;       /* charcoal navy — the palette's dark, as the page */
+    --color-surface: #272c34;    /* one value-step up — cards/panels (elevation by lightness) */
+    --color-teal: #f2f4f5;       /* near-white — headings */
+    --color-neon: #ff9e20;       /* bright palette orange — sings on charcoal, AA as text */
+    --color-sky: #333a44;        /* subtle value-step border — not a colored hairline */
+    --color-ink: #e6e9ec;        /* cool off-white — body text */
+    --color-muted: #a9b2ba;      /* blue-grey — secondary text, AA-safe even at /70 */
+    --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the orange accent */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -83,14 +77,14 @@ html[data-theme='system'][data-system-theme='dark'] {
 
     html:not([data-theme]),
     html[data-theme='system'] {
-        --color-base: #1f1e1d;       /* warm near-black — page (Claude-style greige, not pure black) */
-        --color-surface: #2e2d2a;    /* one value-step up — cards/panels (elevation by lightness) */
-        --color-teal: #f5f3f0;       /* warm near-white — headings */
-        --color-neon: #cf92ad;       /* rose-plum accent — used sparingly for links & small accents */
-        --color-sky: #3a3836;        /* subtle warm value-step border — not a colored hairline */
-        --color-ink: #e8e6e3;        /* warm off-white — body text */
-        --color-muted: #bcb8b2;      /* warm grey — secondary text, AA-safe even at /70 */
-        --color-danger: #f0808a;     /* warm coral-red — reads as alarm, separates from the pink accent */
+        --color-base: #1d2128;       /* charcoal navy — the palette's dark, as the page */
+        --color-surface: #272c34;    /* one value-step up — cards/panels (elevation by lightness) */
+        --color-teal: #f2f4f5;       /* near-white — headings */
+        --color-neon: #ff9e20;       /* bright palette orange — sings on charcoal, AA as text */
+        --color-sky: #333a44;        /* subtle value-step border — not a colored hairline */
+        --color-ink: #e6e9ec;        /* cool off-white — body text */
+        --color-muted: #a9b2ba;      /* blue-grey — secondary text, AA-safe even at /70 */
+        --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the orange accent */
     }
 }
 
@@ -104,8 +98,8 @@ html[data-theme='dark'] textarea.bg-base,
 html[data-theme='system'][data-system-theme='dark'] input.bg-base,
 html[data-theme='system'][data-system-theme='dark'] select.bg-base,
 html[data-theme='system'][data-system-theme='dark'] textarea.bg-base {
-    background-color: #191817;
-    border-color: #3a3836;
+    background-color: #171a20;
+    border-color: #333a44;
 }
 
 /* The landing hero forces a white background in light mode. In dark mode fall
@@ -159,40 +153,55 @@ html[data-theme='system'][data-system-theme='dark'] .hero-vignette {
     html[data-theme='system'] input.bg-base,
     html[data-theme='system'] select.bg-base,
     html[data-theme='system'] textarea.bg-base {
-        background-color: #191817;
-        border-color: #3a3836;
+        background-color: #171a20;
+        border-color: #333a44;
     }
 }
 
-/* Primary buttons hardcode text-white on bg-neon. In dark mode the accent
-   is light rose-plum, so white labels fail contrast (2.7:1). Flip those
-   labels to dark plum (6.8:1 on the accent) — dark mode only. */
-html[data-theme='dark'] .bg-neon.text-white,
-html[data-theme='system'][data-system-theme='dark'] .bg-neon.text-white {
-    color: #1f1e1d;
+/* Primary buttons are bright orange (bg-neon) with white labels in the markup,
+   but orange + white fails contrast (2:1). Orange is a background color in this
+   palette — it wants a DARK label. Flip the label to charcoal in BOTH themes
+   (7.8:1). Applies everywhere bg-neon.text-white appears. */
+.bg-neon.text-white {
+    color: #1d2128;
 }
 
+/* text-neon is orange, which is unreadable as link text on cream (1.8:1). Links
+   and small accents use TEAL instead — legible AND the intended accent role.
+   (Orange stays a fill-only color: buttons, pill accents, the marker underline
+   which is a thick shape, not text.) The :not() guards keep orange where it's a
+   fill or a deliberately large graphic. */
+.text-neon:not(.bg-neon):not(svg):not(.marker) {
+    color: var(--color-teal);
+}
+html[data-theme='dark'] .text-neon:not(.bg-neon):not(svg):not(.marker),
+html[data-theme='system'][data-system-theme='dark'] .text-neon:not(.bg-neon):not(svg):not(.marker) {
+    color: #6fd6da; /* brighter teal — AA on charcoal */
+}
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .bg-neon.text-white,
-    html[data-theme='system'] .bg-neon.text-white {
-        color: #1f1e1d;
+    :root:not([data-theme]) .text-neon:not(.bg-neon):not(svg):not(.marker),
+    html[data-theme='system'] .text-neon:not(.bg-neon):not(svg):not(.marker) {
+        color: #6fd6da;
     }
 }
+/* Stickies are fixed light paper — the bright dark-mode teal above washes out
+   on them, so re-pin accents to the sticky's own (light-mode) teal. */
+.nb-sticky .text-neon:not(.bg-neon):not(svg):not(.marker) {
+    color: var(--color-teal) !important;
+}
 
-/* Active section filter pill. Light mode fills with teal (dark plum) + white
-   label. In dark mode teal becomes near-white, so a white label on it vanishes.
-   Re-fill with the rose-plum accent and flip the label dark, mirroring the
-   .bg-neon.text-white rule. Scoped to .section-pill.bg-teal so it only hits the
-   ACTIVE pill (bg-teal is only present when active). */
+/* Active section filter pill. Light: solid teal + white label (fine as authored).
+   Dark: teal headings become near-white, so an active teal pill with a white
+   label would vanish — refill with the bright orange accent + dark label. */
 html[data-theme='dark'] .section-pill.bg-teal,
 html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal {
-    background-color: var(--color-neon);
-    color: #1f1e1d;
+    background-color: #ff9e20;
+    color: #1d2128;
 }
 html[data-theme='dark'] .section-pill.bg-teal .bg-white\/25,
 html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal .bg-white\/25 {
     background-color: rgba(31, 30, 29, 0.18);
-    color: #1f1e1d;
+    color: #1d2128;
 }
 
 /* Course file-count chip. In light mode it's a plum-tinted pill (teal = dark
@@ -226,13 +235,13 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     }
     :root:not([data-theme]) .section-pill.bg-teal,
     html[data-theme='system'] .section-pill.bg-teal {
-        background-color: var(--color-neon);
-        color: #1f1e1d;
+        background-color: #ff9e20;
+        color: #1d2128;
     }
     :root:not([data-theme]) .section-pill.bg-teal .bg-white\/25,
     html[data-theme='system'] .section-pill.bg-teal .bg-white\/25 {
         background-color: rgba(31, 30, 29, 0.18);
-        color: #1f1e1d;
+        color: #1d2128;
     }
 }
 
@@ -279,10 +288,10 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
    below are fixed pastels, and the palette vars are re-pinned to their
    light values inside so text utilities stay readable on the paper. */
 .nb-sticky {
-    --color-teal: #331d2c;
-    --color-ink: #3f2e3e;
-    --color-muted: #6e5563;
-    --color-neon: #8a4f6d;
+    --color-teal: #1a565a;
+    --color-ink: #1d2128;
+    --color-muted: #5b6a63;
+    --color-neon: #b0530a;
     position: relative;
     border-radius: 2px 2px 22px 2px;
     /* A sticky lies almost flat: shallow, faint shadow on light paper.
@@ -316,21 +325,17 @@ html[data-theme='system'][data-system-theme='dark'] .nb-sticky {
 }
 
 /* Fixed pastel paper — the classic sticky pack. */
-.nb-tint-rose  { background-color: #f2dce6; }
+.nb-tint-rose  { background-color: #f9ebf1; }
 .nb-tint-sky   { background-color: #dfe9f2; }
 .nb-tint-amber { background-color: #f7ecc4; }
+.nb-tint-teal  { background-color: #e1eded; }
 
-/* Inside a sticky, neon is the light-mode plum, so primary buttons keep
-   their white label even when the app theme is dark. */
-html[data-theme='dark'] .nb-sticky .bg-neon.text-white,
-html[data-theme='system'][data-system-theme='dark'] .nb-sticky .bg-neon.text-white {
-    color: #fff;
-}
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .nb-sticky .bg-neon.text-white,
-    html[data-theme='system'] .nb-sticky .bg-neon.text-white {
-        color: #fff;
-    }
+/* A sticky mutes neon to burnt orange so orange *text* stays readable on pale
+   paper — but a filled button wants the same bright orange as the rest of the
+   page. Reset the fill token on buttons only; its charcoal label (from
+   .bg-neon.text-white) then applies unchanged, in both themes. */
+.nb-sticky .bg-neon {
+    --color-neon: #ff9e20;
 }
 
 /* Index-card pushpin. */

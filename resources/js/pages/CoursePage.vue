@@ -459,7 +459,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                        :title="`Preview ${material.displayName} (opens in a new tab)`"
                                        class="flex items-center gap-1 text-[15px] font-semibold text-neon hover:underline">
                                         <span class="truncate">{{ material.displayName }}</span>
-                                        <svg aria-hidden="true" class="size-3.5 shrink-0 text-neon/70" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                        <svg aria-hidden="true" class="size-3.5 shrink-0 text-teal/70" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M8 5H5v10h10v-3M12 4h4v4M16 4l-7 7" />
                                         </svg>
                                     </a>

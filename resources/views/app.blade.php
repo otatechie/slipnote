@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title inertia>SlipNote</title>
     <meta name="robots" content="noindex,nofollow">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+    <link rel="apple-touch-icon" href="/favicon-192.png">
     <script>
         (() => {
             const key = 'slipnote-theme'
@@ -18,9 +21,10 @@
             document.documentElement.style.colorScheme = resolved
         })()
     </script>
-    {{-- Pliant is self-hosted (see @font-face in app.css): keeps the prod CSP
-         happy (font-src 'self') and no visitor IPs go to Google. --}}
-    <link rel="preload" href="/fonts/pliant-variable.woff2" as="font" type="font/woff2" crossorigin>
+    {{-- TikTok Sans is self-hosted (see @font-face in app.css): keeps the prod
+         CSP happy (font-src 'self') and no visitor IPs go to Google. One
+         variable file covers every weight. --}}
+    <link rel="preload" href="/fonts/tiktoksans-variable.woff2" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @inertiaHead
 </head>

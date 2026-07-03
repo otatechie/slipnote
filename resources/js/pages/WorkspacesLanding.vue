@@ -120,8 +120,8 @@ function forget(ws) {
 
             <!-- Owner receipt card -->
             <template v-if="flash.ownerUrl">
-                <div class="rounded-2xl border border-neon/40 bg-neon/10 p-5 sm:p-6">
-                    <p class="text-[15px] font-bold text-neon">"{{ flash.createdName }}" is ready 🎉</p>
+                <div class="rounded-2xl border border-teal/30 bg-teal/5 p-5 sm:p-6">
+                    <p class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is ready 🎉</p>
                     <p class="mt-1.5 text-[13px] text-muted">
                         You can add a recovery email later to get it back if you lose it.
                     </p>
@@ -142,7 +142,7 @@ function forget(ws) {
                             <span v-else>Copied ✓</span>
                         </button>
                         <button type="button" @click="downloadTxt"
-                                class="h-9 flex-1 cursor-pointer rounded-lg border border-neon/50 text-[13px] font-semibold text-neon transition hover:bg-neon/10">
+                                class="h-9 flex-1 cursor-pointer rounded-lg border border-teal/40 text-[13px] font-semibold text-teal transition hover:bg-teal/10">
                             <span v-if="!downloaded">Download .txt</span>
                             <span v-else>Saved ✓</span>
                         </button>
@@ -183,7 +183,7 @@ function forget(ws) {
             <!-- Create form -->
             <template v-else>
                 <form @submit.prevent="create"
-                      class="rounded-2xl border border-sky bg-surface p-5 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:p-6">
+                      class="rounded-2xl border border-sky bg-surface p-5 shadow-[0_2px_8px_-4px_rgba(29,33,40,0.12)] sm:p-6">
                     <label for="name" class="mb-2 block text-[13px] font-semibold text-ink">Board name</label>
                     <input id="name" type="text" v-model="createForm.name"
                            placeholder="Computer Science - Level 100" autofocus
@@ -210,18 +210,18 @@ function forget(ws) {
 
                 <!-- Recent boards first among the "returning user" paths — one click
                      beats retyping a name. -->
-                <div v-if="props.recent.length" class="mt-7 rounded-2xl border border-sky bg-surface px-5 py-4 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-6">
+                <div v-if="props.recent.length" class="mt-7 rounded-2xl border border-sky bg-surface px-5 py-4 shadow-[0_2px_8px_-4px_rgba(29,33,40,0.12)] sm:px-6">
                     <p class="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Your recent boards</p>
-                    <ul class="divide-y divide-sky/30">
+                    <ul class="divide-y divide-sky">
                         <li v-for="ws in props.recent" :key="ws.slug"
                             class="flex items-center justify-between gap-3 py-2">
                             <a :href="'/' + ws.slug"
-                               class="min-w-0 flex-1 truncate text-[14px] font-medium text-neon hover:underline">
+                               class="min-w-0 flex-1 truncate text-[14px] font-medium text-neon underline decoration-dashed decoration-teal/30 underline-offset-4 hover:decoration-teal/70">
                                 {{ ws.name }}
                             </a>
                             <button type="button" @click="forget(ws)"
                                     :aria-label="`Remove ${ws.name} from this list`"
-                                    class="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[12px] text-muted/70 transition hover:bg-sky/40 hover:text-ink">
+                                    class="shrink-0 cursor-pointer rounded-md px-2 py-1 text-[12px] text-muted/70 transition hover:bg-danger/10 hover:text-danger">
                                 Remove
                             </button>
                         </li>
@@ -231,7 +231,7 @@ function forget(ws) {
                     </p>
                 </div>
 
-                <div class="rounded-2xl border border-sky bg-surface px-5 py-5 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] sm:px-6"
+                <div class="rounded-2xl border border-sky bg-surface px-5 py-5 shadow-[0_2px_8px_-4px_rgba(29,33,40,0.12)] sm:px-6"
                      :class="props.recent.length ? 'mt-4' : 'mt-7'">
                     <p class="text-[13px] font-semibold text-ink">Already made one? Find it by name:</p>
                     <form @submit.prevent="open" class="mt-2.5 flex flex-col gap-2 sm:flex-row">
@@ -245,11 +245,11 @@ function forget(ws) {
                         </button>
                     </form>
                     <span v-if="errors.openName" role="alert" class="mt-2 block text-[13px] text-danger">{{ errors.openName[0] }}</span>
-                    <div class="mt-3 border-t border-sky/40 pt-3">
+                    <div class="mt-3 border-t border-sky pt-3">
                         <p class="text-[12px] text-muted">
                             Lost your owner link?
                             <button type="button" @click="recover" :disabled="!recoveryUrl()"
-                                    class="cursor-pointer font-semibold text-neon transition hover:underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline">
+                                    class="cursor-pointer font-semibold text-neon underline decoration-dashed decoration-teal/30 underline-offset-4 transition hover:decoration-teal/70 disabled:cursor-not-allowed disabled:text-muted disabled:no-underline">
                                 Recover it with this board name
                             </button>
                         </p>

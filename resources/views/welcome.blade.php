@@ -40,16 +40,16 @@
     <section class="hero-bg nb-paper relative isolate flex-1 overflow-hidden bg-white">
         <div class="hero-vignette pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40" aria-hidden="true"></div>
         <header class="relative px-4 pt-4 sm:px-5 sm:pt-6">
-            <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-sky/80 bg-surface/85 px-3 py-2.5 shadow-[0_10px_30px_-24px_rgba(0,0,0,0.45)] backdrop-blur sm:px-6 sm:py-3">
+            <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-sky/80 bg-surface px-3 py-2.5 shadow-[0_6px_18px_-16px_rgba(0,0,0,0.35)] backdrop-blur sm:px-6 sm:py-3">
                 <a href="{{ route('welcome') }}" class="inline-flex min-w-0 items-center gap-2 text-[13px] font-bold tracking-[-0.01em] text-teal sm:text-[14px]">
-                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neon text-[14px] text-white shadow-[0_4px_12px_-6px_rgba(91,91,214,0.85)] sm:h-9 sm:w-9 sm:text-[15px]">S</span>
+                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neon text-[14px] text-white shadow-[0_4px_12px_-6px_rgba(33,94,97,0.55)] sm:h-9 sm:w-9 sm:text-[15px]">S</span>
                     SlipNote
                 </a>
 
                 {{-- No nav links: it's a one-scroll page and Privacy lives in the
                      footer, so the header's only job is the CTA. --}}
                 <a href="{{ route('start') }}"
-                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white shadow-[0_3px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_1px_0_0_var(--color-teal)] active:translate-y-0.5 active:shadow-none sm:px-4 sm:py-2.5 sm:text-[13px]">
+                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white shadow-[0_3px_0_0_#164043] transition-all hover:translate-y-0.5 hover:shadow-[0_1px_0_0_#164043] active:translate-y-0.5 active:shadow-none sm:px-4 sm:py-2.5 sm:text-[13px]">
                     <span class="sm:hidden">Create board</span>
                     <span class="hidden sm:inline">Create your board</span>
                 </a>
@@ -76,7 +76,7 @@
                     </p>
                     <div class="mt-5 flex flex-col items-center sm:mt-8 lg:items-start">
                         <a href="{{ route('start') }}"
-                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_var(--color-teal)] active:translate-y-1 active:shadow-none sm:w-auto">
+                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_#164043] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_#164043] active:translate-y-1 active:shadow-none sm:w-auto">
                             Create your board
                         </a>
                     </div>
@@ -228,7 +228,7 @@
     </section>
 
     <section class="nb-paper border-t border-sky px-4 py-12 sm:px-5 sm:py-24">
-        <div class="nb-sticky nb-tint-rose relative mx-auto max-w-5xl -rotate-1 px-5 py-7 sm:px-10 sm:py-12">
+        <div class="nb-sticky nb-tint-teal relative mx-auto max-w-5xl -rotate-1 px-5 py-7 sm:px-10 sm:py-12">
             <span class="nb-tape -top-3 left-8 -rotate-6" aria-hidden="true"></span>
             <span class="nb-tape -top-3 right-8 rotate-3" aria-hidden="true"></span>
             <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -242,7 +242,7 @@
                 </div>
                 <div class="flex flex-col items-center gap-2 lg:items-stretch">
                     <a href="{{ route('start') }}"
-                       class="inline-flex items-center justify-center rounded-full bg-neon px-6 py-3 text-[15px] font-bold text-white shadow-[0_4px_0_0_var(--color-teal)] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_var(--color-teal)] active:translate-y-1 active:shadow-none">
+                       class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_#164043] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_#164043] active:translate-y-1 active:shadow-none sm:w-auto">
                         Create your board
                     </a>
                 </div>

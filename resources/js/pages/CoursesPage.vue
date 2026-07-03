@@ -397,7 +397,7 @@ function persistOrder() {
                         @dragstart="draggable && courses.length > 1 && onDragStart($event, course.id)"
                         @dragover="draggable && courses.length > 1 && onDragOver($event, course.id)"
                         @drop="draggable && courses.length > 1 && onDrop()"
-                        class="group flex items-start gap-3 rounded-2xl border border-sky/30 bg-surface px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-neon hover:shadow-md sm:gap-4 sm:px-6">
+                        class="group flex items-start gap-3 rounded-2xl border border-sky/30 bg-surface px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-teal hover:shadow-md sm:gap-4 sm:px-6">
 
                         <!-- Reorder controls (owner + manual sort + 2+ courses).
                              Up/down buttons work on touch & keyboard; the drag
@@ -554,8 +554,7 @@ function persistOrder() {
                      nothing competes; once courses exist it collapses to a one-row
                      disclosure (same idiom as "Manage this board") so it doesn't
                      out-weigh the course list. -->
-                <div v-if="recoveryAvailable" class="mt-8 overflow-hidden rounded-xl border transition-colors"
-                    :class="(needsRecoveryEmail && totalCourses === 0) ? 'border-neon/40 bg-neon/5' : 'border-sky bg-surface/50'">
+                <div v-if="recoveryAvailable" class="mt-8 overflow-hidden rounded-xl border border-sky bg-surface/50 transition-colors">
                     <button v-if="totalCourses > 0" type="button" @click="recoveryOpen = !recoveryOpen"
                         class="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-3 text-left transition hover:bg-sky/30"
                         :aria-expanded="recoveryOpen" aria-controls="recoveryPanel">
@@ -610,7 +609,7 @@ function persistOrder() {
                                 :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New email, or leave blank to remove'"
                                 class="w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
                             <button type="submit" :disabled="recoveryForm.processing"
-                                class="w-full shrink-0 cursor-pointer rounded-lg border border-neon/50 px-4 py-2.5 text-[13px] font-semibold text-neon transition hover:bg-neon/10 disabled:opacity-60 sm:w-auto">
+                                class="bg-neon text-white w-full shrink-0 cursor-pointer rounded-lg px-4 py-2.5 text-[13px] font-bold transition hover:brightness-110 disabled:opacity-60 sm:w-auto">
                                 Save
                             </button>
                         </form>
