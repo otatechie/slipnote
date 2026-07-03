@@ -350,3 +350,19 @@ html[data-theme='system'][data-system-theme='dark'] .nb-sticky {
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, white 45%, var(--color-neon)), var(--color-neon) 60%);
     box-shadow: 0 3px 4px -1px rgba(0, 0, 0, 0.4);
 }
+
+/* ---------------------------------------------------------------------------
+   Operator tabs (operator/dashboard.blade.php). CSS-only: two hidden radios
+   ahead of the tab bar + panels decide which panel shows and which pill reads
+   active. Active fill uses the theme tokens, so dark mode inverts for free
+   (near-white pill, charcoal label).
+--------------------------------------------------------------------------- */
+#tab-reported:checked ~ .op-panel-boards,
+#tab-boards:checked ~ .op-panel-reported {
+    display: none;
+}
+#tab-reported:checked ~ .op-tabs .op-tab-reported,
+#tab-boards:checked ~ .op-tabs .op-tab-boards {
+    background-color: var(--color-teal);
+    color: var(--color-base);
+}

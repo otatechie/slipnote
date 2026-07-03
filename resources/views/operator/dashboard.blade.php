@@ -39,8 +39,25 @@
         </div>
     </div>
 
-    {{-- Latest boards --}}
-    <h2 class="mb-2.5 text-[15px] font-bold text-ink">Latest boards</h2>
+    {{-- Reported / Latest boards tabs. CSS-only: hidden radios drive which
+         panel shows (see "Operator tabs" in app.css) — no JS, and arrow keys
+         switch tabs for free. Reported is the default: action before browsing. --}}
+    <input type="radio" name="operator-tab" id="tab-reported" class="sr-only" checked>
+    <input type="radio" name="operator-tab" id="tab-boards" class="sr-only">
+    <div class="op-tabs mb-4 flex flex-wrap gap-1.5" role="tablist">
+        <label for="tab-reported" class="op-tab-reported inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
+            Reported files
+            @if ($materials->isNotEmpty())
+                <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-danger">{{ $materials->count() }}</span>
+            @endif
+        </label>
+        <label for="tab-boards" class="op-tab-boards inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
+            Latest boards
+            <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-teal">{{ $recent->count() }}</span>
+        </label>
+    </div>
+
+    <div class="op-panel-boards">
     <div class="mb-8 divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
         @forelse ($recent as $ws)
             <div class="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5">
@@ -57,13 +74,9 @@
             <p class="px-4 py-3 text-[14px] text-muted">No boards yet.</p>
         @endforelse
     </div>
+    </div>
 
-    <h2 class="mb-2.5 text-[15px] font-bold text-ink">
-        Reported files
-        @if ($materials->isNotEmpty())
-            <span class="ml-1 font-semibold tabular-nums text-danger/90">{{ $materials->count() }}</span>
-        @endif
-    </h2>
+    <div class="op-panel-reported">
     @if ($materials->isNotEmpty())
         <div class="divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
             @foreach ($materials as $material)
@@ -173,5 +186,6 @@
             <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">No files are currently flagged. Reports show up here when someone uses the report button on a file.</p>
         </div>
     @endif
+    </div>
 </div>
 </x-layouts.app>
