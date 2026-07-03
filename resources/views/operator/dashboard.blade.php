@@ -3,9 +3,9 @@
     <header class="mb-7 flex items-start justify-between gap-4">
         <div>
             <p class="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
-            <h1 class="text-3xl font-bold tracking-tight text-ink">Reported files</h1>
+            <h1 class="text-3xl font-bold tracking-tight text-ink">Operator</h1>
             <p class="mt-1.5 text-[15px] text-muted">
-                {{ $materials->count() === 1 ? '1 file' : $materials->count().' files' }} flagged for review.
+                Usage at a glance, plus anything flagged for review.
             </p>
         </div>
         <form method="POST" action="{{ route('operator.logout') }}">
@@ -20,6 +20,50 @@
         </div>
     @endif
 
+    {{-- Usage at a glance --}}
+    <div class="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
+            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Boards</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['workspaces']) }}</p>
+            <p class="text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
+        </div>
+        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
+            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Files</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['files']) }}</p>
+            <p class="text-[12px] text-muted">+{{ $stats['files_week'] }} this week</p>
+        </div>
+        <div class="col-span-2 rounded-xl border border-sky/40 bg-surface px-4 py-3">
+            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Storage</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['storage_mb'], 1) }} <span class="text-[16px] font-semibold text-muted">MB</span></p>
+            <p class="text-[12px] text-muted">across all boards</p>
+        </div>
+    </div>
+
+    {{-- Latest boards --}}
+    <h2 class="mb-2.5 text-[15px] font-bold text-ink">Latest boards</h2>
+    <div class="mb-8 divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
+        @forelse ($recent as $ws)
+            <div class="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5">
+                <div class="min-w-0">
+                    <p class="truncate text-[14px] font-semibold text-teal">{{ $ws->name }}</p>
+                    <p class="text-[12px] text-muted">
+                        {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} ·
+                        {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
+                    </p>
+                </div>
+                <p class="shrink-0 text-[12px] tabular-nums text-muted" title="{{ $ws->created_at }}">{{ $ws->created_at->diffForHumans() }}</p>
+            </div>
+        @empty
+            <p class="px-4 py-3 text-[14px] text-muted">No boards yet.</p>
+        @endforelse
+    </div>
+
+    <h2 class="mb-2.5 text-[15px] font-bold text-ink">
+        Reported files
+        @if ($materials->isNotEmpty())
+            <span class="ml-1 font-semibold tabular-nums text-danger/90">{{ $materials->count() }}</span>
+        @endif
+    </h2>
     @if ($materials->isNotEmpty())
         <div class="divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
             @foreach ($materials as $material)

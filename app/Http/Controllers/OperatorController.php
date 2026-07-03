@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BlockedUpload;
 use App\Models\Material;
+use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -61,7 +62,27 @@ class OperatorController extends Controller
             ->orderByDesc('reports_count')
             ->get();
 
-        return view('operator.dashboard', ['materials' => $materials]);
+        // Usage stats: is anyone actually using this thing?
+        $stats = [
+            'workspaces' => Workspace::count(),
+            'workspaces_week' => Workspace::where('created_at', '>=', now()->subDays(7))->count(),
+            'files' => Material::count(),
+            'files_week' => Material::where('created_at', '>=', now()->subDays(7))->count(),
+            'storage_mb' => round(Material::sum('file_size') / 1_048_576, 1),
+        ];
+
+        // Most recent boards, with how much they hold.
+        $recent = Workspace::query()
+            ->withCount(['courses', 'materials'])
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        return view('operator.dashboard', [
+            'materials' => $materials,
+            'stats' => $stats,
+            'recent' => $recent,
+        ]);
     }
 
     /** Enter the operator secret (timing-safe, rate-limited). */
