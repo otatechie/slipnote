@@ -88,13 +88,21 @@ function proceed() {
     router.visit(flash.value.createdUrl)
 }
 
+// Removing a recent board only clears the local shortcut, but if the user
+// hasn't saved its link elsewhere this is their only way back, so confirm
+// in a styled dialog (matches the report/QR modals elsewhere in the app).
+const forgetTarget = ref(null)
+
 function forget(ws) {
-    // Removing a recent board only clears the local shortcut, but if the user
-    // hasn't saved its link elsewhere this is their only way back, so confirm.
-    if (! window.confirm(`Remove "${ws.name}" from this list? This only clears the shortcut on this browser; the board itself stays. If you haven't saved its link, you may lose your way back.`)) {
-        return
-    }
-    router.post('/workspaces/forget', { slug: ws.slug }, { preserveScroll: true })
+    forgetTarget.value = ws
+}
+
+function confirmForget() {
+    if (! forgetTarget.value) return
+    router.post('/workspaces/forget', { slug: forgetTarget.value.slug }, {
+        preserveScroll: true,
+        onFinish: () => { forgetTarget.value = null },
+    })
 }
 </script>
 
@@ -259,6 +267,30 @@ function forget(ws) {
                     </div>
                 </div>
             </template>
+        </div>
+
+        <!-- Remove-from-list confirm. Matches the report/QR modals: backdrop
+             click + Escape close, danger-styled confirm. -->
+        <div v-if="forgetTarget" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+             role="dialog" aria-modal="true" aria-label="Remove board from list"
+             @keydown.escape.window="forgetTarget = null">
+            <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="forgetTarget = null"></div>
+            <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                <h2 class="text-[15px] font-bold text-ink">Remove &ldquo;{{ forgetTarget.name }}&rdquo; from this list?</h2>
+                <p class="mt-2 text-[13px] leading-relaxed text-muted">
+                    This only clears the shortcut on this browser &mdash; the board itself stays.
+                    If you haven&rsquo;t saved its link, you may lose your way back.
+                </p>
+                <div class="mt-5 flex items-center justify-end gap-2">
+                    <button type="button" @click="forgetTarget = null"
+                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
+                    <button type="button" @click="confirmForget"
+                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-red-600/90 px-5 text-[14px] font-semibold text-white transition hover:bg-red-600">
+                        Remove
+                    </button>
+                </div>
+            </div>
         </div>
     </AppLayout>
 </template>
