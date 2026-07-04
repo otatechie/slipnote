@@ -689,7 +689,7 @@ watch(() => props.materials, () => { selected.value = [] })
                         <button type="button" @click="reportTarget = null"
                                 class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
                         <button type="button" @click="submitReport" :disabled="!reportReason || reportSubmitting"
-                                class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-red-600/90 px-5 text-[14px] font-semibold text-white transition hover:bg-red-600 disabled:opacity-50">
+                                class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-110 disabled:opacity-50">
                             Report file
                         </button>
                     </div>
