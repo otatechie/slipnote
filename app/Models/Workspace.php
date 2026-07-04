@@ -130,21 +130,6 @@ class Workspace extends Model
         return [$secret, Hash::make($secret)];
     }
 
-    /**
-     * Rotate the owner secret: generate a new one, store only its hash,
-     * return the new plaintext (to email). The previous owner link stops
-     * working — by design (a recovered/lost link should die). Preserves the
-     * guarantee that the secret itself is never stored, only its hash.
-     */
-    public function rotateOwnerSecret(): string
-    {
-        $secret = Str::random(40);
-        $this->owner_secret_hash = Hash::make($secret);
-        $this->save();
-
-        return $secret;
-    }
-
     /** Slug from the name, with a numeric suffix if it collides. */
     public static function uniqueSlug(string $name): string
     {

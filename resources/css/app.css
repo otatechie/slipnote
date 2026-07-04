@@ -45,7 +45,7 @@
                                     a DARK label (see .bg-neon.text-white override) for 7.8:1. */
     --color-sky: #e3ddd0;        /* hairline borders, quiet fills — soft warm-grey */
     --color-ink: #1d2128;        /* body text — charcoal (palette) */
-    --color-muted: #5b6a63;      /* secondary text — warm teal-grey, AA-safe on cream */
+    --color-muted: #5b6a63;      /* secondary text — warm teal-grey, AA-safe on the off-white page */
     --color-danger: #b91c1c;     /* destructive/danger — clear red, separated from the orange accent */
 }
 
@@ -197,8 +197,8 @@ html[data-theme='system'][data-system-theme='dark'] .btn-danger:hover {
     }
 }
 
-/* text-neon is orange, which is unreadable as link text on cream (1.8:1). Links
-   and small accents use TEAL instead — legible AND the intended accent role.
+/* text-neon is orange, which is unreadable as link text on the off-white page
+   (1.8:1). Links and small accents use TEAL instead — legible AND the intended accent role.
    (Orange stays a fill-only color: buttons, pill accents, the marker underline
    which is a thick shape, not text.) The :not() guards keep orange where it's a
    fill or a deliberately large graphic. */
@@ -235,10 +235,10 @@ html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal .bg-wh
     color: #1d2128;
 }
 
-/* Course file-count chip. In light mode it's a plum-tinted pill (teal = dark
-   plum). In dark mode teal becomes near-white, so the chip goes pure grey and
-   the page loses all accent. Retint it to the rose-plum accent in dark only.
-   Scoped to .file-count-chip so headings/banners that also use teal stay put. */
+/* Course file-count chip. In light mode it's a teal-tinted pill. In dark mode
+   teal becomes near-white, so the chip goes pure grey and the page loses all
+   accent. Retint it to the orange accent in dark only. Scoped to
+   .file-count-chip so headings/banners that also use teal stay put. */
 html[data-theme='dark'] .file-count-chip,
 html[data-theme='system'][data-system-theme='dark'] .file-count-chip {
     border-color: color-mix(in srgb, var(--color-neon) 40%, transparent);
