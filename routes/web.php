@@ -11,38 +11,32 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
-// Resolve the {workspace} route segment by slug (NOT by id — implicit
-// binding would try the primary key and 404 every slug). Unknown → 404.
+// Resolve {workspace} by slug, not id (implicit binding would 404 every slug).
 Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrFail());
 
-// Marketing landing page (Blade for SEO — rendered server-side, full
-// meta tag control, no Inertia/Vue hydration cost).
+// Marketing landing page — Blade, not Inertia, for SEO.
 Route::view('/', 'welcome')->name('welcome');
 
-// Workspace create/open hub.
 Route::get('/start', [WorkspacesController::class, 'index'])->name('start');
 Route::post('/workspaces', [WorkspacesController::class, 'store'])->name('workspaces.store');
 Route::post('/workspaces/open', [WorkspacesController::class, 'open'])->name('workspaces.open');
 Route::post('/workspaces/forget', [WorkspacesController::class, 'forget'])->name('workspaces.forget');
 
-// Static legal pages. Declared BEFORE the /{workspace} catch-all so the
-// slugs "privacy" and "terms" aren't read as workspace names.
+// Static routes below are declared BEFORE the /{workspace} catch-all so their
+// paths (privacy, terms, download, operator, …) aren't read as workspace slugs.
 Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::view('/terms', 'legal.terms')->name('terms');
 
 // Material download. Anonymous by design — but addressed by the file's
 // random manage_token, not a sequential id, so files can't be enumerated
-// across workspaces by guessing /download/1, /download/2, … Declared
-// BEFORE the /{workspace} catch-all so "download" isn't read as a slug.
+// across workspaces by guessing /download/1, /download/2, …
 Route::get('/download/{token}', function (Request $request, string $token) {
     $material = Material::where('manage_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
 
-    // ?view=1 serves the file inline (Content-Disposition: inline) so students
-    // can preview before downloading. Only PDFs and images are ever served
-    // inline — serving arbitrary uploads (e.g. HTML) inline would be an XSS
-    // vector. Everything else falls through to a normal attachment download.
+    // ?view=1 serves PDFs/images inline for preview. Only previewable types —
+    // serving arbitrary uploads (e.g. HTML) inline would be an XSS vector.
     if ($request->boolean('view') && $material->isPreviewable()) {
         return Storage::disk('local')->response(
             $material->stored_path,
@@ -56,9 +50,8 @@ Route::get('/download/{token}', function (Request $request, string $token) {
     );
 })->name('material.download');
 
-// Uploader-or-owner delete. By global id; the owner path is scoped to the
-// material's OWN workspace session — owning workspace A grants nothing over
-// a file in workspace B.
+// Uploader-or-owner delete. Owner path is scoped to the material's OWN
+// workspace session — owning workspace A grants nothing over a file in B.
 Route::delete('/materials/{material}/{token}', function (Material $material, string $token) {
     abort_unless($material->course()->exists(), 404);
 
@@ -81,18 +74,15 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
         ->with('uploaded', 'File removed.');
 })->name('material.destroy');
 
-// Operator moderation dashboard (site admin). Lists reported files across all
-// workspaces; gated by OPERATOR_SECRET held in session. Declared BEFORE the
-// /{workspace} catch-all so "operator" isn't read as a workspace slug.
+// Operator moderation dashboard. Gated by OPERATOR_SECRET held in session.
 Route::get('/operator', [OperatorController::class, 'dashboard'])->name('operator.dashboard');
 Route::post('/operator/login', [OperatorController::class, 'login'])->name('operator.login');
 Route::post('/operator/logout', [OperatorController::class, 'logout'])->name('operator.logout');
 Route::post('/operator/material/{material}/remove', [OperatorController::class, 'remove'])->name('operator.remove');
 Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
 
-// Everything inside a workspace. ResolveWorkspace sets the current tenant
-// from the {workspace} slug (unknown slug → 404) before any scoped query.
-// Declared last so the static routes above win.
+// Workspace-scoped routes. The catch-all /{workspace} lives here, so this
+// group is declared last (static routes above win).
 Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}', [CoursesController::class, 'index'])->name('courses.index');
     Route::post('/{workspace}/courses', [CoursesController::class, 'store'])->name('courses.store');
