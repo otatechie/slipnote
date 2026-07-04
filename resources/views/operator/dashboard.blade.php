@@ -52,8 +52,8 @@
     <div class="op-tabs mb-4 flex flex-wrap gap-1.5" role="tablist">
         <label for="tab-reported" class="op-tab-reported inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
             Reported files
-            @if ($materials->isNotEmpty())
-                <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-danger">{{ $materials->count() }}</span>
+            @if ($reportedTotal > 0)
+                <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-danger">{{ $reportedTotal }}</span>
             @endif
         </label>
         <label for="tab-boards" class="op-tab-boards inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
@@ -85,6 +85,9 @@
     </div>
 
     <div class="op-panel-reported">
+    @if ($reportedTotal > $materials->count())
+        <p class="mb-3 text-[13px] text-muted">Showing the {{ $materials->count() }} most-reported of {{ $reportedTotal }}. Clear these to see the rest.</p>
+    @endif
     @if ($materials->isNotEmpty())
         <div class="divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
             @foreach ($materials as $material)

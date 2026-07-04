@@ -55,12 +55,17 @@ class OperatorController extends Controller
             return view('operator.login');
         }
 
-        // Reported files, most-reported first.
+        // Reported files, most-reported first. Capped: the queue is worked
+        // worst-first and items leave as they're removed/dismissed, so the tail
+        // past 50 never needs to be on screen — but an abuse spike must not try
+        // to render thousands of rows at once. The count note flags any overflow.
+        $reportedTotal = Material::whereHas('reports')->count();
         $materials = Material::query()
             ->whereHas('reports')
             ->withCount('reports')
             ->with(['reports' => fn ($q) => $q->latest()->limit(20), 'course.workspace'])
             ->orderByDesc('reports_count')
+            ->limit(50)
             ->get();
 
         // Usage stats: is anyone actually using this thing?
@@ -83,6 +88,7 @@ class OperatorController extends Controller
 
         return view('operator.dashboard', [
             'materials' => $materials,
+            'reportedTotal' => $reportedTotal,
             'stats' => $stats,
             'recent' => $recent,
         ]);
