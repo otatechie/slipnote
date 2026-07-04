@@ -65,9 +65,17 @@
     <div class="op-panel-boards">
     <div class="mb-8 divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
         @forelse ($recent as $ws)
-            <div class="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5">
+            {{-- A board with no files is an unused shell — fade it so the boards
+                 that actually hold content stand out when scanning. --}}
+            @php($empty = $ws->materials_count === 0)
+            <div class="flex items-center justify-between gap-3 px-4 py-2 sm:px-5 {{ $empty ? 'opacity-55' : '' }}">
                 <div class="min-w-0">
-                    <p class="truncate text-[14px] font-semibold text-teal">{{ $ws->name }}</p>
+                    <p class="flex items-center gap-2 text-[14px] font-semibold text-teal">
+                        <span class="truncate">{{ $ws->name }}</span>
+                        @if ($empty)
+                            <span class="shrink-0 rounded-full bg-sky/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-muted">empty</span>
+                        @endif
+                    </p>
                     <p class="text-[12px] text-muted">
                         {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} ·
                         {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
