@@ -408,7 +408,7 @@ watch(() => props.materials, () => { selected.value = [] })
                         Cancel
                     </button>
                     <button type="button" @click="bulkDelete" :disabled="bulkForm.processing"
-                            class="cursor-pointer rounded-lg bg-red-600/90 px-3.5 py-1.5 text-[13px] font-semibold text-white transition hover:bg-red-600 disabled:opacity-60">
+                            class="btn-danger cursor-pointer rounded-lg px-3.5 py-1.5 text-[13px] font-semibold transition disabled:opacity-60">
                         Delete {{ selectedCount === 1 ? '1 file' : selectedCount + ' files' }}
                     </button>
                 </div>

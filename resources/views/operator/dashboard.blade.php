@@ -136,7 +136,7 @@
                             Dismiss
                         </button>
                         <button type="button" onclick="document.getElementById('remove-{{ $material->id }}').showModal()"
-                                class="inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-md bg-red-600/90 px-3 text-[13px] font-semibold text-white transition hover:bg-red-600 sm:h-8 sm:w-auto sm:text-[12px]">
+                                class="btn-danger inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-md px-3 text-[13px] font-semibold transition sm:h-8 sm:w-auto sm:text-[12px]">
                             Remove
                         </button>
                     </div>
@@ -175,7 +175,7 @@
                                 <form method="POST" action="{{ route('operator.remove', $material->id) }}">
                                     @csrf
                                     <button type="submit"
-                                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-red-600/90 px-5 text-[14px] font-semibold text-white transition hover:bg-red-600">
+                                            class="btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-lg px-5 text-[14px] font-semibold transition">
                                         Remove file
                                     </button>
                                 </form>

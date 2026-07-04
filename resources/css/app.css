@@ -166,6 +166,37 @@ html[data-theme='system'][data-system-theme='dark'] .hero-vignette {
     color: #1d2128;
 }
 
+/* Destructive button (delete / remove file). ONE red across the app, distinct
+   from the danger *text* token (--color-danger is coral in dark mode, tuned
+   for text — white on it fails). This is a solid fill that keeps a white label
+   AA-legible in both themes: deep red in light, a touch brighter in dark so it
+   still reads as alarm on charcoal without blowing out contrast. */
+.btn-danger {
+    background-color: #b91c1c; /* red-700 — 5.9:1 with white */
+    color: #fff;
+}
+.btn-danger:hover {
+    background-color: #a51818;
+}
+html[data-theme='dark'] .btn-danger,
+html[data-theme='system'][data-system-theme='dark'] .btn-danger {
+    background-color: #dc2626; /* red-600 — 4.9:1 with white on charcoal */
+}
+html[data-theme='dark'] .btn-danger:hover,
+html[data-theme='system'][data-system-theme='dark'] .btn-danger:hover {
+    background-color: #ef4444;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .btn-danger,
+    html[data-theme='system'] .btn-danger {
+        background-color: #dc2626;
+    }
+    :root:not([data-theme]) .btn-danger:hover,
+    html[data-theme='system'] .btn-danger:hover {
+        background-color: #ef4444;
+    }
+}
+
 /* text-neon is orange, which is unreadable as link text on cream (1.8:1). Links
    and small accents use TEAL instead — legible AND the intended accent role.
    (Orange stays a fill-only color: buttons, pill accents, the marker underline
