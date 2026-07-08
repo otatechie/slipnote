@@ -1,4 +1,8 @@
-# SlipNote
+<p align="center">
+  <img src="https://raw.githubusercontent.com/otatechie/slipnote/main/public/logo-mark.png" alt="SlipNote" width="120" height="120">
+</p>
+
+<h1 align="center">SlipNote</h1>
 
 A dead-simple materials board for students. No accounts, no login — anyone
 with the link can browse, download, and contribute course files across three
@@ -91,16 +95,6 @@ fresh link emailed back; the old link stops working. Responses are identical
 whether the email matches or not (no enumeration), rate-limited, and the
 feature is hidden when the mail driver is `log` or `array`.
 
-## Tests
-
-```bash
-php artisan test                          # full suite (109 passing)
-```
-
-`WorkspaceIsolationTest` is the security crux — it proves workspace A cannot
-read, reach, or mutate workspace B's data. Suites run *inside* a workspace via
-the `InteractsWithWorkspace` trait.
-
 ## Security
 
 - **Owner secret** stored only as a bcrypt hash; checks are timing-safe via
@@ -122,37 +116,14 @@ the `InteractsWithWorkspace` trait.
 - **Abuse throttling** — per-IP limits on uploads and workspace creation, a
   fail-closed host-disk check, and a content-hash blocklist refusing re-upload
   of operator-removed files.
+- **Upload hardening** — files are validated by real content type (`mimetypes`,
+  via magic bytes) as well as extension, so a renamed executable is rejected;
+  client filenames are sanitised before storage (no control chars / header
+  injection); and per-workspace byte and file-count caps bound abuse. Files are
+  **not** virus-scanned — treat downloads as untrusted (see the Terms page).
 
 For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
-`SESSION_SECURE_COOKIE=true`, and serve over HTTPS.
-
-## Architecture notes
-
-- **Tenancy (hand-rolled, no package).** `App\Tenancy\Tenancy` is a
-  request-scoped singleton; `ResolveWorkspace` middleware sets it from the
-  `{workspace}` slug. `BelongsToWorkspace` adds the `WorkspaceScope` global
-  scope so every query is auto-constrained and `workspace_id` auto-set.
-- The by-id `/download` and `/materials` routes deliberately run *without* the
-  scope; the delete route re-checks the owner session against the material's
-  own workspace.
-- **Inertia + Vue 3 pages** in `resources/js/pages/` talk to thin controllers;
-  the marketing root (`/`) is server-rendered Blade for SEO.
-- Search uses SQLite's `collate nocase` for A–Z sort — revisit if the driver
-  changes.
-
-## Known scope limits
-
-- No workspace edit/delete UI (a workspace, once made, stays).
-- No accounts. Bulk moderation is limited to owner bulk-delete and the operator
-  kill-switch; no soft-delete/restore (hard delete is permanent).
-- No pagination; search keeps long lists manageable.
-- Telegram config is global (`.env`), not per-workspace — deferred.
-
-## Roadmap
-
-- **Deadlines** — a per-board section answering "when is it due?" the way files
-  answer "who has the notes?". Title, course, date, optional note; anyone with
-  the link adds, the owner removes; sorted soonest-first with a countdown on
-  the nearest, past items sink; `.ics` download per item. Deliberately no
-  reminders, notifications or recurrence — the board is the single shared
-  source of truth, your calendar app does the nagging.
+`SESSION_SECURE_COOKIE=true`, and serve over HTTPS. Note that
+`SESSION_SECURE_COOKIE=true` **requires** HTTPS — over plain `http://` the
+session cookie is dropped and every POST fails with a 419 (leave it unset in
+local dev on http).
