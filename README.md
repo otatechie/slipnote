@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/otatechie/slipnote/main/public/logo-mark.png" alt="SlipNote" width="120" height="120">
+  <img src="https://raw.githubusercontent.com/otatechie/slipnote/main/public/og.png" alt="SlipNote" width="640">
 </p>
-
-<h1 align="center">SlipNote</h1>
 
 A dead-simple materials board for students. No accounts, no login — anyone
 with the link can browse, download, and contribute course files across three
