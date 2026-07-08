@@ -17,13 +17,15 @@
     </header>
 
     <div class="space-y-6 text-[15px] leading-relaxed text-ink">
-        <p>SlipNote is provided free, as-is, with no warranty. By using it, you accept the following.</p>
+        <p>SlipNote exists to help students share their own course materials — notes, slides, past papers — with their own classmates, and nothing more. It's provided free, as-is, with no warranty. By using it, you accept the following.</p>
 
         <section>
             <h2 class="mb-2 text-[15px] font-bold text-ink">Acceptable use</h2>
             <ul class="ml-5 list-disc space-y-1.5 text-[14px] text-ink/90">
                 <li>Upload only what you have the right to share. Don't upload copyrighted material you don't own or have permission to redistribute.</li>
-                <li>Don't upload illegal content, malware, or anything that could harm other users.</li>
+                <li>Don't upload other people's personal, private, or confidential information without their consent.</li>
+                <li>Don't upload malware, or files designed to harm, deceive, or exploit anyone who downloads them.</li>
+                <li>Don't upload illegal content or anything that could harm other users.</li>
                 <li>The site operator may remove any content or workspace that violates these terms, without notice.</li>
             </ul>
         </section>
@@ -34,8 +36,18 @@
         </section>
 
         <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">Your content is your responsibility</h2>
+            <p class="text-[14px] text-ink/90">SlipNote is a neutral host. It does not pre-screen, review, or endorse anything users upload, and files are not moderated before they appear. Whoever uploads a file is solely responsible for it — for having the right to share it and for what it contains. Boards and their contents are shared by users, not published by the operator. When a problem is reported or found, the operator can remove the content, but SlipNote takes no responsibility for user-uploaded material and makes no claim that it is accurate, lawful, or safe.</p>
+        </section>
+
+        <section>
             <h2 class="mb-2 text-[15px] font-bold text-ink">No warranty</h2>
-            <p class="text-[14px] text-ink/90">The site is provided "as is" without warranty of any kind. We don't guarantee uptime, data retention, email delivery, or that files won't be lost. Keep your own copies of anything important, including any owner link or owner key you rely on.</p>
+            <p class="text-[14px] text-ink/90">The site is provided "as is" without warranty of any kind. We don't guarantee uptime, data retention, email delivery, or that files won't be lost. Files are not scanned for viruses or malware — you download them at your own risk, and you should treat any file as untrusted until you've checked it yourself. Keep your own copies of anything important, including any owner link or owner key you rely on.</p>
+        </section>
+
+        <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">Your indemnity</h2>
+            <p class="text-[14px] text-ink/90">If something you upload or share through SlipNote causes a claim against the site operator — for example from a copyright holder, or from someone whose information you posted — you agree to cover the reasonable costs the operator incurs in dealing with it, to the extent the law allows.</p>
         </section>
 
         <section>
@@ -60,6 +72,11 @@
         <section>
             <h2 class="mb-2 text-[15px] font-bold text-ink">Copyright takedowns</h2>
             <p class="text-[14px] text-ink/90">If you believe content on SlipNote infringes your copyright, report the file or contact the operator with a description of the material and its URL. The operator will remove infringing content promptly when verified.</p>
+        </section>
+
+        <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">Governing law</h2>
+            <p class="text-[14px] text-ink/90">These terms are governed by the laws of the jurisdiction in which the operator of this specific SlipNote deployment is based, without regard to conflict-of-law rules. Any dispute will be handled in the courts of that jurisdiction. Nothing here removes any consumer rights you have under the mandatory law of your own country.</p>
         </section>
 
         <section>

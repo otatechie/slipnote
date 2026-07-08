@@ -38,6 +38,21 @@
         </section>
 
         <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">How long we keep it</h2>
+            <p class="text-[14px] text-ink/90">SlipNote does not auto-delete anything. Files, workspaces, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else.</p>
+        </section>
+
+        <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">Age</h2>
+            <p class="text-[14px] text-ink/90">SlipNote is intended for students in higher or further education and is not directed at children under 13. We don't knowingly collect personal information from children under 13. If you believe a child has uploaded personal information, report the file or contact the operator and it will be removed.</p>
+        </section>
+
+        <section>
+            <h2 class="mb-2 text-[15px] font-bold text-ink">Your rights</h2>
+            <p class="text-[14px] text-ink/90">Depending on where you live (for example under GDPR or CCPA), you may have the right to access, correct, or delete personal information about you, or to object to its processing. Because SlipNote holds so little — no accounts, no profiles — most of this is self-service: delete your own file with its delete link, or ask the workspace owner or site operator. For anything else, contact the operator of the specific site.</p>
+        </section>
+
+        <section>
             <h2 class="mb-2 text-[15px] font-bold text-ink">What we don't do</h2>
             <ul class="ml-5 list-disc space-y-1.5 text-[14px] text-ink/90">
                 <li>No analytics, no advertising, no profile building.</li>
