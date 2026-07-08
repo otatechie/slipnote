@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/otatechie/slipnote/main/public/og.png" alt="SlipNote" width="640">
+  <img src="https://raw.githubusercontent.com/otatechie/slipnote/main/public/logo-banner.png" alt="SlipNote" width="440">
 </p>
 
 A dead-simple materials board for students. No accounts, no login — anyone
