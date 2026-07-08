@@ -240,7 +240,19 @@ class CourseController extends Controller
             'uploaderName' => 'nullable|string|max:60',
             'passphrase' => 'nullable|string',
             'files' => 'required|array|min:1|max:20',
-            'files.*' => 'file|max:25600|mimes:pdf,docx,pptx,png,jpg,jpeg',
+            // mimes checks the extension; mimetypes checks the real content
+            // type (magic bytes via finfo), so a renamed executable — e.g.
+            // virus.exe → notes.pdf — fails even though its extension passes.
+            'files.*' => 'file|max:25600|mimes:pdf,docx,pptx,png,jpg,jpeg|mimetypes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg',
+        ], [
+            'files.required' => 'Choose at least one file to upload.',
+            'files.min' => 'Choose at least one file to upload.',
+            'files.max' => 'You can upload up to 20 files at once.',
+            'files.*.mimes' => 'Unsupported file type. Use PDF, Word, PowerPoint, or an image (PNG/JPG).',
+            'files.*.mimetypes' => 'Unsupported file type. Use PDF, Word, PowerPoint, or an image (PNG/JPG).',
+            'files.*.max' => 'That file is too large — each file can be up to 25 MB.',
+            'title.max' => 'That title is too long — keep it under 120 characters.',
+            'uploaderName.max' => 'That name is too long — keep it under 60 characters.',
         ]);
 
         // Per-IP upload throttle: blunts automated abuse / mass dumping while
@@ -286,6 +298,9 @@ class CourseController extends Controller
         // request never overshoots. The host-disk check above is the hard
         // safety net; a tiny overshoot under concurrent uploads is acceptable.
         $remaining = $workspace->storageRemaining();
+        // Hard file-count cap alongside the byte cap: a flood of tiny files
+        // shouldn't exhaust inodes or the list UI while under the size limit.
+        $filesLeft = $workspace->filesRemaining();
         $created = [];
         $skipped = 0;
         $blocked = 0;
@@ -317,18 +332,19 @@ class CourseController extends Controller
             }
 
             $size = (int) $file->getSize();
-            if ($size > $remaining) {
+            if ($size > $remaining || $filesLeft <= 0) {
                 $skipped++;
 
                 continue;
             }
             $remaining -= $size;
+            $filesLeft--;
             $seenHashes->put($hash, true);
 
             $material = $course->materials()->create([
                 'section' => $data['section'],
                 'title' => $title,
-                'original_filename' => $file->getClientOriginalName(),
+                'original_filename' => $this->sanitizeFilename($file->getClientOriginalName()),
                 'stored_path' => $file->store('materials', 'local'),
                 'uploader_name' => $uploaderName,
                 'manage_token' => Str::random(40),
@@ -374,5 +390,22 @@ class CourseController extends Controller
             'uploaded' => $message,
             'manageUrl' => $count === 1 ? $created[0]->manageUrl() : null,
         ]);
+    }
+
+    /**
+     * Clean a client-supplied filename before it's stored and later echoed
+     * into a Content-Disposition header on download. Strips directory parts
+     * and control characters (which enable header injection / spoofing),
+     * collapses whitespace, and guarantees a non-empty fallback.
+     */
+    private function sanitizeFilename(string $name): string
+    {
+        // Drop any path components a client may have sent (basename only).
+        $name = basename(str_replace('\\', '/', $name));
+        // Remove control chars incl. CR/LF (header injection) and quotes.
+        $name = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '', $name);
+        $name = trim(preg_replace('/\s+/', ' ', $name));
+
+        return $name !== '' ? mb_substr($name, 0, 200) : 'file';
     }
 }

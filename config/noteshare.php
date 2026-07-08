@@ -44,9 +44,13 @@ return [
     |   WORKSPACE_STORAGE_BYTES  — soft cap per workspace (default 500 MB)
     |   MIN_FREE_DISK_BYTES      — refuse uploads when host free space drops
     |                              below this (default 1 GB)
+    |   WORKSPACE_MAX_FILES      — hard cap on file COUNT per workspace, so a
+    |                              flood of tiny files can't exhaust inodes or
+    |                              the UI even while under the byte cap
     */
     'workspace_storage_bytes' => (int) env('WORKSPACE_STORAGE_BYTES', 500 * 1024 * 1024),
     'min_free_disk_bytes' => (int) env('MIN_FREE_DISK_BYTES', 1024 * 1024 * 1024),
+    'workspace_max_files' => (int) env('WORKSPACE_MAX_FILES', 2000),
 
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.

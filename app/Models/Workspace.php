@@ -177,4 +177,10 @@ class Workspace extends Model
     {
         return $this->storageRemaining() <= 0;
     }
+
+    /** Files this workspace can still accept before its count cap (>= 0). */
+    public function filesRemaining(): int
+    {
+        return max(0, (int) config('noteshare.workspace_max_files') - $this->materials()->count());
+    }
 }

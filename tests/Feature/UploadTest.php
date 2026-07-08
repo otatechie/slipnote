@@ -169,6 +169,25 @@ class UploadTest extends TestCase
         $this->assertSame(0, Material::count());
     }
 
+    public function test_it_rejects_an_executable_renamed_with_an_allowed_extension(): void
+    {
+        // A real on-disk file (not a fake) so content sniffing via finfo runs:
+        // Windows PE header ("MZ...") but named notes.pdf. It passes the
+        // extension check yet must fail the content-type (mimetypes) check.
+        $path = tempnam(sys_get_temp_dir(), 'disguised').'.pdf';
+        file_put_contents($path, "MZ\x90\x00\x03".str_repeat("\x00", 200));
+        $disguised = new UploadedFile($path, 'notes.pdf', 'application/pdf', null, true);
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [$disguised],
+        ])->assertSessionHasErrors(['files.0']);
+
+        $this->assertSame(0, Material::count());
+
+        @unlink($path);
+    }
+
     public function test_it_records_file_size_on_upload(): void
     {
         // 100 KB file → 102400 bytes
@@ -205,6 +224,44 @@ class UploadTest extends TestCase
 
         // Only the pre-seeded row exists.
         $this->assertSame(1, Material::count());
+    }
+
+    public function test_it_rejects_upload_that_would_exceed_the_file_count_cap(): void
+    {
+        // Cap at 1 file for this test; pre-seed one so the workspace is full.
+        config(['noteshare.workspace_max_files' => 1]);
+        $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'first.pdf',
+            'stored_path' => 'materials/first.pdf',
+            'file_size' => 10,
+        ]);
+
+        $file = UploadedFile::fake()->create('second.pdf', 10, 'application/pdf');
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [$file],
+        ])->assertSessionHasErrors(['files']);
+
+        $this->assertSame(1, Material::count());
+    }
+
+    public function test_it_sanitizes_a_filename_with_control_characters(): void
+    {
+        // A filename carrying a CRLF + quote — the Content-Disposition
+        // header-injection shape — must be stripped before it's stored.
+        $file = UploadedFile::fake()->createWithContent("ok\r\n\"evil.pdf", 'data');
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [$file],
+        ])->assertRedirect();
+
+        $stored = Material::first()->original_filename;
+        $this->assertStringNotContainsString("\r", $stored);
+        $this->assertStringNotContainsString("\n", $stored);
+        $this->assertStringNotContainsString('"', $stored);
     }
 
     public function test_it_saves_an_optional_title_with_html_stripped(): void
