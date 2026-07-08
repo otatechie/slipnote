@@ -7,7 +7,8 @@
     <meta name="robots" content="noindex,nofollow">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
-    <link rel="apple-touch-icon" href="/favicon-192.png">
+    <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <script>
         (() => {
             const key = 'slipnote-theme'
@@ -21,10 +22,12 @@
             document.documentElement.style.colorScheme = resolved
         })()
     </script>
-    {{-- TikTok Sans is self-hosted (see @font-face in app.css): keeps the prod
-         CSP happy (font-src 'self') and no visitor IPs go to Google. One
-         variable file covers every weight. --}}
-    <link rel="preload" href="/fonts/tiktoksans-variable.woff2" as="font" type="font/woff2" crossorigin>
+    {{-- Open Runde is self-hosted (see @font-face in app.css): keeps the prod
+         CSP happy (font-src 'self') and no visitor IPs go to a font CDN.
+         Preload the two most-used weights (body + headings); the other two
+         load on demand. --}}
+    <link rel="preload" href="/fonts/OpenRunde-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/OpenRunde-Semibold.woff2" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @inertiaHead
 </head>

@@ -6,7 +6,8 @@
     <title>{{ ($title ?? null) ? $title.' · SlipNote' : 'SlipNote' }}</title>
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
-    <link rel="apple-touch-icon" href="/favicon-192.png">
+    <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     @if ($description ?? null)
         <meta name="description" content="{{ $description }}">
     @endif
@@ -31,9 +32,10 @@
         })()
     </script>
     {{ $head ?? '' }}
-    {{-- TikTok Sans is self-hosted (see @font-face in app.css): keeps the prod
-         CSP happy (font-src 'self') and no visitor IPs go to Google. --}}
-    <link rel="preload" href="/fonts/tiktoksans-variable.woff2" as="font" type="font/woff2" crossorigin>
+    {{-- Open Runde is self-hosted (see @font-face in app.css): keeps the prod
+         CSP happy (font-src 'self') and no visitor IPs go to a font CDN. --}}
+    <link rel="preload" href="/fonts/OpenRunde-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/OpenRunde-Semibold.woff2" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="m-0 bg-base font-sans text-ink">
@@ -55,7 +57,7 @@
                     <button type="button"
                             data-theme-toggle
                             aria-label="Switch theme mode"
-                            class="group inline-flex cursor-pointer items-center justify-center rounded-full border border-sky bg-surface p-1.5 text-muted transition hover:border-neon hover:text-neon">
+                            class="group inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full border border-sky bg-surface px-2.5 py-1.5 text-muted transition hover:border-neon hover:text-neon">
                     <svg aria-hidden="true" data-theme-icon="system" class="size-4 group-data-[active-theme=light]:hidden group-data-[active-theme=dark]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>
                     </svg>
@@ -65,6 +67,7 @@
                     <svg aria-hidden="true" data-theme-icon="dark" class="hidden size-4 group-data-[active-theme=dark]:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/>
                     </svg>
+                    <span data-theme-label class="text-[13px] font-semibold">Theme: System</span>
                     </button>
                 </div>
                 <p class="text-[12px] text-muted">&copy; {{ date('Y') }} SlipNote</p>

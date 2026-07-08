@@ -90,18 +90,23 @@ if (document.readyState === 'loading') {
     initThemeToggle()
 }
 
-createInertiaApp({
-    title: title => title ? `${title} · SlipNote` : 'SlipNote',
-    resolve: name => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob('./pages/**/*.vue')),
-    setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .mount(el)
+// Plain blade pages (welcome, operator, legal) have no Inertia root — only the
+// app pages render one. Mounting Inertia without it throws (null el). Guard on
+// the root's presence so this script is a no-op on blade pages.
+if (document.getElementById('app')) {
+    createInertiaApp({
+        title: title => title ? `${title} · SlipNote` : 'SlipNote',
+        resolve: name => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob('./pages/**/*.vue')),
+        setup({ el, App, props, plugin }) {
+            createApp({ render: () => h(App, props) })
+                .use(plugin)
+                .mount(el)
 
-        initThemeToggle()
+            initThemeToggle()
 
-        // Re-wire the toggle after every Inertia navigation — the SPA swaps
-        // the DOM so the new footer button needs a fresh listener.
-        router.on('navigate', () => initThemeToggle())
-    },
-})
+            // Re-wire the toggle after every Inertia navigation — the SPA swaps
+            // the DOM so the new footer button needs a fresh listener.
+            router.on('navigate', () => initThemeToggle())
+        },
+    })
+}

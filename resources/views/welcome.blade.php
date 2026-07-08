@@ -41,15 +41,15 @@
         <div class="hero-vignette pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-40" aria-hidden="true"></div>
         <header class="relative px-4 pt-4 sm:px-5 sm:pt-6">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full border border-sky/80 bg-surface px-3 py-2.5 shadow-[0_6px_18px_-16px_rgba(0,0,0,0.35)] backdrop-blur sm:px-6 sm:py-3">
-                <a href="{{ route('welcome') }}" class="inline-flex min-w-0 items-center gap-2 text-[13px] font-bold tracking-[-0.01em] text-teal sm:text-[14px]">
-                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neon text-[14px] text-white shadow-[0_4px_12px_-6px_rgba(33,94,97,0.55)] sm:h-9 sm:w-9 sm:text-[15px]">S</span>
+                <a href="{{ route('welcome') }}" class="inline-flex min-w-0 items-center gap-2 text-[16px] font-bold tracking-[-0.01em] text-teal sm:text-[18px]">
+                    <img src="/logo-mark.png" alt="SlipNote logo" class="h-8 w-8 shrink-0 sm:h-9 sm:w-9">
                     SlipNote
                 </a>
 
                 {{-- No nav links: it's a one-scroll page and Privacy lives in the
                      footer, so the header's only job is the CTA. --}}
                 <a href="{{ route('start') }}"
-                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white shadow-[0_3px_0_0_#164043] transition-all hover:translate-y-0.5 hover:shadow-[0_1px_0_0_#164043] active:translate-y-0.5 active:shadow-none sm:px-4 sm:py-2.5 sm:text-[13px]">
+                   class="inline-flex shrink-0 items-center justify-center rounded-full bg-neon px-3 py-2 text-[12px] font-semibold text-white shadow-[0_3px_0_0_#1e3a8a] transition-all hover:translate-y-0.5 hover:shadow-[0_1px_0_0_#1e3a8a] active:translate-y-0.5 active:shadow-none sm:px-4 sm:py-2.5 sm:text-[13px]">
                     <span class="sm:hidden">Create board</span>
                     <span class="hidden sm:inline">Create your board</span>
                 </a>
@@ -76,7 +76,7 @@
                     </p>
                     <div class="mt-5 flex flex-col items-center sm:mt-8 lg:items-start">
                         <a href="{{ route('start') }}"
-                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_#164043] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_#164043] active:translate-y-1 active:shadow-none sm:w-auto">
+                           class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_#1e3a8a] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-1 active:shadow-none sm:w-auto">
                             Create your board
                         </a>
                     </div>
@@ -86,10 +86,7 @@
                 </div>
 
                 <div class="group relative mx-auto w-full max-w-md lg:max-w-none" role="img" aria-label="Example board: the Computer Science Level 100 class, showing its CS 101 course with three shared files (a quiz solution, lecture slides and a past paper), with a Download-all option for the whole section.">
-                    {{-- masking tape holding the screenshot to the page --}}
-                    <span class="nb-tape -left-6 -top-3 z-10 -rotate-45" aria-hidden="true"></span>
-                    <span class="nb-tape -right-6 -top-3 z-10 rotate-45" aria-hidden="true"></span>
-                    <div class="overflow-hidden rounded-lg border border-sky bg-surface text-left shadow-[0_18px_50px_-22px_rgba(0,0,0,0.3)] transition-transform duration-300 rotate-1 group-hover:rotate-0 sm:rotate-2" aria-hidden="true">
+                    <div class="hero-mock overflow-hidden rounded-lg border border-sky bg-surface text-left shadow-[0_18px_50px_-22px_rgba(0,0,0,0.3)] transition-transform duration-300 rotate-1 group-hover:rotate-0 sm:rotate-2" aria-hidden="true">
                         <div class="flex items-center gap-1.5 border-b border-sky px-4 py-3">
                             <span class="h-2.5 w-2.5 rounded-full bg-red-400/70" aria-hidden="true"></span>
                             <span class="h-2.5 w-2.5 rounded-full bg-yellow-400/70" aria-hidden="true"></span>
@@ -172,14 +169,14 @@
                     'QR code for the lecture hall',
                     'Private owner link',
                 ] as $chip)
-                    <li class="rounded-sm border border-dashed border-sky bg-base px-3.5 py-1 font-hand text-[17px] text-muted odd:rotate-1 even:-rotate-1">{{ $chip }}</li>
+                    <li class="feature-chip rounded-sm border border-dashed border-sky bg-base px-3.5 py-1 font-hand text-[17px] text-muted odd:rotate-1 even:-rotate-1">{{ $chip }}</li>
                 @endforeach
             </ul>
         </div>
     </section>
 
     <section id="why" class="border-t border-sky bg-surface px-4 py-9 sm:px-5 sm:py-20">
-        <div class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
                 <h2 class="max-w-md text-[24px] font-semibold leading-[1.08] tracking-[-0.03em] text-teal sm:text-[34px]">
                     Better than losing files in a busy class group chat
@@ -193,7 +190,7 @@
                 </p>
             </div>
 
-            <div class="grid gap-6 pt-3 sm:grid-cols-2">
+            <div class="grid gap-6 sm:grid-cols-2">
                 @foreach ([
                     [
                         'title' => 'Works anywhere',
@@ -216,9 +213,7 @@
                         'tilt' => '-rotate-1',
                     ],
                 ] as $benefit)
-                    {{-- pinned index card --}}
                     <div class="{{ $benefit['tilt'] }} relative rounded-lg border border-sky bg-base px-5 pb-6 pt-7 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] transition-transform duration-200 hover:rotate-0 sm:px-7 sm:pb-8 sm:pt-9">
-                        <span class="nb-pin" aria-hidden="true"></span>
                         <p class="text-[17px] font-semibold text-teal">{{ $benefit['title'] }}</p>
                         <p class="mt-2.5 text-[14px] leading-relaxed text-muted">{{ $benefit['body'] }}</p>
                     </div>
@@ -228,7 +223,7 @@
     </section>
 
     <section class="nb-paper border-t border-sky px-4 py-12 sm:px-5 sm:py-24">
-        <div class="nb-sticky nb-tint-teal relative mx-auto max-w-5xl -rotate-1 px-5 py-7 sm:px-10 sm:py-12">
+        <div class="nb-sticky nb-cta nb-tint-sky relative mx-auto max-w-5xl -rotate-1 px-5 py-7 sm:px-10 sm:py-12">
             <span class="nb-tape -top-3 left-8 -rotate-6" aria-hidden="true"></span>
             <span class="nb-tape -top-3 right-8 rotate-3" aria-hidden="true"></span>
             <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -242,7 +237,7 @@
                 </div>
                 <div class="flex flex-col items-center gap-2 lg:items-stretch">
                     <a href="{{ route('start') }}"
-                       class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_#164043] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_#164043] active:translate-y-1 active:shadow-none sm:w-auto">
+                       class="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-neon px-7 py-3.5 text-[15px] font-bold text-white shadow-[0_4px_0_0_#1e3a8a] transition-all hover:translate-y-0.5 hover:shadow-[0_2px_0_0_#1e3a8a] active:translate-y-1 active:shadow-none sm:w-auto">
                         Create your board
                     </a>
                 </div>
