@@ -125,3 +125,7 @@ For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
 `SESSION_SECURE_COOKIE=true` **requires** HTTPS — over plain `http://` the
 session cookie is dropped and every POST fails with a 419 (leave it unset in
 local dev on http).
+
+## License
+
+[MIT](LICENSE) — free to use, self-host, and modify.
