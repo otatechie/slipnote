@@ -197,6 +197,17 @@ function confirmDelete(e) {
     }
 }
 
+// Undo-upload uses the app's own dialog (not window.confirm) for a
+// consistent look with the Report modal. The form is only submitted once
+// the user confirms inside it.
+const undoForm = ref(null)
+const confirmingUndo = ref(false)
+
+function submitUndo() {
+    confirmingUndo.value = false
+    undoForm.value?.submit()
+}
+
 function courseListUrl() {
     return '/' + props.workspace.slug
 }
@@ -299,10 +310,21 @@ watch(() => props.materials, () => { selected.value = [] })
                 {{ flash.created }}
             </div>
 
-            <!-- Upload receipt -->
+            <!-- Upload receipt. manageUrl is only set for a single-file upload
+                 (one token, one file) — the uploader's only way to delete
+                 their own upload later, since there's no login to recover it. -->
             <div v-if="flash.uploaded"
                  class="mb-5 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
                 {{ flash.uploaded }}
+                <template v-if="flash.manageUrl">
+                    <form ref="undoForm" :action="flash.manageUrl" method="POST" class="inline">
+                        <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="button" @click="confirmingUndo = true"
+                                class="ml-1 cursor-pointer font-semibold underline hover:no-underline">Undo upload</button>
+                    </form>
+                    <span class="mt-1 block text-xs font-semibold text-danger">Only works right now — refresh or leave, and it's gone.</span>
+                </template>
             </div>
 
             <!-- Report receipt -->
@@ -695,6 +717,27 @@ watch(() => props.materials, () => { selected.value = [] })
                         </button>
                     </div>
                     <p class="mt-3 text-[11px] text-muted/70">Goes to the site operator for review. Files aren't removed automatically.</p>
+                </div>
+            </div>
+
+            <div v-if="confirmingUndo" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-label="Undo upload"
+                 @keydown.escape.window="confirmingUndo = false">
+                <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="confirmingUndo = false"></div>
+                <div class="relative w-full max-w-md rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                    <!-- Mobile grab handle -->
+                    <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                    <h2 class="text-[15px] font-bold text-ink">Undo this upload?</h2>
+                    <p class="mt-1 text-[13px] text-muted">The file will be removed from the board. This can't be undone.</p>
+
+                    <div class="mt-4 flex items-center justify-end gap-2">
+                        <button type="button" @click="confirmingUndo = false"
+                                class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
+                        <button type="button" @click="submitUndo"
+                                class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-danger px-5 text-[14px] font-semibold text-white transition hover:brightness-110">
+                            Undo upload
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

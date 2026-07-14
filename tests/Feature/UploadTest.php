@@ -54,6 +54,45 @@ class UploadTest extends TestCase
         Storage::disk('local')->assertExists($material->stored_path);
     }
 
+    public function test_a_single_file_upload_returns_a_manage_url_to_delete_it(): void
+    {
+        $file = UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf');
+
+        $response = $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [$file],
+        ]);
+
+        $manageUrl = $response->getSession()->get('manageUrl');
+        $this->assertNotNull($manageUrl);
+
+        $material = Material::first();
+        $this->assertStringContainsString($material->manage_token, $manageUrl);
+        $this->assertStringContainsString((string) $material->id, $manageUrl);
+
+        // manageUrl IS the delete route itself (DELETE method) — the
+        // uploader's one link to remove their own file, not a GET page.
+        $this->delete($manageUrl)->assertRedirect();
+        $this->assertSame(0, Material::count());
+    }
+
+    public function test_a_multi_file_upload_does_not_return_a_manage_url(): void
+    {
+        // manageUrl is only meaningful for a single upload — with several
+        // files there's no one link to hand back, so it must be absent.
+        $files = [
+            UploadedFile::fake()->createWithContent('a.pdf', 'alpha'),
+            UploadedFile::fake()->createWithContent('b.pdf', 'bravo'),
+        ];
+
+        $response = $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => $files,
+        ]);
+
+        $this->assertNull($response->getSession()->get('manageUrl'));
+    }
+
     public function test_a_file_downloads_via_its_unguessable_token(): void
     {
         $material = $this->course->materials()->create([
