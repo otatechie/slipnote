@@ -8,9 +8,25 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SecureHeaders
 {
+    /**
+     * Routes that opt in to search indexing — the marketing landing and the
+     * legal pages. Mirrors :indexable="true" in the Blade layout and the
+     * Allow list in public/robots.txt; keep the three in sync.
+     */
+    private const INDEXABLE_ROUTES = ['welcome', 'privacy', 'terms'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
+
+        // Everything except the public pages is noindex. The Blade/Inertia
+        // layouts already emit a robots <meta>, but file downloads are PDFs
+        // and slides — no HTML to put a tag in, so the header is the only
+        // way to mark them. Without it a leaked /download/{token} link is
+        // indexable, and robots.txt alone is advisory and per-crawler.
+        if (! in_array($request->route()?->getName(), self::INDEXABLE_ROUTES, true)) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');

@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title inertia>SlipNote</title>
     <meta name="robots" content="noindex,nofollow">
+    {{-- Link-preview card for the chat apps boards are shared in. Rendered
+         server-side on purpose: preview fetchers don't run JS, so the <Head>
+         tags the Vue pages set are invisible to them. Board name only — never
+         courses, files or counts; noindex above still keeps these out of
+         search. --}}
+    @if (app(\App\Tenancy\Tenancy::class)->has())
+        @php($ogWorkspace = app(\App\Tenancy\Tenancy::class)->current())
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="SlipNote">
+        <meta property="og:title" content="{{ $ogWorkspace->name }} · SlipNote">
+        <meta property="og:description" content="A shared board for course notes, slides and past papers. Free, no accounts, no setup.">
+        <meta property="og:url" content="{{ url('/'.$ogWorkspace->slug) }}">
+        <meta property="og:image" content="{{ url('/og.png') }}">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $ogWorkspace->name }} · SlipNote">
+        <meta name="twitter:image" content="{{ url('/og.png') }}">
+    @endif
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
