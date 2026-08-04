@@ -29,6 +29,12 @@ class ResolveWorkspace
 
         app(Tenancy::class)->set($workspace);
 
+        // GET only: a POST is already covered by the page view that preceded
+        // it, and this shouldn't add a write to every upload.
+        if ($request->isMethodSafe()) {
+            $workspace->touchAccess();
+        }
+
         return $next($request);
     }
 }

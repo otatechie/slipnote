@@ -77,9 +77,14 @@ class OperatorController extends Controller
             'files' => Material::count(),
             'files_week' => Material::where('created_at', '>=', now()->subDays(7))->count(),
             'storage_mb' => round(Material::sum('file_size') / 1_048_576, 1),
+            // A board is "active" if anyone opened or downloaded from it this
+            // week — not whether it received files. An archive that gets no
+            // uploads but serves past papers every exam week is alive.
+            'active_week' => Workspace::where('last_accessed_at', '>=', now()->subDays(7))->count(),
         ];
 
-        // Most recent boards, with how much they hold.
+        // Most recent boards, with how much they hold and when they were last
+        // touched — a board with files but no recent access is a dead one.
         $recent = Workspace::query()
             ->withCount(['courses', 'materials'])
             ->latest()

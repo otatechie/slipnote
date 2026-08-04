@@ -35,6 +35,12 @@ Route::get('/download/{token}', function (Request $request, string $token) {
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
 
+    // Downloads are the signal that a board is still doing its job — a past
+    // papers archive gets no uploads for a year and is used every exam week.
+    // This route sits outside the workspace group, so ResolveWorkspace's
+    // touch never fires here.
+    $material->course->workspace->touchAccess();
+
     // ?view=1 serves PDFs/images inline for preview. Only previewable types —
     // serving arbitrary uploads (e.g. HTML) inline would be an XSS vector.
     if ($request->boolean('view') && $material->isPreviewable()) {

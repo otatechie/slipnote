@@ -25,6 +25,7 @@ class Workspace extends Model
     protected $casts = [
         // Encrypted at rest: a leaked DB/backup must not expose emails.
         'recovery_email' => 'encrypted',
+        'last_accessed_at' => 'datetime',
     ];
 
     public function courses(): HasMany
@@ -128,6 +129,30 @@ class Workspace extends Model
         $secret = Str::random(40);
 
         return [$secret, Hash::make($secret)];
+    }
+
+    /**
+     * Record that someone looked at this board or pulled a file from it.
+     *
+     * Throttled to the hour: the question this answers is "has anyone touched
+     * this board in months", so finer resolution buys nothing and would mean a
+     * write on every page view. Skips the model's timestamps so a visit never
+     * looks like an edit.
+     */
+    public function touchAccess(): void
+    {
+        if ($this->last_accessed_at?->gt(now()->subHour())) {
+            return;
+        }
+
+        $this->last_accessed_at = now();
+
+        // timestamps=false, not just saveQuietly(): saveQuietly suppresses
+        // events but still bumps updated_at, which would make every visit
+        // look like an edit.
+        $this->timestamps = false;
+        $this->saveQuietly();
+        $this->timestamps = true;
     }
 
     /** Slug from the name, with a numeric suffix if it collides. */
