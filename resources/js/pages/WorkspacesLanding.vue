@@ -129,9 +129,10 @@ function confirmForget() {
             <!-- Owner receipt card -->
             <template v-if="flash.ownerUrl">
                 <div class="rounded-2xl border border-teal/30 bg-teal/5 p-5 sm:p-6">
-                    <p class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is ready 🎉</p>
+                    <p class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
                     <p class="mt-1.5 text-[13px] text-muted">
-                        You can add a recovery email later to get it back if you lose it.
+                        It's empty for now — add a few files before you share it.
+                        You can add a recovery email later to get it back if you lose the link.
                     </p>
 
                     <div class="mt-4">
@@ -157,8 +158,11 @@ function confirmForget() {
                     </div>
 
                     <div class="mt-4">
+                        <!-- Labelled "once it has files": an empty board shared
+                             into a group chat converts nobody and doesn't get a
+                             second look. Save the link now, share it later. -->
                         <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-teal">
-                            🔗 Share this with classmates
+                            🔗 Share with classmates — once it has files
                         </p>
                         <!-- Not a live link on purpose: navigating away here would
                              discard the owner link, which is shown only once. -->
@@ -182,7 +186,7 @@ function confirmForget() {
                             class="mt-4 w-full rounded-lg py-3.5 text-[15px] font-bold transition
                                    enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:shadow-sm enabled:hover:brightness-125
                                    disabled:cursor-not-allowed disabled:border disabled:border-dashed disabled:border-sky disabled:bg-base disabled:text-muted">
-                        <span v-if="saved">Continue to {{ flash.createdName }}</span>
+                        <span v-if="saved">Add files to {{ flash.createdName }}</span>
                         <span v-else>Tick the box above to continue</span>
                     </button>
                 </div>

@@ -28,11 +28,16 @@
             <p class="text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
         </div>
         {{-- Opened or downloaded from, not uploaded to: an archive nobody adds
-             to but everyone reads is still doing its job. --}}
+             to but everyone reads is still doing its job. Says so on the tile,
+             because "active" could mean either and the difference is the point.
+             Before any board has been visited the count is 0 for a reason that
+             isn't "nobody came" — say which, or it reads as broken. --}}
         <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
             <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Active</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['active_week']) }}</p>
-            <p class="text-[12px] text-muted">used this week</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
+            <p class="text-[12px] text-muted">
+                {{ $stats['tracking_started'] ? 'opened or downloaded, 7d' : 'no visits recorded yet' }}
+            </p>
         </div>
         <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
             <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Courses</p>
@@ -64,7 +69,7 @@
             @endif
         </label>
         <label for="tab-boards" class="op-tab-boards inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
-            Latest boards
+            Newest boards
             <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-teal">{{ $recent->count() }}</span>
         </label>
     </div>
@@ -84,19 +89,34 @@
                     </p>
                 </div>
                 <div class="shrink-0 text-right">
-                    <p class="text-[12px] tabular-nums text-muted" title="Created {{ $ws->created_at }}">{{ $ws->created_at->diffForHumans() }}</p>
-                    {{-- Last time anyone opened or downloaded. Null = nobody
-                         since this started being recorded. --}}
-                    <p class="text-[12px] tabular-nums {{ $ws->last_accessed_at?->gt(now()->subDays(30)) ? 'text-teal' : 'text-muted/70' }}"
-                       title="{{ $ws->last_accessed_at ? 'Last opened '.$ws->last_accessed_at : 'Not opened since tracking began' }}">
-                        {{ $ws->last_accessed_at ? 'seen '.$ws->last_accessed_at->diffForHumans(null, true).' ago' : 'never seen' }}
-                    </p>
+                    {{-- Labelled: two bare relative times stacked ("3 weeks ago"
+                         over "2 days ago") give no clue which is which. --}}
+                    <p class="text-[12px] tabular-nums text-muted" title="{{ $ws->created_at }}">made {{ $ws->created_at->diffForHumans(null, true) }} ago</p>
+                    {{-- Only when there's something to report: a board with no
+                         recorded access says nothing useful, and repeating that
+                         down the column drowns out the rows that do. --}}
+                    @if ($ws->last_accessed_at)
+                        <p class="text-[12px] tabular-nums text-teal" title="Last opened {{ $ws->last_accessed_at }}">
+                            opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
+                        </p>
+                    @endif
                 </div>
             </div>
         @empty
             <p class="px-4 py-3 text-[14px] text-muted">No boards yet.</p>
         @endforelse
     </div>
+    {{-- The list is capped and sorted by creation, and empty rows are faded —
+         both are invisible rules until stated. The empty count is the useful
+         number here: boards created and never filled are the drop-off. --}}
+    @if ($recent->isNotEmpty())
+        <p class="-mt-6 mb-8 text-[13px] text-muted">
+            The {{ $recent->count() }} newest of {{ number_format($stats['workspaces']) }}.
+            @if ($stats['empty_boards'] > 0)
+                <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
+            @endif
+        </p>
+    @endif
     </div>
 
     <div class="op-panel-reported">
@@ -175,7 +195,7 @@
                                 <form method="POST" action="{{ route('operator.dismiss', $material->id) }}">
                                     @csrf
                                     <button type="submit"
-                                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-teal px-5 text-[14px] font-semibold text-white transition hover:brightness-110">
+                                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-110">
                                         Dismiss reports
                                     </button>
                                 </form>

@@ -81,6 +81,11 @@ class OperatorController extends Controller
             // week — not whether it received files. An archive that gets no
             // uploads but serves past papers every exam week is alive.
             'active_week' => Workspace::where('last_accessed_at', '>=', now()->subDays(7))->count(),
+            // Until some board has been visited, "0 active" means "not measured
+            // yet", not "nobody came". The tile says which.
+            'tracking_started' => Workspace::whereNotNull('last_accessed_at')->exists(),
+            // Created and never filled — the drop-off worth watching.
+            'empty_boards' => Workspace::whereDoesntHave('materials')->count(),
         ];
 
         // Most recent boards, with how much they hold and when they were last
