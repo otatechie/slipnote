@@ -21,8 +21,10 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   each. Files that would exceed the workspace cap are skipped while the rest
   save. Identical files already on the board (matched by content hash) are
   skipped as duplicates.
-- **Uploader delete** — each upload gets a secret token; the success banner
-  shows a one-time "Remove it" link. Holding the token is the only credential.
+- **Uploader delete** — a single-file upload gets a secret token; the success
+  banner shows a one-time "Undo upload" link, good only for that page view.
+  Holding the token is the only credential. Batch uploads (multiple files at
+  once) don't get this link yet.
 - **Owner mode** — visit `/<workspace>?owner=SECRET` to unlock a per-row
   "Delete" on every file for the session; "Lock board" leaves owner mode on
   the current device. The secret is per-workspace, stored only as a bcrypt
@@ -129,3 +131,8 @@ local dev on http).
 ## License
 
 [MIT](LICENSE) — free to use, self-host, and modify.
+
+The licence covers **this code only**. Any hosted instance is operated
+independently of it, and neither the licence nor this repository grants rights
+to a hosted instance's workspaces, boards, or uploaded files — those belong to
+whoever runs and uses that instance.
