@@ -37,7 +37,6 @@
     font-display: swap;
     src: url('/fonts/OpenRunde-Bold.woff2') format('woff2');
 }
-
 @theme {
     --font-sans: 'Open Runde', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
@@ -539,85 +538,362 @@ textarea:focus-visible {
 }
 
 /* ---------------------------------------------------------------------------
-   Landing page. The product pages are deliberately quiet, and a marketing page
-   that is only quiet reads as a dashboard. Warmth here comes from colour and
-   shape — a four-tint accent palette, softer corners, a hover lift and real
-   elevation on the product shot — not from washes or textures behind the type.
+   Notebook landing page
 --------------------------------------------------------------------------- */
-
-/* A warm supporting palette, landing page only. The product is blue-only on
-   purpose — one accent, so it always means "the action here". A page whose job
-   is to make a class want to use it can afford more than one colour, and warm
-   ones read as school rather than dashboard. Each pins --lp; everything below
-   colours itself from that, so a tint is one class on the element. */
-.lp-blue   { --lp: #2f5fd8; }
-.lp-amber  { --lp: #96460a; }
-.lp-rose   { --lp: #a8144f; }
-.lp-green  { --lp: #0f6a33; }
-
-html[data-theme='dark'] .lp-blue,
-html[data-theme='system'][data-system-theme='dark'] .lp-blue { --lp: #7ea5ff; }
-html[data-theme='dark'] .lp-amber,
-html[data-theme='system'][data-system-theme='dark'] .lp-amber { --lp: #fbbf24; }
-html[data-theme='dark'] .lp-rose,
-html[data-theme='system'][data-system-theme='dark'] .lp-rose { --lp: #f9a8d4; }
-html[data-theme='dark'] .lp-green,
-html[data-theme='system'][data-system-theme='dark'] .lp-green { --lp: #6ee7b7; }
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .lp-blue,
-    html[data-theme='system'] .lp-blue { --lp: #7ea5ff; }
-    :root:not([data-theme]) .lp-amber,
-    html[data-theme='system'] .lp-amber { --lp: #fbbf24; }
-    :root:not([data-theme]) .lp-rose,
-    html[data-theme='system'] .lp-rose { --lp: #f9a8d4; }
-    :root:not([data-theme]) .lp-green,
-    html[data-theme='system'] .lp-green { --lp: #6ee7b7; }
-}
-
-/* A tinted badge: the numeral on a step, the icon on a benefit. The fill is
-   only 10% because mixing the accent into its own backdrop is what eats the
-   contrast — at 14% the numerals sat at 3.7-4.2:1, under AA. At 10% every
-   tint clears 4.5:1 in both themes. */
-.lp-badge {
-    border: 1px solid color-mix(in srgb, var(--lp) 38%, transparent);
-    background-color: color-mix(in srgb, var(--lp) 10%, transparent);
-    color: var(--lp);
-}
-
-/* Softer corners, landing page only. 18px is right for a dense file list where
-   a card is a row of data; a page selling a friendly tool can round further
-   without reading as sloppy. Scoped to the wrapper, so every op-card inside
-   picks it up without touching the shared token. */
 .lp {
-    --op-radius: 26px;
+    /* The margin rule tracks the content column instead of the viewport edge --
+       at a fixed inset it sat ~640px from the text it is meant to margin on a
+       2560px screen. It sits 22px OUTSIDE the column (max-w-6xl is 1152px, so
+       the column starts at 50% - 576px), because on ruled paper you write to
+       the right of the margin. max() keeps it on-screen on phones, where the
+       narrowest content is the 16px gutter the nav and sections share. */
+    --rule-gap: 34px;
+    --rule-margin: max(8px, calc(50% - 576px - 22px));
+    --paper: #fbf7ea;
+    --paper-raised: #fffdf7;
+    --paper-line: rgba(78, 115, 170, 0.09);
+    --paper-margin: rgba(220, 82, 88, 0.18);
+    --paper-edge: #ddd2ba;
+    --pencil: #5e594e;
+    /* Re-pin the shared tokens to the warm ramp. text-ink and text-muted are
+       cool blue-greys (hue 220) app-wide; on warm paper that pairing is what
+       reads as dingy rather than cosy. Deeper accent too: the page accent at
+       12-13px measured 4.14:1 on paper, under AA. */
+    --color-ink: #282720;
+    --color-muted: #5e594e;
+    --color-sky: #ddd2ba;
+    --color-neon: #2f5fd8;
+    /* The recessed tone inside a raised card (file-type badges, the Download
+       pill in the hero mock). Unpinned it was the app's cool #f3f5fa on warm
+       paper; pinned to --paper it measured 1.05:1 against the card, which is a
+       fill that cannot mark a boundary. One real step down: 1.15:1, matching
+       the 1.17:1 the dark theme already gets. */
+    --color-base: #f4edd6;
+    /* Buttons in the mock sit on --color-surface, a step ABOVE the card rather
+       than below it: the recessed cream read as a grubby patch on a near-white
+       card. White is only 1.02:1 against the card, so the border carries the
+       button's extent -- which is how /start's secondary buttons already work
+       (bg-base vs bg-surface is 1.09:1 on that page too). */
+    --color-surface: #ffffff;
+    --shadow-paper: 0 22px 50px -28px rgba(59, 48, 31, 0.42);
+    color: #282720;
+    background-color: var(--paper);
+    /* Hard stops, not a ramp. The old rules faded transparent->line->transparent
+       across 2px, which renders as a smear rather than a drawn line.
+       Opacities are set so both themes land on the same weight: the ruling at
+       ~1.12:1 against the page and the margin at ~1.25:1. Dark used to sit
+       louder than light at both. */
+    background-image:
+        linear-gradient(90deg,
+            transparent 0 calc(var(--rule-margin) - 1px),
+            var(--paper-margin) calc(var(--rule-margin) - 1px) var(--rule-margin),
+            transparent var(--rule-margin)),
+        repeating-linear-gradient(to bottom,
+            var(--paper-line) 0 1px,
+            transparent 1px var(--rule-gap));
 }
 
-/* Cards answer the pointer. Transform + border only, same easing as .op-press. */
-.lp-lift {
-    transition:
-        transform 220ms var(--ease-out),
-        border-color 220ms ease;
-}
-@media (hover: hover) and (pointer: fine) {
-    .lp-lift:hover {
-        transform: translateY(-3px);
-        border-color: color-mix(in srgb, var(--color-neon) 40%, var(--op-hairline));
-    }
+body:has(.lp) > div > footer {
+    border-color: #ddd2ba;
+    background: #fbf7ea;
 }
 
-/* The one product shot on the page. The app's flat cards are right in a list of
-   twenty; here a single card carrying the whole proof needs to sit above the
-   page rather than in it. */
-.lp-mock {
-    box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--color-ink) 45%, transparent);
+html[data-theme='dark'] body:has(.lp) > div > footer,
+html[data-theme='system'][data-system-theme='dark'] body:has(.lp) > div > footer {
+    border-color: #403e3b;
+    background: #1c1b1a;
 }
-html[data-theme='dark'] .lp-mock,
-html[data-theme='system'][data-system-theme='dark'] .lp-mock {
-    box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.9);
+
+html[data-theme='dark'] .lp,
+html[data-theme='system'][data-system-theme='dark'] .lp {
+    /* The margin rule tracks the content column instead of the viewport edge --
+       at a fixed inset it sat ~640px from the text it is meant to margin on a
+       2560px screen. It sits 22px OUTSIDE the column (max-w-6xl is 1152px, so
+       the column starts at 50% - 576px), because on ruled paper you write to
+       the right of the margin. max() keeps it on-screen on phones, where the
+       narrowest content is the 16px gutter the nav and sections share. */
+    --rule-gap: 34px;
+    --rule-margin: max(8px, calc(50% - 576px - 22px));
+    /* A soft grey, near-neutral -- not a dark version of the paper.
+       The sepia values here measured 11-17% HSL saturation against the
+       app's 10-14% blue-grey, which is what read as muddy. This is ~3-4%: the
+       whisper of warmth left keeps a family resemblance to the cream light
+       mode without reading as a colour. Lightness is matched to the app's dark
+       tokens value for value, so every contrast ratio is unchanged.
+       --color-neon has to be restated: the light .lp block re-pins it to the
+       light-mode blue, and without this it leaked into dark, where #2f5fd8 is
+       far too dark to sit on charcoal. */
+    --paper: #1c1b1a;
+    --paper-raised: #292827;
+    --paper-line: rgba(214, 212, 206, 0.06);
+    --paper-margin: rgba(226, 120, 112, 0.16);
+    --paper-edge: #403e3b;
+    --pencil: #aeaca8;
+    --color-ink: #e9e9e7;
+    --color-muted: #aeaca8;
+    --color-sky: #403e3b;
+    --color-neon: #5b8bff;
+    --color-base: var(--paper);
+    --color-surface: #36322e;
+    --shadow-paper: 0 26px 60px -26px rgba(0, 0, 0, 0.82);
+    color: #e9e9e7;
 }
+
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .lp-mock,
-    html[data-theme='system'] .lp-mock {
-        box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.9);
+    :root:not([data-theme]) body:has(.lp) > div > footer,
+    html[data-theme='system'] body:has(.lp) > div > footer {
+        border-color: #403e3b;
+        background: #1c1b1a;
     }
+
+    :root:not([data-theme]) .lp,
+    html[data-theme='system'] .lp {
+    /* The margin rule tracks the content column instead of the viewport edge --
+       at a fixed inset it sat ~640px from the text it is meant to margin on a
+       2560px screen. It sits 22px OUTSIDE the column (max-w-6xl is 1152px, so
+       the column starts at 50% - 576px), because on ruled paper you write to
+       the right of the margin. max() keeps it on-screen on phones, where the
+       narrowest content is the 16px gutter the nav and sections share. */
+    --rule-gap: 34px;
+    --rule-margin: max(8px, calc(50% - 576px - 22px));
+        /* A soft grey, near-neutral -- not a dark version of the paper.
+           The sepia values here measured 11-17% HSL saturation against the
+           app's 10-14% blue-grey, which is what read as muddy. This is ~3-4%: the
+           whisper of warmth left keeps a family resemblance to the cream light
+           mode without reading as a colour. Lightness is matched to the app's dark
+           tokens value for value, so every contrast ratio is unchanged.
+           --color-neon has to be restated: the light .lp block re-pins it to the
+           light-mode blue, and without this it leaked into dark, where #2f5fd8 is
+           far too dark to sit on charcoal. */
+        --paper: #1c1b1a;
+        --paper-raised: #292827;
+        --paper-line: rgba(214, 212, 206, 0.06);
+        --paper-margin: rgba(226, 120, 112, 0.16);
+        --paper-edge: #403e3b;
+        --pencil: #aeaca8;
+        --color-ink: #e9e9e7;
+        --color-muted: #aeaca8;
+        --color-sky: #403e3b;
+        --color-neon: #5b8bff;
+        --color-base: var(--paper);
+        --color-surface: #36322e;
+        --shadow-paper: 0 26px 60px -26px rgba(0, 0, 0, 0.82);
+        color: #e9e9e7;
+    }
+}
+
+.lp-nav {
+    border-bottom: 1px solid var(--paper-edge);
+    background: color-mix(in srgb, var(--paper) 86%, transparent);
+    backdrop-filter: blur(16px) saturate(120%);
+}
+
+.lp-paper {
+    position: relative;
+    border: 1px solid var(--paper-edge);
+    border-radius: 8px 14px 10px 7px;
+    background: var(--paper-raised);
+    box-shadow: var(--shadow-paper);
+}
+
+
+
+.lp-marker {
+    position: relative;
+    display: inline-block;
+    z-index: 0;
+    white-space: nowrap;
+}
+
+.lp-marker::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    right: -0.06em;
+    bottom: 0.04em;
+    left: -0.06em;
+    height: 0.35em;
+    transform: rotate(-1deg);
+    border-radius: 1em 0.4em 1em 0.3em;
+    background: rgba(255, 214, 74, 0.48);
+}
+
+/* The steps run. Gap lives here rather than in a Tailwind utility because the
+   connecting rules are positioned relative to it and need one source of truth. */
+.lp-steps {
+    --lp-step-gap: 34px;
+    display: grid;
+    gap: var(--lp-step-gap);
+}
+
+.lp-step {
+    position: relative;
+    padding-left: 56px;
+}
+
+/* A soft lift of the paper instead of a card. The ruling runs under the copy
+   and costs it contrast; this floats the text on a blurred pool of raised
+   paper that has no edge to read as a box. Bleeds outside the box on purpose,
+   so the fade finishes in open air rather than at a hard clip. */
+.lp-step::before {
+    content: '';
+    position: absolute;
+    inset: -22px -26px -26px -22px;
+    pointer-events: none;
+    background: radial-gradient(66% 60% at 42% 48%,
+        color-mix(in srgb, var(--paper-raised) 94%, transparent) 0,
+        color-mix(in srgb, var(--paper-raised) 58%, transparent) 46%,
+        transparent 76%);
+}
+
+/* Lifts the copy over the halo without a negative z-index, which would drop it
+   behind the page's own ruled background. */
+.lp-step > * {
+    position: relative;
+}
+
+/* Ink, not the accent. Three blue numerals spend the page's one accent on
+   ordinals; it belongs to the button we actually want pressed. */
+.lp-step-mark {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: inline-flex;
+    width: 38px;
+    height: 38px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--color-ink);
+    color: var(--paper);
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* Stacked: a rule down from one mark to the next, stopping short of both so it
+   reads as a run and not a strike-through. */
+.lp-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 46px;
+    bottom: calc(8px - var(--lp-step-gap));
+    width: 1px;
+    background: color-mix(in srgb, var(--pencil) 28%, transparent);
+}
+
+@media (min-width: 640px) {
+    .lp-steps {
+        --lp-step-gap: 40px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    /* The mark stays pinned top-left in both layouts; only the offset the copy
+       clears changes, from beside it to below it. */
+    .lp-step {
+        padding-left: 0;
+        padding-top: 54px;
+    }
+
+    .lp-step:not(:last-child)::after {
+        left: 50px;
+        top: 18px;
+        right: calc(12px - var(--lp-step-gap));
+        bottom: auto;
+        width: auto;
+        height: 1px;
+    }
+}
+
+/* The double divider from the knowledge base's .card: a crisp hairline with a
+   3px halo just outside it. Solid, not dashed -- dashed means "not yet"
+   everywhere else in the product (the empty-files badge, the disabled continue
+   button), so on four filled cards it read as four placeholders.
+   The 72% fill is deliberate: the ruling still runs through the cards. */
+.lp-proof {
+    border: 1px solid var(--paper-edge);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--paper-raised) 72%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pencil) 9%, transparent);
+}
+
+/* Warm tint, ink glyph. The accent version measured 2.60:1 in dark mode --
+   mixing an accent into its own backdrop eats the contrast between them -- and
+   put a 222deg disc inside a 43deg card, the same cool-on-warm mismatch already
+   fixed for the text tokens. Warm/10 matches the card hue and lifts the glyph
+   to 10.7:1 dark, 12.6:1 light. */
+.lp-proof-mark {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--pencil) 10%, transparent);
+    color: var(--color-ink);
+}
+
+/* No drop shadow. A coloured glow under a solid fill is the one thing on this
+   page that isn't drawn from the notebook vocabulary, and the button is already
+   the only saturated object on the sheet -- it does not need lifting off it.
+   The press and hover travel stay; only the shadow goes. */
+.lp-cta {
+    transition: transform 160ms var(--ease-out);
+}
+
+.lp-cta:active {
+    transform: scale(0.97);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .lp-cta:hover {
+        transform: translateY(-2px);
+    }
+}
+
+/* First-visit explanatory motion. Content is hidden only after JS marks the
+   document ready, so no-JS visitors never receive a blank page. */
+.lp-motion-ready [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+        opacity 500ms var(--ease-out),
+        transform 500ms var(--ease-out);
+    transition-delay: var(--delay, 0ms);
+}
+
+.lp-motion-ready [data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lp-motion-ready [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .lp-cta,
+    .lp-cta:hover,
+    .lp-cta:active {
+        transform: none;
+        transition: none;
+    }
+}
+
+
+/* A halo instead of a card. The closing ask still needs to lift off the ruled
+   page, but a card did it with a hard edge that covered the paper entirely and
+   read as a slab. This just brightens the sheet behind the text and fades to
+   nothing, so the ruling keeps running through the section. Works in both
+   themes because --paper-raised is a step toward the light in each. */
+.lp-halo {
+    background:
+        radial-gradient(
+            62% 58% at 50% 48%,
+            color-mix(in srgb, var(--paper-raised) 94%, transparent) 0,
+            color-mix(in srgb, var(--paper-raised) 55%, transparent) 42%,
+            transparent 72%
+        );
 }
