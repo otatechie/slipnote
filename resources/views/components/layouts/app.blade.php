@@ -39,8 +39,14 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="m-0 bg-base font-sans text-ink">
+    <a href="#main-content"
+       class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-neon focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+        Skip to main content
+    </a>
     <div class="flex min-h-screen flex-col">
-        {{ $slot }}
+        <div id="main-content" class="contents">
+            {{ $slot }}
+        </div>
 
         <footer class="mt-auto border-t border-sky/60 py-6">
             <div class="mx-auto flex max-w-3xl flex-col items-center gap-2.5 px-5 text-center">
@@ -74,7 +80,14 @@
                     </button>
                 </div>
                 <p class="flex flex-wrap items-center justify-center gap-x-1.5 text-[12px] text-muted">
-                    <span>&copy; {{ date('Y') }} SlipNote</span>
+                    {{-- The holder is the person named in LICENSE, not the product --
+                         "SlipNote" is not a legal person and cannot hold copyright.
+                         "Code" is load-bearing: the MIT licence covers this repository
+                         only, and grants nothing over a hosted instance's boards or
+                         uploaded files (README, License). --}}
+                    <span>&copy; {{ date('Y') }} Ato Augustine</span>
+                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    <span>Code is MIT licensed</span>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <span class="inline-flex items-center gap-1.5">
                         Made with <svg aria-hidden="true" class="size-3.5 fill-none stroke-current text-teal" viewBox="0 0 20 20" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17.25C10 17.25 2 12 2 6.5A4.5 4.5 0 0 1 10 3.914 4.5 4.5 0 0 1 18 6.5C18 12 10 17.25 10 17.25Z"/></svg> for students
