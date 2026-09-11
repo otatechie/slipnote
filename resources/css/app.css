@@ -37,20 +37,10 @@
     font-display: swap;
     src: url('/fonts/OpenRunde-Bold.woff2') format('woff2');
 }
-/* Handwriting face for the notebook-style homepage annotations. Only the
-   welcome page uses it, so browsers fetch it only there. */
-@font-face {
-    font-family: 'Caveat';
-    font-style: normal;
-    font-weight: 400 700;
-    font-display: swap;
-    src: url('/fonts/caveat-variable.woff2') format('woff2');
-}
 
 @theme {
     --font-sans: 'Open Runde', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-hand: 'Caveat', 'Comic Sans MS', cursive;
 
     /* SlipNote palette: blue + charcoal on cool off-white, from the logo.
        Logo blues are royal #3b6ef5 (wordmark/icon) + sky #5bc5f2 (card fill).
@@ -131,50 +121,6 @@ html[data-theme='system'][data-system-theme='dark'] textarea.bg-base {
     border-color: #41474f;
 }
 
-/* The landing hero forces a white background in light mode. In dark mode fall
-   back to the page color so the near-white headline stays readable. Keyed to
-   data-theme (the app's real dark switch), not Tailwind's prefers-color-scheme
-   dark: variant. */
-html[data-theme='dark'] .hero-bg,
-html[data-theme='system'][data-system-theme='dark'] .hero-bg {
-    background-color: var(--color-base);
-}
-
-/* File-type tags in the hero mock. Colour-coded (PDF red / PPTX amber) with
-   theme-aware fills + text. Defined in CSS keyed to data-theme (the app's real
-   dark switch) rather than Tailwind's prefers-color-scheme dark: variant, so
-   they track the in-app theme toggle and not just the OS setting. */
-.filetag-pdf {
-    background-color: color-mix(in srgb, #fb2c36 20%, transparent);
-    color: #9f0712; /* red-800 */
-}
-.filetag-pptx {
-    background-color: color-mix(in srgb, #f59e0b 25%, transparent);
-    color: #7b3306; /* amber-900 */
-}
-
-html[data-theme='dark'] .filetag-pdf,
-html[data-theme='system'][data-system-theme='dark'] .filetag-pdf {
-    background-color: color-mix(in srgb, #fb2c36 28%, transparent);
-    color: #ffc9c9; /* red-200 */
-}
-html[data-theme='dark'] .filetag-pptx,
-html[data-theme='system'][data-system-theme='dark'] .filetag-pptx {
-    background-color: color-mix(in srgb, #f59e0b 30%, transparent);
-    color: #ffe08a; /* warm amber-200 */
-}
-
-/* Bottom edge vignette — fades the hero into the section below so there is
-   no hard horizontal seam. Colour matches each theme's page background. */
-.hero-vignette {
-    background-image: linear-gradient(to bottom, transparent, #ffffff);
-}
-
-html[data-theme='dark'] .hero-vignette,
-html[data-theme='system'][data-system-theme='dark'] .hero-vignette {
-    background-image: linear-gradient(to bottom, transparent, var(--color-base));
-}
-
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) input.bg-base,
     :root:not([data-theme]) select.bg-base,
@@ -250,12 +196,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-neon:not(.bg-neon):not
         color: #7aa5ff;
     }
 }
-/* Stickies are fixed light paper — the bright dark-mode blue above washes out
-   on them, so re-pin accents to the sticky's own (light-mode) teal. */
-.nb-sticky .text-neon:not(.bg-neon):not(svg):not(.marker) {
-    color: var(--color-teal) !important;
-}
-
 /* Active section filter pill. Light: solid teal(=blue) + white label (fine as
    authored). Dark: the teal token becomes near-white, so an active pill with a
    white label would vanish — refill with the bright blue accent, keeping the
@@ -347,157 +287,6 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
     outline: none;
-}
-
-/* ---------------------------------------------------------------------------
-   Notebook homepage (welcome page only). Everything derives from the theme
-   tokens via color-mix, so light and dark mode both read as "paper".
---------------------------------------------------------------------------- */
-
-/* Faint ruled lines, like a notebook page. */
-.nb-paper {
-    background-image: repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent 35px,
-        color-mix(in srgb, var(--color-teal) 8%, transparent) 35px,
-        color-mix(in srgb, var(--color-teal) 8%, transparent) 36px
-    );
-}
-
-/* A strip of translucent masking tape. Position with utilities. */
-.nb-tape {
-    position: absolute;
-    width: 92px;
-    height: 24px;
-    background: color-mix(in srgb, var(--color-neon) 26%, transparent);
-    border-radius: 2px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-    opacity: 0.9;
-}
-
-/* Sticky note: slight bottom-right curl + folded corner.
-   Sticky notes are colored paper — they don't have a dark mode. The tints
-   below are fixed pastels, and the palette vars are re-pinned to their
-   light values inside so text utilities stay readable on the paper. */
-.nb-sticky {
-    --color-teal: #2450c8;
-    --color-ink: #1d2128;
-    --color-muted: #5a6472;
-    --color-neon: #1e469f;
-    position: relative;
-    border-radius: 2px 2px 22px 2px;
-    /* A sticky lies almost flat: shallow, faint shadow on light paper.
-       The dark desk needs more depth to separate — see overrides below. */
-    box-shadow: 0 5px 9px -7px rgba(51, 29, 44, 0.35);
-}
-html[data-theme='dark'] .nb-sticky,
-html[data-theme='system'][data-system-theme='dark'] .nb-sticky {
-    box-shadow: 0 10px 16px -12px rgba(0, 0, 0, 0.65);
-}
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .nb-sticky,
-    html[data-theme='system'] .nb-sticky {
-        box-shadow: 0 10px 16px -12px rgba(0, 0, 0, 0.65);
-    }
-}
-.nb-sticky::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 22px;
-    height: 22px;
-    border-bottom-right-radius: 22px;
-    background: linear-gradient(
-        315deg,
-        rgba(30, 20, 28, 0.14) 0%,
-        rgba(30, 20, 28, 0.04) 44%,
-        transparent 52%
-    );
-}
-
-/* Fixed pastel paper — the classic sticky pack. */
-.nb-tint-rose  { background-color: #f9ebf1; }
-.nb-tint-sky   { background-color: #dfe9f2; }
-.nb-tint-amber { background-color: #f7ecc4; }
-
-/* A sticky mutes neon to a deep blue so blue *text* stays readable on pale
-   paper — but a filled button wants the same bright blue as the rest of the
-   page. Reset the fill token on buttons only; its white label (from
-   .bg-neon.text-white) then applies unchanged, in both themes. */
-.nb-sticky .bg-neon {
-    --color-neon: #3b6ef5;
-}
-
-/* ---------------------------------------------------------------------------
-   Dark-mode homepage fixes. In dark mode a few welcome-page elements were tuned
-   for the light page and lose contrast on charcoal: the hero mock all but
-   vanishes, the feature chips go near-invisible, and the footer CTA blazes as a
-   solo light-mode block. Keyed to data-theme (the real toggle) + the
-   prefers-color-scheme fallback, matching the overrides above.
---------------------------------------------------------------------------- */
-
-/* Hero product mock — lift it off the dark page with a brighter border and a
-   real elevation shadow (the light-mode shadow is invisible on charcoal). */
-html[data-theme='dark'] .hero-mock,
-html[data-theme='system'][data-system-theme='dark'] .hero-mock {
-    border-color: #434953;
-    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
-}
-
-/* Feature chips — bg-base equals the page in dark mode, so the chip had no fill
-   and the muted hand-font text was near-invisible. Lift fill to the card
-   surface and text to the ink color. */
-html[data-theme='dark'] .feature-chip,
-html[data-theme='system'][data-system-theme='dark'] .feature-chip {
-    background-color: var(--color-surface);
-    border-color: #434953;
-    color: var(--color-ink);
-}
-
-/* Footer CTA — the step stickies are an intentional bright cluster mid-page,
-   but this solo card at the page foot reads as a light-mode block pasted in.
-   Re-skin it as a dark surface (like the benefit cards) in dark mode only.
-   Re-pin the sticky's light text tokens back to the dark ones so the heading
-   and body stay readable, and drop the paper curl shadow for a card shadow. */
-html[data-theme='dark'] .nb-cta,
-html[data-theme='system'][data-system-theme='dark'] .nb-cta {
-    background-color: var(--color-surface);
-    --color-teal: #f2f4f5;
-    --color-ink: #e6e9ec;
-    --color-muted: #a7b0bd;
-    box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.7);
-}
-html[data-theme='dark'] .nb-cta::after,
-html[data-theme='system'][data-system-theme='dark'] .nb-cta::after {
-    display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) .hero-mock,
-    html[data-theme='system'] .hero-mock {
-        border-color: #434953;
-        box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
-    }
-    :root:not([data-theme]) .feature-chip,
-    html[data-theme='system'] .feature-chip {
-        background-color: var(--color-surface);
-        border-color: #434953;
-        color: var(--color-ink);
-    }
-    :root:not([data-theme]) .nb-cta,
-    html[data-theme='system'] .nb-cta {
-        background-color: var(--color-surface);
-        --color-teal: #f2f4f5;
-        --color-ink: #e6e9ec;
-        --color-muted: #a7b0bd;
-        box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.7);
-    }
-    :root:not([data-theme]) .nb-cta::after,
-    html[data-theme='system'] .nb-cta::after {
-        display: none;
-    }
 }
 
 /* ---------------------------------------------------------------------------
