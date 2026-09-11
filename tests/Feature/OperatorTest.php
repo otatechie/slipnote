@@ -65,8 +65,21 @@ class OperatorTest extends TestCase
 
         $this->get(route('operator.dashboard'))
             ->assertOk()
-            ->assertSee('MATH 251')   // board context for the reported file
-            ->assertSee('spam');      // the report reason
+            ->assertSee('MATH 251')   // course code leads the title so rows distinguish
+            ->assertSee('spam')       // the report reason
+            ->assertSee('Review file', false)
+            ->assertSee('Test Workspace', false)
+            ->assertSee(route('course.show', ['workspace' => $this->workspace->slug, 'slug' => 'math-251']), false);
+    }
+
+    public function test_boards_tab_is_kept_in_the_url(): void
+    {
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'boards']))
+            ->assertOk()
+            ->assertSee(route('operator.dashboard', ['tab' => 'boards']), false)
+            ->assertSee(route('courses.index', ['workspace' => $this->workspace->slug]), false)
+            ->assertDontSee('Review file', false);
     }
 
     public function test_rotating_the_operator_secret_invalidates_existing_sessions(): void
@@ -110,5 +123,44 @@ class OperatorTest extends TestCase
     {
         $this->post(route('operator.remove', $this->material->id))->assertForbidden();
         $this->assertSame(1, Material::count());
+    }
+
+    public function test_dismiss_can_be_undone(): void
+    {
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->post(route('operator.dismiss', $this->material->id))
+            ->assertRedirect(route('operator.dashboard'));
+
+        $this->assertSame(0, $this->material->reports()->count());
+
+        $this->post(route('operator.undo'))
+            ->assertRedirect(route('operator.dashboard'));
+
+        $this->assertSame(1, $this->material->reports()->count());
+        $this->assertSame('spam', $this->material->reports()->first()->reason);
+    }
+
+    public function test_remove_can_be_undone(): void
+    {
+        $path = $this->material->stored_path;
+        $id = $this->material->id;
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->post(route('operator.remove', $id))
+            ->assertRedirect(route('operator.dashboard'));
+
+        $this->assertSame(0, Material::count());
+        Storage::disk('local')->assertMissing($path);
+
+        $this->post(route('operator.undo'))
+            ->assertRedirect(route('operator.dashboard'));
+
+        $this->assertSame(1, Material::count());
+        $this->assertSame($id, Material::first()->id);
+        $this->assertSame(1, Material::first()->reports()->count());
+        Storage::disk('local')->assertExists($path);
+        $this->assertDatabaseMissing('blocked_uploads', [
+            'content_hash' => hash('sha256', Storage::disk('local')->get($path)),
+        ]);
     }
 }
