@@ -155,7 +155,11 @@
                     <li class="nb-sticky {{ $step['tint'] }} {{ $step['tilt'] }} relative px-6 pb-8 pt-7 transition-transform duration-200 hover:rotate-0 sm:px-8 sm:pb-10 sm:pt-9">
                         <span class="nb-tape -top-3 left-1/2 -translate-x-1/2 -rotate-2" aria-hidden="true"></span>
                         <span class="font-hand text-[34px] font-bold leading-none text-neon sm:text-[40px]" aria-hidden="true">{{ $i + 1 }}.</span>
-                        <p class="mt-2 text-[18px] font-semibold leading-[1.1] tracking-[-0.02em] text-teal sm:mt-3 sm:text-[26px]">{{ $step['title'] }}</p>
+                        {{-- A real heading. At 26px semibold this reads as one, but as
+                             a <p> it was invisible to heading navigation: the page
+                             outline went h1 then three h2s, and none of the seven
+                             titles carrying the actual content. --}}
+                        <h3 class="mt-2 text-[18px] font-semibold leading-[1.1] tracking-[-0.02em] text-teal sm:mt-3 sm:text-[26px]">{{ $step['title'] }}</h3>
                         <p class="mt-2.5 text-[15px] leading-relaxed text-muted">{{ $step['body'] }}</p>
                     </li>
                 @endforeach
@@ -214,7 +218,7 @@
                     ],
                 ] as $benefit)
                     <div class="{{ $benefit['tilt'] }} relative rounded-lg border border-sky bg-base px-5 pb-6 pt-7 shadow-[0_4px_14px_-12px_rgba(51,29,44,0.3)] transition-transform duration-200 hover:rotate-0 sm:px-7 sm:pb-8 sm:pt-9">
-                        <p class="text-[17px] font-semibold text-teal">{{ $benefit['title'] }}</p>
+                        <h3 class="text-[17px] font-semibold text-teal">{{ $benefit['title'] }}</h3>
                         <p class="mt-2.5 text-[14px] leading-relaxed text-muted">{{ $benefit['body'] }}</p>
                     </div>
                 @endforeach
