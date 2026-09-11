@@ -59,13 +59,21 @@ function share() {
 // (dynamic import keeps the qrcode lib out of the initial bundle).
 const qrDataUrl = ref('')
 const qrOpen = ref(false)
+const qrError = ref(false)
 async function toggleQr() {
     if (qrOpen.value) { qrOpen.value = false; return }
-    if (!qrDataUrl.value) {
+    // Open first, generate second. Awaiting the lazy chunk before showing
+    // anything meant the first click looked dead on a slow connection — the
+    // exact moment (a full lecture hall) this button exists for.
+    qrOpen.value = true
+    if (qrDataUrl.value) return
+    qrError.value = false
+    try {
         const QR = (await import('qrcode')).default
         qrDataUrl.value = await QR.toDataURL(workspaceUrl.value, { width: 512, margin: 2 })
+    } catch {
+        qrError.value = true
     }
-    qrOpen.value = true
 }
 function downloadQr() {
     const a = document.createElement('a')
@@ -148,9 +156,27 @@ function saveRecoveryEmail() {
     })
 }
 
-// Owner unlock form
+// Owner unlock form. The panel is nothing but a form, so opening it moves focus
+// into the field — same as the course sheet. The recovery panel deliberately
+// doesn't: it leads with status ("Recovery email is set"), and jumping to the
+// input would skip the sentence explaining what the input is for.
 const unlockOpen = ref(!!(errors.value?.ownerInput))
 const unlockForm = useForm({ ownerInput: '' })
+const ownerField = ref(null)
+watch(unlockOpen, (v) => {
+    if (v) setTimeout(() => ownerField.value?.focus(), 50)
+})
+
+// Escape closes the topmost dismissible thing, innermost first. Centralised so
+// the two disclosures can be backed out of like the sheet and the QR overlay —
+// they were the only things here a keyboard couldn't dismiss.
+function onEscape() {
+    if (confirmingExit.value) { confirmingExit.value = false; return }
+    if (qrOpen.value) { qrOpen.value = false; return }
+    if (sheet.value) { sheet.value = false; return }
+    if (unlockOpen.value) { unlockOpen.value = false; return }
+    if (recoveryOpen.value) { recoveryOpen.value = false }
+}
 function unlockOwner() {
     unlockForm.post('/' + props.workspace.slug + '/unlock', {
         preserveScroll: true,
@@ -158,8 +184,13 @@ function unlockOwner() {
     })
 }
 
-// Leave owner mode on this device (useful on shared computers).
+// Leave owner mode on this device (useful on shared computers). Confirmed first:
+// the only way back in is the owner link, and a board owner who never saved it is
+// locked out of their own board by one click on a button the width of a word.
+const confirmingExit = ref(false)
+
 function lockBoard() {
+    confirmingExit.value = false
     router.post('/' + props.workspace.slug + '/lock', {}, { preserveScroll: true })
 }
 
@@ -260,102 +291,117 @@ function persistOrder() {
 
     <Head :title="workspace.name + ' · Courses'" />
     <AppLayout>
-        <div class="mx-auto w-full max-w-3xl flex-1 px-5 pb-10 pt-10" @keydown.escape.window="sheet = false">
+        <div class="op mx-auto w-full max-w-3xl flex-1 px-5 pb-10" @keydown.escape.window="onEscape">
 
-            <header class="mb-7">
-                <!-- Title block owns the full width so the board name never wraps
-                     against the action cluster. -->
-                <a href="/start"
-                    class="group mb-1.5 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted transition hover:text-neon">
-                    <svg aria-hidden="true"
-                        class="size-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 12H5" />
-                        <path d="M12 19l-7-7 7-7" />
-                    </svg>
-                    All boards
-                </a>
-                <h1 class="text-3xl font-bold tracking-tight text-ink">{{ workspace.name }}</h1>
-                <p class="mt-1.5 text-[15px] text-muted">
-                    <template v-if="totalCourses > 0">Pick a course to find what you need — or add what you have.</template>
-                    <template v-else>Your board's courses live here — add one to get started.</template>
-                </p>
-
-                <!-- Actions on their own row: actions left, owner-mode status right. -->
-                <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <!-- Wrapping row on mobile (Share + QR pair up; New course takes the
-                         next line) instead of three stacked full-width buttons. -->
-                    <div class="flex flex-wrap gap-2 sm:items-center">
-                        <!-- Share leads nowhere on an empty board, so it appears once there's a course to find. -->
-                        <button v-if="totalCourses > 0" type="button" @click="share"
-                            class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40 sm:flex-none sm:justify-start">
-                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1" />
-                                <path d="M12 9a3 3 0 0 0-4.5-.4L4.9 11.2a3 3 0 1 0 4.2 4.2l1-1" />
-                            </svg>
-                            <span v-if="!shareCopied">Share board</span>
-                            <span v-else>Link copied ✓</span>
-                        </button>
-                        <!-- QR for the "get the notes here" moment in a lecture hall. -->
-                        <button v-if="totalCourses > 0" type="button" @click="toggleQr"
-                            :aria-expanded="qrOpen" aria-label="Show QR code for this board"
-                            class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-teal/30 bg-surface px-4 py-2.5 text-[14px] font-semibold text-teal shadow-sm transition hover:bg-sky/40 sm:flex-none sm:justify-start">
-                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
-                            </svg>
-                            <span>QR code</span>
-                        </button>
-                        <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
-                            class="inline-flex flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125 sm:flex-none">
-                            <span class="text-lg leading-none">+</span> New course
-                        </button>
-                    </div>
-                    <!-- Owner-mode status (quiet — it's a state, not an action) + the
-                         button that ends it, grouped so "Lock" has context. -->
-                    <span v-if="isOwner"
-                        class="inline-flex items-center gap-2 self-start rounded-full border border-sky py-1 pl-3 pr-1 text-[12px] font-medium text-muted sm:ml-auto sm:self-auto">
-                        <span class="flex items-center gap-1.5">
-                            <span class="size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
-                            Owner mode
-                        </span>
-                        <button type="button" @click="lockBoard" title="Leave owner mode on this device"
-                            class="inline-flex cursor-pointer items-center gap-1 rounded-full border border-sky bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink transition hover:bg-sky/40">
-                            <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="4" y="9" width="12" height="8" rx="1.5" />
-                                <path d="M7 9V6.5a3 3 0 0 1 6 0V9" />
-                            </svg>
-                            Lock
-                        </button>
-                    </span>
+            <!-- Sticky identity bar: which board you're in, plus the one action an
+                 owner reaches for again and again. Everything else scrolls away. -->
+            <header class="op-top mb-4 flex items-center justify-between gap-4">
+                <div class="min-w-0">
+                    <a href="/start"
+                        class="op-kicker group mb-1 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon">
+                        <svg aria-hidden="true"
+                            class="size-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5" />
+                            <path d="M12 19l-7-7 7-7" />
+                        </svg>
+                        All boards
+                    </a>
+                    <h1 class="op-title truncate text-[1.85rem] font-bold text-ink sm:text-[2.15rem]">{{ workspace.name }}</h1>
                 </div>
+                <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
+                    class="op-press inline-flex h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:h-8">
+                    <span class="text-base leading-none">+</span> New course
+                </button>
             </header>
 
+            <!-- Says what a board holds, and where adding actually happens. The old
+                 line invited you to "add what you have" on a page with nothing to add
+                 it to — uploads live one level down, inside a course. It also stated
+                 the product model only in the empty state, which a visitor to a
+                 populated board never sees. -->
+            <p class="mb-5 text-[13px] text-muted">
+                <template v-if="totalCourses > 0">Notes, slides and past papers from your classmates. Open a course to read or add files.</template>
+                <template v-else>Your board's courses live here — add one to get started.</template>
+            </p>
+
+            <!-- Share and QR are occasional; owner mode is a state, not an action.
+                 None of them earn a place in the pinned bar. -->
+            <div v-if="totalCourses > 0 || isOwner" class="mb-7 flex flex-wrap items-center gap-2">
+                <!-- Share leads nowhere on an empty board, so it appears once there's a course to find. -->
+                <button v-if="totalCourses > 0" type="button" @click="share"
+                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                        stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1" />
+                        <path d="M12 9a3 3 0 0 0-4.5-.4L4.9 11.2a3 3 0 1 0 4.2 4.2l1-1" />
+                    </svg>
+                    <span v-if="!shareCopied">Share board</span>
+                    <span v-else>Link copied ✓</span>
+                </button>
+                <!-- QR for the "get the notes here" moment in a lecture hall. -->
+                <button v-if="totalCourses > 0" type="button" @click="toggleQr"
+                    :aria-expanded="qrOpen" aria-label="Show QR code for this board"
+                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
+                    </svg>
+                    <span>QR code</span>
+                </button>
+                <!-- Owner-mode status (quiet — it's a state, not an action) + the
+                     button that ends it, grouped so "Lock" has context. -->
+                <!-- Status is borderless; only the button is a pill. Both used to be
+                     rounded-full with the same border, so a non-interactive status
+                     wrapper looked like a control and put two concentric borders 4px
+                     apart around the thing that actually was one. -->
+                <span v-if="isOwner"
+                    class="inline-flex items-center gap-2 text-[12px] font-medium text-muted sm:ml-auto">
+                    <span class="flex items-center gap-1.5">
+                        <span class="size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
+                        Owner mode
+                    </span>
+                    <!-- "Exit", not "Lock". Beside the words "Owner mode" this reads
+                         as "exit owner mode"; "Lock" beside a board reads as "make
+                         this board locked", which is the opposite of what it does and
+                         the misread that costs you your own access. The padlock icon
+                         reinforced that wrong reading, so it's an exit arrow now. The
+                         meaning can't live in a title tooltip — touch never sees it. -->
+                    <button type="button" @click="confirmingExit = true" aria-label="Exit owner mode on this device"
+                        class="op-press inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border border-sky/50 bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink sm:min-h-0">
+                        <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+                            <path d="M12.5 13 16 10l-3.5-3" />
+                            <path d="M16 10H8.5" />
+                        </svg>
+                        Exit
+                    </button>
+                </span>
+            </div>
+
             <!-- Flash: course updated (edit redirects here) -->
-            <div v-if="flash.created"
-                class="mb-5 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
-                {{ flash.created }}
+            <div v-if="flash.created" class="op-toast mb-5 text-sm font-medium text-ink">
+                <p>{{ flash.created }}</p>
             </div>
 
             <!-- Empty state -->
             <template v-if="totalCourses === 0">
-                <div class="mt-8 rounded-2xl border border-sky/30 bg-surface px-6 py-14 text-center shadow-sm sm:mt-16">
-                    <p class="text-[15px] font-semibold text-ink">No courses yet</p>
+                <div class="op-card mt-8 px-6 py-16 text-center sm:mt-12">
+                    <p class="text-[16px] font-semibold tracking-tight text-ink">No courses yet</p>
                     <template v-if="isOwner">
-                        <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
-                            A course is one class — like <span class="font-semibold text-ink">PHYS 101</span> or
-                            <span class="font-semibold text-ink">CS 250</span>. Add one and it becomes
-                            the place your classmates' notes, slides and past papers live.
+                        <p class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">
+                            Each course is one subject — like <span class="font-semibold text-ink">PHYS 101</span> or
+                            <span class="font-semibold text-ink">CS 250</span>. Its notes, slides and past papers
+                            all live in one place.
                         </p>
                         <button type="button" @click="openCreate"
-                            class="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-neon px-4 py-2.5 text-[14px] font-bold text-white shadow-sm transition hover:brightness-125">
+                            class="op-press mt-5 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
                             <span class="text-lg leading-none">+</span> New course
                         </button>
                     </template>
                     <template v-else>
-                        <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">
+                        <p class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">
                             Courses are added by whoever set this board up. If that's you,
                             open it with your <span class="font-semibold text-ink">owner link</span>
                             (the one shown when you created it). Otherwise, check back soon.
@@ -366,13 +412,14 @@ function persistOrder() {
 
             <template v-else>
                 <!-- Search + sort -->
+                <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Courses</h2>
                 <div v-if="totalCourses > 3" class="mb-4 flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch" :placeholder="`Search ${totalCourses} courses…`"
                         aria-label="Search courses"
-                        class="box-border h-12 w-full min-w-0 appearance-none rounded-lg border border-sky bg-surface px-3.5 text-[15px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
+                        class="box-border h-11 w-full min-w-0 appearance-none rounded-xl border border-sky bg-surface px-3.5 text-[14px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
                     <div class="relative">
                         <select v-model="localSort" aria-label="Sort courses"
-                            class="box-border h-12 w-full appearance-none rounded-lg border border-sky bg-surface pl-3.5 pr-10 text-[15px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                            class="box-border h-11 w-full appearance-none rounded-xl border border-sky bg-surface pl-3.5 pr-10 text-[14px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
                             <option value="manual">Custom order</option>
                             <option value="active">Most recently active</option>
                             <option value="az">A–Z</option>
@@ -385,19 +432,21 @@ function persistOrder() {
                 </div>
 
                 <!-- No results -->
-                <p v-if="courses.length === 0"
-                    class="rounded-2xl border border-sky/30 bg-surface px-6 py-8 text-center text-[15px] text-muted shadow-sm">
+                <p v-if="courses.length === 0" class="op-card px-6 py-8 text-center text-[14px] text-muted">
                     No courses match "<span class="font-semibold text-ink">{{ localSearch }}</span>".
                 </p>
 
                 <!-- Course list -->
-                <div v-else class="space-y-2.5">
+                <!-- One card with hairline-separated rows, not a stack of floating
+                     cards: less chrome per item, and the list scans as one column.
+                     Hover tint comes from .op-row, so no per-card lift or shadow. -->
+                <div v-else class="op-card overflow-hidden">
                     <div v-for="(course, idx) in ((draggable && courses.length > 1) ? dragList : courses)"
                         :key="course.id" :draggable="draggable && courses.length > 1"
                         @dragstart="draggable && courses.length > 1 && onDragStart($event, course.id)"
                         @dragover="draggable && courses.length > 1 && onDragOver($event, course.id)"
                         @drop="draggable && courses.length > 1 && onDrop()"
-                        class="group flex items-start gap-3 rounded-2xl border border-sky/30 bg-surface px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-teal hover:shadow-md sm:gap-4 sm:px-6">
+                        class="op-row group flex items-start gap-3 sm:gap-4">
 
                         <!-- Reorder controls (owner + manual sort + 2+ courses).
                              Up/down buttons work on touch & keyboard; the drag
@@ -405,7 +454,7 @@ function persistOrder() {
                         <div v-if="draggable && courses.length > 1" class="-my-1 flex shrink-0 flex-col items-center">
                             <button type="button" @click.stop.prevent="moveCourse(idx, -1)" :disabled="idx === 0"
                                 :aria-label="`Move ${course.code} up`"
-                                class="flex size-6 items-center justify-center rounded text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30">
+                                class="flex h-11 w-9 items-center justify-center rounded text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
                                 <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M4 10l4-4 4 4" />
@@ -421,7 +470,7 @@ function persistOrder() {
                             </svg>
                             <button type="button" @click.stop.prevent="moveCourse(idx, 1)"
                                 :disabled="idx === dragList.length - 1" :aria-label="`Move ${course.code} down`"
-                                class="flex size-6 items-center justify-center rounded text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30">
+                                class="flex h-11 w-9 items-center justify-center rounded text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
                                 <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M4 6l4 4 4-4" />
@@ -432,22 +481,32 @@ function persistOrder() {
                         <Link :href="courseUrl(course.slug)" class="min-w-0 flex-1" @click.stop>
                             <div class="flex items-center gap-2">
                                 <p
-                                    class="flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
+                                    class="teal-accent flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
                                     <span class="truncate">{{ course.code }}</span>
-                                    <span aria-hidden="true"
-                                        class="shrink-0 text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-neon">›</span>
+                                    <svg aria-hidden="true"
+                                        class="size-3.5 shrink-0 text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-neon"
+                                        viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M8 6l4 4-4 4" />
+                                    </svg>
                                 </p>
+                                <!-- Sits next to the code, not flung right: the count
+                                     belongs to the course, and across a wide row
+                                     ml-auto left a dead gap between the two. Form
+                                     matches the operator's count badge; the hue does
+                                     not — red there means "needs attention", and a
+                                     file count is neutral news. -->
                                 <span v-if="course.materials_count > 0"
-                                    class="file-count-chip ml-auto shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-xs font-medium tabular-nums text-teal">
+                                    class="file-count-chip shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-teal">
                                     {{ plural(course.materials_count, 'file') }}
                                 </span>
                                 <span v-else
-                                    class="ml-auto shrink-0 rounded-full border border-dashed border-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted">
+                                    class="shrink-0 rounded-full border border-dashed border-muted/40 px-2 py-0.5 text-[11px] font-semibold text-muted">
                                     No files yet
                                 </span>
                             </div>
                             <p class="mt-0.5 text-[13px] text-muted">{{ course.title }}</p>
-                            <p v-if="course.materials_max_created_at" class="mt-1 flex items-center gap-1 text-[12px] text-muted/80">
+                            <p v-if="course.materials_max_created_at" class="mt-1 flex items-center gap-1 text-[12px] text-muted">
                                 <svg aria-hidden="true" class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
                                 </svg>
@@ -457,7 +516,7 @@ function persistOrder() {
 
                         <button v-if="isOwner" type="button" @click.stop.prevent="openEdit(course)"
                             :aria-label="`Edit ${course.code}`"
-                            class="mt-0.5 shrink-0 cursor-pointer rounded-md p-1.5 text-muted/60 transition hover:bg-sky/40 hover:text-neon focus:opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+                            class="mt-0.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition hover:bg-sky/40 hover:text-neon focus:opacity-100 sm:size-auto sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100">
                             <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                                 stroke-width="1.7">
                                 <path d="M13.5 3.5l3 3L7 16l-4 1 1-4 9.5-9.5z" stroke-linecap="round"
@@ -468,8 +527,8 @@ function persistOrder() {
                 </div>
 
                 <!-- Reorder hint — only meaningful with 2+ courses to reorder -->
-                <p v-if="draggable && courses.length > 1" class="mt-2 text-center text-[12px] text-muted/60">
-                    Use the arrows (or drag) to reorder — saved automatically
+                <p v-if="draggable && courses.length > 1" class="mt-3 text-[13px] text-muted">
+                    Use the arrows (or drag) to reorder — saved automatically.
                 </p>
             </template>
 
@@ -477,13 +536,16 @@ function persistOrder() {
             <template v-if="isOwner">
                 <div v-if="sheet" class="fixed inset-0 z-40" role="dialog" aria-modal="true"
                     :aria-label="editing ? 'Edit course' : 'New course'">
-                    <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="sheet = false"></div>
+                    <!-- Black, not ink: --color-ink is near-white in dark mode, so an
+                         ink scrim brightened the page to a mid-grey lighter than the
+                         dialog itself. A scrim must always darken. -->
+                    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="sheet = false"></div>
                     <div class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-surface px-5 py-6 shadow-xl
                                 transition-transform duration-200 sm:px-6" style="transform: translateX(0)">
                         <div class="mb-1.5 flex items-start justify-between">
                             <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">{{ editing ? 'Edit course' : 'New course' }}</h2>
                             <button type="button" @click="sheet = false" aria-label="Close"
-                                class="-mr-1.5 -mt-1.5 flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition hover:bg-sky/40 hover:text-ink">
+                                class="op-press -mr-1.5 -mt-1.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
                                 <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none"
                                     stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
                                     <path d="M5 5l10 10M15 5L5 15" />
@@ -502,7 +564,7 @@ function persistOrder() {
                                 <p class="mb-1.5 text-[12px] text-muted">The short code your class uses.</p>
                                 <input id="code" type="text" v-model="courseForm.code" placeholder="e.g. PHYS 101"
                                     ref="codeField" required :aria-invalid="!!courseForm.errors.code"
-                                    class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                                 <span v-if="courseForm.errors.code" role="alert"
                                     class="mt-1.5 block text-[13px] text-danger">{{ courseForm.errors.code }}</span>
                                 <span v-else-if="codeDuplicate" class="mt-1.5 block text-[13px] text-amber-600">This
@@ -518,35 +580,15 @@ function persistOrder() {
                                 <input id="ctitle" type="text" v-model="courseForm.title"
                                     placeholder="e.g. Introductory Physics" required
                                     :aria-invalid="!!courseForm.errors.title"
-                                    class="w-full rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[15px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                                 <span v-if="courseForm.errors.title" role="alert"
                                     class="mt-1.5 block text-[13px] text-danger">{{ courseForm.errors.title }}</span>
                             </div>
                             <button type="submit" :disabled="courseForm.processing"
-                                class="mt-1 cursor-pointer rounded-lg bg-neon py-3 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
+                                class="op-press mt-1 min-h-11 cursor-pointer rounded-full bg-neon py-3 text-[15px] font-semibold text-white disabled:opacity-60">
                                 {{ editing ? 'Save changes' : 'Create course' }}
                             </button>
                         </form>
-                    </div>
-                </div>
-
-                <!-- QR code overlay — scan-to-open for a room full of students. -->
-                <div v-if="qrOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Board QR code" @keydown.escape.window="qrOpen = false">
-                    <div class="absolute inset-0 bg-ink/30 backdrop-blur-sm" @click="qrOpen = false"></div>
-                    <div class="relative flex w-full max-w-xs flex-col items-center rounded-2xl bg-surface px-6 pb-6 pt-11 shadow-xl">
-                        <button type="button" @click="qrOpen = false" aria-label="Close"
-                            class="absolute right-3 top-3 flex size-9 cursor-pointer items-center justify-center rounded-lg text-muted transition hover:bg-sky/40 hover:text-ink">
-                            <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
-                                <path d="M5 5l10 10M15 5L5 15" />
-                            </svg>
-                        </button>
-                        <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR code for this board" class="size-52 rounded-xl bg-white p-2 shadow-sm" />
-                        <p class="mt-4 text-[13px] font-semibold text-ink">Scan to open this board</p>
-                        <p class="mt-1 w-full break-all text-center text-[12px] text-muted">{{ workspaceUrl }}</p>
-                        <button type="button" @click="downloadQr"
-                            class="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-neon px-3 py-2 text-[13px] font-bold text-white transition hover:brightness-125">
-                            Download QR
-                        </button>
                     </div>
                 </div>
 
@@ -554,7 +596,7 @@ function persistOrder() {
                      nothing competes; once courses exist it collapses to a one-row
                      disclosure (same idiom as "Manage this board") so it doesn't
                      out-weigh the course list. -->
-                <div v-if="recoveryAvailable" class="mt-8 overflow-hidden rounded-xl border border-sky bg-surface/50 transition-colors">
+                <div v-if="recoveryAvailable" class="op-card mt-8 overflow-hidden">
                     <button v-if="totalCourses > 0" type="button" @click="recoveryOpen = !recoveryOpen"
                         class="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-3 text-left transition hover:bg-sky/30"
                         :aria-expanded="recoveryOpen" aria-controls="recoveryPanel">
@@ -562,7 +604,10 @@ function persistOrder() {
                             <span class="text-[13px] font-semibold text-ink">
                                 {{ needsRecoveryEmail ? 'No recovery email set' : 'Recovery email is set' }}
                             </span>
-                            <span v-if="!recoveryOpen" class="text-[12px] text-muted">
+                            <!-- Stays visible when open. Hiding it only for the panel
+                                 to restate the same thing at greater length left a
+                                 gap between the heading and its own explanation. -->
+                            <span class="text-[12px] text-muted">
                                 {{ needsRecoveryEmail
                                     ? 'Add one so we can send your owner link back if you lose it.'
                                     : 'Lose your owner link and we\'ll email a fresh one.' }}
@@ -576,12 +621,16 @@ function persistOrder() {
                     </button>
                     <div v-if="recoveryOpen" id="recoveryPanel" class="px-5 pb-4" :class="totalCourses === 0 ? 'pt-4' : 'pt-1'">
                         <p v-if="flash.recoverySaved" role="status"
-                           class="mb-3 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
+                           class="teal-accent mb-3 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
                             <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
                             {{ flash.recoverySaved }}
                         </p>
-                        <template v-if="needsRecoveryEmail">
-                            <p v-if="totalCourses === 0" class="text-[13px] font-semibold text-ink">No recovery email set</p>
+                        <!-- Only when there is no disclosure button above it — that
+                             one renders only once the board has courses. With the
+                             button present, this was a second, longer copy of the
+                             summary line it already shows. -->
+                        <template v-if="needsRecoveryEmail && totalCourses === 0">
+                            <p class="text-[13px] font-semibold text-ink">No recovery email set</p>
                             <p class="mt-1 text-[12px] text-muted">
                                 Add a recovery email so we can send your owner link back if you lose it.
                             </p>
@@ -601,31 +650,102 @@ function persistOrder() {
                             <Link :href="recoveryUrl()"
                                 class="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-neon transition hover:underline">
                                 Recover owner link
-                                <span aria-hidden="true">›</span>
+                                <svg aria-hidden="true" class="size-3 shrink-0" viewBox="0 0 20 20" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M8 6l4 4-4 4" />
+                                </svg>
                             </Link>
                         </template>
                         <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2 sm:flex-row">
                             <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
-                                :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New email, or leave blank to remove'"
-                                class="w-full min-w-0 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
+                                class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[13px] text-ink shadow-inner focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
                             <button type="submit" :disabled="recoveryForm.processing"
-                                class="bg-neon text-white w-full shrink-0 cursor-pointer rounded-lg px-4 py-2.5 text-[13px] font-bold transition hover:brightness-110 disabled:opacity-60 sm:w-auto">
+                                class="op-press w-full min-h-11 shrink-0 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60 sm:w-auto">
                                 Save
                             </button>
                         </form>
                         <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{
                             errors.recoveryEmail[0]
                             }}</span>
-                        <p v-if="needsRecoveryEmail" class="mt-2 text-[11px] text-muted/80">Only used to recover this board
+                        <p v-if="needsRecoveryEmail" class="mt-2 text-[11px] text-muted">Only used to recover this board
                             — never shared.</p>
+                        <!-- Visible, not a placeholder. "leave blank to remove" lived
+                             in the placeholder, so the only instructions for deleting
+                             your recovery email vanished the moment you typed — and
+                             were never there at all for anyone who didn't read it
+                             first. A destructive path needs standing text. -->
+                        <p v-else class="mt-2 text-[11px] text-muted">Saving an empty field removes the current recovery
+                            email.</p>
                     </div>
                 </div>
             </template>
 
+            <!-- QR overlay — scan-to-open for a room full of students. Lives outside
+                 the owner block on purpose: the button that opens it is shown to
+                 everyone with a course to share, so gating the dialog on isOwner
+                 made the button silently do nothing for visitors. -->
+            <!-- Exit owner mode confirm. The action is one click, instant, and the
+                 only way back is the owner link — which the /start receipt screen
+                 exists precisely because people lose. So the dialog's job is not
+                 "are you sure" but "here is what you'll need to get back in". -->
+            <div v-if="confirmingExit" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-label="Exit owner mode">
+                <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingExit = false"></div>
+                <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                    <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                    <button type="button" @click="confirmingExit = false" aria-label="Close"
+                            class="op-press absolute right-3 top-3 hidden size-9 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:flex">
+                        <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                            <path d="M5 5l10 10M15 5L5 15" />
+                        </svg>
+                    </button>
+                    <h2 class="pr-10 text-[15px] font-semibold text-ink">Exit owner mode on this device?</h2>
+                    <p class="mt-2 text-[13px] leading-relaxed text-muted">
+                        The board stays exactly as it is &mdash; this only signs you out here.
+                        To manage it again you&rsquo;ll need your owner link, so make sure you still have it.
+                    </p>
+                    <div class="mt-5 flex items-center justify-end gap-2">
+                        <button type="button" @click="confirmingExit = false"
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Stay in owner mode</button>
+                        <button type="button" @click="lockBoard"
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
+                            Exit
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="qrOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Board QR code">
+                <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="qrOpen = false"></div>
+                <div class="relative flex w-full max-w-xs flex-col items-center rounded-2xl bg-surface px-6 pb-6 pt-11 shadow-xl">
+                    <button type="button" @click="qrOpen = false" aria-label="Close"
+                        class="op-press absolute right-3 top-3 flex size-11 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
+                        <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                            <path d="M5 5l10 10M15 5L5 15" />
+                        </svg>
+                    </button>
+                    <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR code for this board" class="size-52 rounded-xl bg-white p-2 shadow-sm" />
+                    <!-- Same footprint as the image so the dialog doesn't jump when
+                         it lands. On failure the link below still works, so the modal
+                         degrades to "share this" rather than leaving a dead square. -->
+                    <div v-else role="status"
+                        class="flex size-52 items-center justify-center rounded-xl border border-sky/50 bg-base px-4 text-center text-[12px] text-muted">
+                        {{ qrError ? 'Could not build the QR code.' : 'Building QR code…' }}
+                    </div>
+                    <p class="mt-4 text-[13px] font-semibold text-ink">
+                        {{ qrError ? 'Share this link instead' : 'Scan to open this board' }}
+                    </p>
+                    <p class="mt-1 w-full break-all text-center text-[12px] text-muted">{{ workspaceUrl }}</p>
+                    <button v-if="qrDataUrl" type="button" @click="downloadQr"
+                        class="op-press mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-neon px-3 text-[13px] font-semibold text-white">
+                        Download QR
+                    </button>
+                </div>
+            </div>
+
             <!-- Non-owner: unlock panel -->
             <template v-if="!isOwner">
-                <div class="mt-10 overflow-hidden rounded-xl border border-sky transition-colors"
-                    :class="unlockOpen ? 'bg-sky/30' : ''">
+                <div class="op-card mt-10 overflow-hidden">
                     <h2>
                         <button type="button" @click="unlockOpen = !unlockOpen"
                             class="flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-sky/30"
@@ -648,28 +768,36 @@ function persistOrder() {
                             Owner secret or link
                             <span class="font-normal text-muted">— either works</span>
                         </label>
-                        <form @submit.prevent="unlockOwner" class="mt-2 flex gap-1.5">
-                            <input id="ownerInput" type="text" v-model="unlockForm.ownerInput" autocomplete="off"
-                                autocapitalize="off" spellcheck="false" placeholder="owner-… or https://…"
+                        <form @submit.prevent="unlockOwner" class="mt-2 flex flex-col gap-2 sm:flex-row">
+                            <input id="ownerInput" ref="ownerField" type="text" v-model="unlockForm.ownerInput" autocomplete="off"
+                                autocapitalize="off" spellcheck="false" placeholder="Paste your owner link or secret"
                                 aria-describedby="ownerInputNote"
                                 :aria-invalid="!!errors.ownerInput"
-                                class="min-w-0 flex-1 rounded-lg border border-sky/30 bg-base px-3 py-2.5 text-[13px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                class="min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[13px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                             <button type="submit" :disabled="unlockForm.processing"
-                                class="shrink-0 cursor-pointer rounded-lg bg-neon px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-125 disabled:opacity-60">
+                                class="op-press w-full min-h-11 shrink-0 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60 sm:w-auto">
                                 {{ unlockForm.processing ? 'Unlocking…' : 'Unlock' }}
                             </button>
                         </form>
-                        <p v-if="errors.ownerInput" role="alert" class="mt-2 text-[12px] font-medium text-muted">Not a
-                            match — check you copied the whole thing.</p>
-                        <p id="ownerInputNote" class="mt-2 text-[11px] text-muted/60">
+                        <!-- The server's own message: this key carries both "wrong
+                             secret" and "rate limited", and a hardcoded string told
+                             a throttled user their secret was wrong — so they'd
+                             retry, and stay throttled. -->
+                        <p v-if="errors.ownerInput" role="alert"
+                           class="mt-2 text-[12px] font-medium text-danger">{{ errors.ownerInput[0] }}</p>
+                        <p id="ownerInputNote" class="mt-2 text-[11px] text-muted">
                             Goes only to this board · SlipNote never asks for it by email.
                         </p>
                     </div>
                 </div>
             </template>
 
-            <!-- Storage indicator — same compact meter as the course page. -->
-            <div v-if="storageUsed > 0" class="mt-8 flex items-center justify-center gap-2">
+            <!-- Capacity is the owner's responsibility, so they always see it.
+                 Anyone else only once it's close enough to bite — uploads are open
+                 to any visitor, and a near-full board is why theirs would fail.
+                 Below that, "0.2 of 500 MB" is chrome that looks like a signal. -->
+            <div v-if="storageUsed > 0 && (isOwner || storagePct >= 75)"
+                class="mt-8 flex items-center justify-center gap-2">
                 <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">
                     <div class="h-full rounded-full transition-all"
                          :class="storagePct >= 90 ? 'bg-danger' : storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
