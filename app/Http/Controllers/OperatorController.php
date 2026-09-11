@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\BlockedUpload;
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Report;
 use App\Models\Workspace;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Site-operator moderation dashboard — the kill-switch for abuse. Lists every
@@ -19,11 +22,16 @@ use Illuminate\Support\Facades\Storage;
  *  - Disabled entirely unless OPERATOR_SECRET is configured.
  *  - Login is a POST; the secret is held in the session (never in a URL),
  *    checked timing-safe, and rate-limited.
- *  - Destructive actions (remove / dismiss) are POSTs, CSRF-protected, behind
- *    the operator-session gate.
+ *  - Destructive actions (remove / dismiss / undo) are POSTs, CSRF-protected,
+ *    behind the operator-session gate.
  */
 class OperatorController extends Controller
 {
+    private const UNDO_SESSION = 'operator_undo';
+
+    /** Long enough to catch the wrong row, short enough the trash doesn't linger. */
+    private const UNDO_TTL_SECONDS = 300;
+
     private function enabled(): bool
     {
         return filled(config('noteshare.operator_secret'));
@@ -46,14 +54,29 @@ class OperatorController extends Controller
             && hash_equals($this->secretFingerprint(), session('operator_fp'));
     }
 
+    /** Reported is the default: action before browsing. */
+    private function tab(Request $request): string
+    {
+        return $request->query('tab') === 'boards' ? 'boards' : 'reported';
+    }
+
+    private function dashboardRedirect(Request $request): RedirectResponse
+    {
+        $params = $this->tab($request) === 'boards' ? ['tab' => 'boards'] : [];
+
+        return redirect()->route('operator.dashboard', $params);
+    }
+
     /** The dashboard (or the login form when not authenticated). */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         abort_unless($this->enabled(), 404);
 
         if (! $this->authed()) {
             return view('operator.login');
         }
+
+        $undo = $this->activeUndo();
 
         // Reported files, most-reported first. Capped: the queue is worked
         // worst-first and items leave as they're removed/dismissed, so the tail
@@ -91,7 +114,18 @@ class OperatorController extends Controller
         // Most recent boards, with how much they hold and when they were last
         // touched — a board with files but no recent access is a dead one.
         $recent = Workspace::query()
-            ->withCount(['courses', 'materials'])
+            ->withCount([
+                'courses',
+                'materials',
+                // Files on this board currently carrying reports. A board with
+                // several is a repeat offender — a different problem from one
+                // bad file, and the per-file queue can't show it.
+                'materials as reported_count' => fn ($q) => $q->whereHas('reports'),
+            ])
+            // Bytes, not just file count: the abuse that never gets reported is
+            // someone using a board as free file hosting, and three files can be
+            // three hundred megabytes.
+            ->withSum('materials', 'file_size')
             ->latest()
             ->limit(10)
             ->get();
@@ -101,6 +135,8 @@ class OperatorController extends Controller
             'reportedTotal' => $reportedTotal,
             'stats' => $stats,
             'recent' => $recent,
+            'tab' => $this->tab($request),
+            'undo' => $undo,
         ]);
     }
 
@@ -132,27 +168,59 @@ class OperatorController extends Controller
 
     public function logout(Request $request)
     {
+        // Logging out commits whatever was waiting on Undo — the file stays
+        // gone, the trash copy is dropped, the session no longer holds it.
+        $this->commitUndo();
         $request->session()->forget('operator_fp');
 
         return redirect()->route('operator.dashboard');
     }
 
-    /** Delete the file and its reports (cascade). */
+    /**
+     * Take the file down and blocklist the bytes so the same file can't come
+     * back. The bytes sit in a short-lived trash path so Undo can put them
+     * back; after the window (or logout) the trash is dropped.
+     */
     public function remove(Request $request, Material $material)
     {
         abort_unless($this->enabled() && $this->authed(), 403);
 
-        // Blocklist the exact bytes so the same file can't be re-uploaded
-        // (anonymous whack-a-mole defense). Hash before the file is deleted.
+        $this->commitUndo();
+
+        $reports = $this->snapshotReports($material);
+        $attributes = $material->getAttributes();
+        $hash = null;
+        $trashPath = null;
+        $createdBlock = false;
+
         if (Storage::disk('local')->exists($material->stored_path)) {
             $hash = hash('sha256', Storage::disk('local')->get($material->stored_path));
+            $trashPath = 'operator-undo/'.$material->id.'-'.Str::random(12);
+            if (! Storage::disk('local')->copy($material->stored_path, $trashPath)) {
+                $trashPath = null;
+            }
+
+            $createdBlock = BlockedUpload::query()
+                ->where('content_hash', $hash)
+                ->doesntExist();
             BlockedUpload::firstOrCreate(['content_hash' => $hash]);
         }
 
         Storage::disk('local')->delete($material->stored_path);
         $material->delete();
 
-        return redirect()->route('operator.dashboard')->with('done', 'File removed.');
+        $this->stashUndo([
+            'action' => 'remove',
+            'label' => $attributes['title']
+                ?: pathinfo((string) $attributes['original_filename'], PATHINFO_FILENAME),
+            'material' => $attributes,
+            'reports' => $reports,
+            'hash' => $hash,
+            'trash_path' => $trashPath,
+            'created_block' => $createdBlock,
+        ]);
+
+        return $this->dashboardRedirect($request)->with('done', 'File removed. Same bytes can’t be re-uploaded.');
     }
 
     /** Clear a file's reports without deleting it (a false alarm). */
@@ -160,8 +228,144 @@ class OperatorController extends Controller
     {
         abort_unless($this->enabled() && $this->authed(), 403);
 
+        $this->commitUndo();
+
+        $this->stashUndo([
+            'action' => 'dismiss',
+            'label' => $material->displayName(),
+            'material_id' => $material->id,
+            'reports' => $this->snapshotReports($material),
+        ]);
+
         $material->reports()->delete();
 
-        return redirect()->route('operator.dashboard')->with('done', 'Reports dismissed.');
+        return $this->dashboardRedirect($request)->with('done', 'Reports dismissed.');
+    }
+
+    /** Reverse the last dismiss or remove, if the window hasn't closed. */
+    public function undo(Request $request)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $undo = $this->activeUndo();
+        if ($undo === null) {
+            return $this->dashboardRedirect($request)
+                ->withErrors(['undo' => 'Nothing left to undo.']);
+        }
+
+        if ($undo['action'] === 'dismiss') {
+            $this->restoreDismiss($undo);
+        } elseif ($undo['action'] === 'remove') {
+            $this->restoreRemove($undo);
+        }
+
+        session()->forget(self::UNDO_SESSION);
+
+        return $this->dashboardRedirect($request)->with('done', 'Undone.');
+    }
+
+    /**
+     * @return list<array{reason: ?string, reporter_ip: ?string, created_at: ?string}>
+     */
+    private function snapshotReports(Material $material): array
+    {
+        return $material->reports()->get()->map(fn (Report $report) => [
+            'reason' => $report->reason,
+            'reporter_ip' => $report->reporter_ip,
+            'created_at' => $report->created_at?->toDateTimeString(),
+        ])->all();
+    }
+
+    /** @param  array<string, mixed>  $payload */
+    private function stashUndo(array $payload): void
+    {
+        $payload['expires_at'] = now()->addSeconds(self::UNDO_TTL_SECONDS)->getTimestamp();
+        session([self::UNDO_SESSION => $payload]);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function activeUndo(): ?array
+    {
+        $undo = session(self::UNDO_SESSION);
+        if (! is_array($undo) || ! isset($undo['expires_at'], $undo['action'])) {
+            return null;
+        }
+
+        if ((int) $undo['expires_at'] < now()->getTimestamp()) {
+            $this->commitUndo();
+
+            return null;
+        }
+
+        return $undo;
+    }
+
+    /** Drop a pending undo without restoring — the action stands. */
+    private function commitUndo(): void
+    {
+        $undo = session(self::UNDO_SESSION);
+        if (is_array($undo) && is_string($undo['trash_path'] ?? null)) {
+            Storage::disk('local')->delete($undo['trash_path']);
+        }
+
+        session()->forget(self::UNDO_SESSION);
+    }
+
+    /** @param  array<string, mixed>  $undo */
+    private function restoreDismiss(array $undo): void
+    {
+        $material = Material::find($undo['material_id'] ?? null);
+        if ($material === null) {
+            return;
+        }
+
+        $this->restoreReports($material, $undo['reports'] ?? []);
+    }
+
+    /** @param  array<string, mixed>  $undo */
+    private function restoreRemove(array $undo): void
+    {
+        $attrs = $undo['material'] ?? null;
+        if (! is_array($attrs) || ! isset($attrs['id'])) {
+            return;
+        }
+
+        if (Material::query()->whereKey($attrs['id'])->exists()) {
+            return;
+        }
+
+        $trash = is_string($undo['trash_path'] ?? null) ? $undo['trash_path'] : null;
+        $storedPath = $attrs['stored_path'] ?? null;
+        if (is_string($trash) && is_string($storedPath) && Storage::disk('local')->exists($trash)) {
+            Storage::disk('local')->move($trash, $storedPath);
+        }
+
+        $material = new Material;
+        $material->timestamps = false;
+        $material->forceFill($attrs);
+        $material->save();
+
+        $this->restoreReports($material, $undo['reports'] ?? []);
+
+        if (! empty($undo['created_block']) && is_string($undo['hash'] ?? null)) {
+            BlockedUpload::query()->where('content_hash', $undo['hash'])->delete();
+        }
+    }
+
+    /**
+     * @param  list<array{reason?: ?string, reporter_ip?: ?string, created_at?: ?string}>  $rows
+     */
+    private function restoreReports(Material $material, array $rows): void
+    {
+        foreach ($rows as $row) {
+            $report = $material->reports()->make([
+                'reason' => $row['reason'] ?? null,
+                'reporter_ip' => $row['reporter_ip'] ?? null,
+            ]);
+            if (! empty($row['created_at'])) {
+                $report->created_at = $row['created_at'];
+            }
+            $report->save();
+        }
     }
 }

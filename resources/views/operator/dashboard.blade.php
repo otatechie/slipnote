@@ -1,163 +1,184 @@
-<x-layouts.app title="Operator">
-<div class="mx-auto w-full max-w-4xl flex-1 px-5 pb-10 pt-10">
-    <header class="mb-7 flex items-start justify-between gap-4">
-        <div>
-            <p class="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
-            <h1 class="text-3xl font-bold tracking-tight text-ink">Operator</h1>
-            <p class="mt-1.5 text-[15px] text-muted">
-                Usage at a glance, plus anything flagged for review.
-            </p>
+<x-layouts.operator title="Operator">
+<div class="op mx-auto w-full max-w-5xl flex-1 px-5 pb-12">
+    <header class="op-top mb-4 flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <p class="op-kicker mb-1 text-[11px] font-semibold uppercase text-muted">SlipNote · Moderation</p>
+            <h1 class="op-title text-[1.85rem] font-bold text-ink sm:text-[2.15rem]">Operator</h1>
         </div>
         <form method="POST" action="{{ route('operator.logout') }}">
             @csrf
-            <button type="submit" class="cursor-pointer text-[13px] font-semibold text-muted hover:text-neon">Log out</button>
+            <button type="submit" class="op-press inline-flex h-11 shrink-0 cursor-pointer items-center rounded-full border border-sky/50 bg-surface/80 px-3.5 text-[13px] font-semibold text-muted sm:h-8">Log out</button>
         </form>
     </header>
 
-    @if (session('done'))
-        <div class="mb-5 rounded-lg border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
-            {{ session('done') }}
+    {{-- States the job outright: this is a moderation console, and the numbers
+         are only a health check — not the main task. Scrolls away with the page
+         rather than riding the sticky bar: it orients you once, and pinning it
+         above a 50-row queue costs the same space on every screen after that. --}}
+    <p class="mb-7 text-[13px] text-muted">Clear reported files first. The usage numbers are just a health check.</p>
+
+    @if (session('done') || $undo)
+        <div class="op-toast mb-5 text-sm font-medium text-ink">
+            <p>{{ session('done') ?? 'You can still undo the last action.' }}</p>
+            @if ($undo)
+                <form method="POST" action="{{ route('operator.undo') }}">
+                    @csrf
+                    <button type="submit" class="op-press inline-flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-neon sm:min-h-0">
+                        Undo{{ ! empty($undo['label']) ? ' “'.$undo['label'].'”' : '' }}
+                    </button>
+                </form>
+            @endif
         </div>
     @endif
+    @error('undo')
+        <div class="op-toast mb-5 text-sm font-medium text-danger" role="alert">{{ $message }}</div>
+    @enderror
 
-    {{-- Usage at a glance --}}
-    <div class="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
-            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Boards</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['workspaces']) }}</p>
-            <p class="text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
-        </div>
-        {{-- Opened or downloaded from, not uploaded to: an archive nobody adds
-             to but everyone reads is still doing its job. Says so on the tile,
-             because "active" could mean either and the difference is the point.
-             Before any board has been visited the count is 0 for a reason that
-             isn't "nobody came" — say which, or it reads as broken. --}}
-        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
-            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Active</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
-            <p class="text-[12px] text-muted">
-                {{ $stats['tracking_started'] ? 'opened or downloaded, 7d' : 'no visits recorded yet' }}
-            </p>
-        </div>
-        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
-            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Courses</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['courses']) }}</p>
-            <p class="text-[12px] text-muted">+{{ $stats['courses_week'] }} this week</p>
-        </div>
-        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
-            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Files</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['files']) }}</p>
-            <p class="text-[12px] text-muted">+{{ $stats['files_week'] }} this week</p>
-        </div>
-        <div class="rounded-xl border border-sky/40 bg-surface px-4 py-3">
-            <p class="text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Storage</p>
-            <p class="mt-1 text-2xl font-bold tabular-nums text-ink">{{ number_format($stats['storage_mb'], 1) }} <span class="text-[16px] font-semibold text-muted">MB</span></p>
-            <p class="text-[12px] text-muted">across all boards</p>
-        </div>
-    </div>
-
-    {{-- Reported / Latest boards tabs. CSS-only: hidden radios drive which
-         panel shows (see "Operator tabs" in app.css) — no JS, and arrow keys
-         switch tabs for free. Reported is the default: action before browsing. --}}
-    <input type="radio" name="operator-tab" id="tab-reported" class="sr-only" checked>
-    <input type="radio" name="operator-tab" id="tab-boards" class="sr-only">
-    <div class="op-tabs mb-4 flex flex-wrap gap-1.5" role="tablist">
-        <label for="tab-reported" class="op-tab-reported inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
+    {{-- Tab lives in the URL so refresh doesn't yank you off Newest boards.
+         Reported stays the default: action before browsing. Eyebrow names the
+         work region so the two jobs (act vs. browse) read as distinct. --}}
+    <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Needs review</h2>
+    <div class="op-seg mb-5" role="tablist">
+        <a href="{{ route('operator.dashboard') }}"
+           @if ($tab === 'reported') aria-current="page" @endif
+           class="op-press">
             Reported files
             @if ($reportedTotal > 0)
-                <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-danger">{{ $reportedTotal }}</span>
+                <span class="rounded-full bg-base px-1.5 text-[11px] font-semibold tabular-nums text-danger">{{ $reportedTotal }}</span>
             @endif
-        </label>
-        <label for="tab-boards" class="op-tab-boards inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-sky px-3 py-1 text-[13px] font-semibold text-teal transition hover:brightness-95">
+        </a>
+        <a href="{{ route('operator.dashboard', ['tab' => 'boards']) }}"
+           @if ($tab === 'boards') aria-current="page" @endif
+           class="op-press">
             Newest boards
-            <span class="rounded-full bg-base px-1.5 text-xs font-semibold tabular-nums text-teal">{{ $recent->count() }}</span>
-        </label>
+            <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $recent->count() }}</span>
+        </a>
     </div>
 
-    <div class="op-panel-boards">
-    <div class="mb-8 divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
+    @if ($tab === 'boards')
+    <div class="op-card overflow-hidden">
         @forelse ($recent as $ws)
             {{-- A board with no files is an unused shell — fade it so the boards
                  that actually hold content stand out when scanning. --}}
-            @php($empty = $ws->materials_count === 0)
-            <div class="flex items-center justify-between gap-3 px-4 py-2 sm:px-5 {{ $empty ? 'opacity-55' : '' }}">
+            @php
+                $bytes = (int) ($ws->materials_sum_file_size ?? 0);
+                $size = $bytes >= 1_048_576
+                    ? number_format($bytes / 1_048_576, 1).' MB'
+                    : number_format($bytes / 1024).' KB';
+            @endphp
+            {{-- Stacks on phones: the right column plus a truncating board name
+                 leaves ~190px for the name at 320px wide, which cuts it mid-word. --}}
+            <div class="op-row flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
                 <div class="min-w-0">
-                    <p class="truncate text-[14px] font-semibold text-teal">{{ $ws->name }}</p>
-                    <p class="text-[12px] text-muted">
+                    <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
+                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $ws->name }}</a>
+                    </p>
+                    <p class="mt-0.5 text-[12px] text-muted">
                         {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} ·
                         {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
+                        {{-- Spelled out rather than a bare badge: on a list of
+                             boards a lone red number could be any of these counts. --}}
+                        @if ($ws->reported_count > 0)
+                            · <span class="font-semibold text-danger">{{ $ws->reported_count }} reported</span>
+                        @endif
                     </p>
                 </div>
-                <div class="shrink-0 text-right">
-                    {{-- Labelled: two bare relative times stacked ("3 weeks ago"
-                         over "2 days ago") give no clue which is which. --}}
-                    <p class="text-[12px] tabular-nums text-muted" title="{{ $ws->created_at }}">made {{ $ws->created_at->diffForHumans(null, true) }} ago</p>
-                    {{-- Only when there's something to report: a board with no
-                         recorded access says nothing useful, and repeating that
-                         down the column drowns out the rows that do. --}}
+                <div class="flex shrink-0 flex-wrap items-center gap-x-2 sm:block sm:text-right">
+                    {{-- Both lines are conditional: an empty board's "0 KB" and a
+                         never-opened board's blank time are noise repeated down
+                         the column, drowning out the rows that do say something. --}}
+                    @if ($ws->materials_count > 0)
+                        <p class="text-[12px] tabular-nums text-muted">{{ $size }}</p>
+                    @endif
                     @if ($ws->last_accessed_at)
-                        <p class="text-[12px] tabular-nums text-teal" title="Last opened {{ $ws->last_accessed_at }}">
+                        <p class="text-[12px] tabular-nums text-ink/80" title="Last opened {{ $ws->last_accessed_at }}">
                             opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
                         </p>
                     @endif
                 </div>
             </div>
         @empty
-            <p class="px-4 py-3 text-[14px] text-muted">No boards yet.</p>
+            <p class="px-4 py-8 text-center text-[14px] text-muted">No boards yet.</p>
         @endforelse
     </div>
     {{-- The list is capped and sorted by creation, and empty rows are faded —
          both are invisible rules until stated. The empty count is the useful
          number here: boards created and never filled are the drop-off. --}}
     @if ($recent->isNotEmpty())
-        <p class="-mt-6 mb-8 text-[13px] text-muted">
+        <p class="mt-3 text-[13px] text-muted">
             The {{ $recent->count() }} newest of {{ number_format($stats['workspaces']) }}.
             @if ($stats['empty_boards'] > 0)
                 <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
             @endif
         </p>
     @endif
-    </div>
-
-    <div class="op-panel-reported">
-    @if ($reportedTotal > $materials->count())
-        <p class="mb-3 text-[13px] text-muted">Showing the {{ $materials->count() }} most-reported of {{ $reportedTotal }}. Clear these to see the rest.</p>
     @endif
+
+    @if ($tab === 'reported')
     @if ($materials->isNotEmpty())
-        <div class="divide-y divide-sky/40 overflow-hidden rounded-xl border border-sky/40 bg-surface">
+        <p class="mb-3 text-[13px] text-muted">
+            Most-reported first — work down the list.
+            @if ($reportedTotal > $materials->count())
+                Showing the top {{ $materials->count() }} of {{ $reportedTotal }}; clear these to see the rest.
+            @endif
+        </p>
+        <div class="op-card overflow-hidden">
             @foreach ($materials as $material)
-                @php($reasons = $material->reports->whereNotNull('reason'))
-                <div class="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4 sm:px-5">
-                    {{-- Content: file + board + reasons. Course info in teal. --}}
+                @php
+                    $reasons = $material->reports->whereNotNull('reason');
+                    $workspace = $material->course->workspace;
+                    $courseUrl = route('course.show', ['workspace' => $workspace->slug, 'slug' => $material->course->slug]);
+                    $boardUrl = route('courses.index', ['workspace' => $workspace->slug]);
+                    $sectionLabel = \App\Models\Material::SECTIONS[$material->section] ?? $material->section;
+                    $reviewUrl = $material->previewUrl() ?? (filled($material->manage_token) ? route('material.download', ['token' => $material->manage_token]) : null);
+                    $reviewLabel = $material->previewUrl() ? 'Review file' : 'Download to review';
+                    $latest = $reasons->first();
+                    $context = $material->course->code.' · '.$material->displayName();
+                @endphp
+                <div class="op-row flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                    {{-- Course code leads the title so two files with the same
+                         display name don't scan as the same row. --}}
                     <div class="min-w-0 flex-1">
-                        <p class="flex items-center gap-2 text-[14px] font-semibold text-teal">
-                            @if (filled($material->manage_token))
-                                <a href="{{ route('material.download', ['token' => $material->manage_token]) }}"
-                                   class="truncate underline decoration-teal/30 decoration-dashed underline-offset-4 transition hover:decoration-teal/70">{{ $material->displayName() }}</a>
-                            @else
-                                <span class="truncate">{{ $material->displayName() }}</span>
-                            @endif
-                            <span class="shrink-0 text-[12px] font-semibold tabular-nums text-danger/90"
+                        <p class="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-ink">
+                            <span class="truncate">{{ $context }}</span>
+                            <span class="shrink-0 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-danger"
                                   title="{{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}">
-                                {{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}
+                                {{ $material->reports_count }}
                             </span>
                         </p>
-                        <p class="truncate text-[12px] text-teal/70">
-                            {{ $material->course->workspace->name }} · {{ $material->course->code }} ·
-                            <span class="uppercase">{{ $material->section }}</span>
+                        <p class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-muted">
+                            <a href="{{ $boardUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:text-ink hover:decoration-ink/40">{{ $workspace->name }}</a>
+                            <span aria-hidden="true" class="text-muted/50">·</span>
+                            <a href="{{ $courseUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:text-ink hover:decoration-ink/40">{{ $material->course->code }}</a>
+                            <span aria-hidden="true" class="text-muted/50">·</span>
+                            <span>{{ $sectionLabel }}</span>
+                            @if ($reviewUrl)
+                                <span aria-hidden="true" class="text-muted/50">·</span>
+                                <a href="{{ $reviewUrl }}" class="op-review">
+                                    <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z"/><circle cx="10" cy="10" r="2.5"/></svg>
+                                    {{ $reviewLabel }}
+                                </a>
+                            @endif
                         </p>
 
-                        {{-- Reasons: latest inline, full history collapsed --}}
+                        {{-- Reasons: latest inline with when it was filed; full history collapsed --}}
                         @if ($reasons->isNotEmpty())
-                            <details class="group mt-2">
-                                <summary class="flex cursor-pointer list-none items-center gap-1.5 text-[12px] text-muted marker:hidden">
-                                    <span class="truncate">
-                                        “{{ \Illuminate\Support\Str::limit($reasons->first()->reason, 80) }}”
-                                        @if ($reasons->count() > 1)<span class="text-muted">+{{ $reasons->count() - 1 }} more</span>@endif
+                            <details class="group mt-2.5">
+                                <summary class="flex cursor-pointer list-none items-center gap-1.5 text-[13px] leading-snug text-muted marker:hidden">
+                                    {{-- Only the quote is clamped. "+N more" sits
+                                         outside it because it's the one signal the
+                                         row expands, and inside the clamp it was
+                                         exactly what got cut ("+2…") on a phone. --}}
+                                    <span class="line-clamp-2 min-w-0 flex-1 sm:truncate">
+                                        “{{ \Illuminate\Support\Str::limit($latest->reason, 80) }}”
+                                        <span class="text-muted">{{ $latest->created_at->diffForHumans() }}</span>
                                     </span>
-                                    <svg class="size-3 shrink-0 transition group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    @if ($reasons->count() > 1)
+                                        <span class="shrink-0 text-muted">+{{ $reasons->count() - 1 }} more</span>
+                                    @endif
+                                    <svg class="size-3 shrink-0 transition-transform duration-150 group-open:rotate-180" style="transition-timing-function: var(--ease-out)" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </summary>
-                                <ul class="mt-1.5 space-y-1 border-l-2 border-sky/50 pl-3">
+                                <ul class="mt-1.5 space-y-1 border-l-2 border-sky/60 pl-3">
                                     @foreach ($reasons as $report)
                                         <li class="text-[12px] text-ink/90">
                                             <span class="text-muted">{{ $report->created_at->diffForHumans() }}:</span>
@@ -169,33 +190,34 @@
                         @endif
                     </div>
 
-                    {{-- Actions: inline top-right on desktop, equal-width bar on mobile.
-                         View lives on the filename link above. --}}
-                    <div class="grid shrink-0 grid-cols-2 items-center gap-1.5 sm:flex sm:gap-1.5">
+                    {{-- Two decisions only — inspect lives inline above. Dialogs
+                         repeat course + filename so the wrong row is harder to confirm. --}}
+                    <div class="grid shrink-0 grid-cols-2 items-center gap-2.5 sm:flex sm:justify-end">
                         <button type="button" onclick="document.getElementById('dismiss-{{ $material->id }}').showModal()"
-                                class="inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-md border border-sky/40 bg-base px-3 text-[13px] font-semibold text-muted transition hover:bg-sky/40 sm:h-8 sm:w-auto sm:text-[12px]">
+                                title="Clear the reports — the file stays up"
+                                class="op-press inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:w-auto sm:text-[12px]">
                             Dismiss
                         </button>
                         <button type="button" onclick="document.getElementById('remove-{{ $material->id }}').showModal()"
-                                class="btn-danger inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-md px-3 text-[13px] font-semibold transition sm:h-8 sm:w-auto sm:text-[12px]">
+                                title="Delete the file and block re-upload"
+                                class="op-press btn-danger inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full px-3.5 text-[13px] font-semibold sm:h-8 sm:w-auto sm:text-[12px]">
                             Remove
                         </button>
                     </div>
 
-                    {{-- Dismiss confirmation modal (native <dialog>) --}}
                     <dialog id="dismiss-{{ $material->id }}"
-                            class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl bg-surface p-0 shadow-xl backdrop:bg-ink/30 backdrop:backdrop-blur-sm">
+                            class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
                         <div class="px-6 py-6">
-                            <h2 class="text-[15px] font-bold text-ink">Dismiss the reports?</h2>
-                            <p class="mt-1 truncate text-[13px] text-muted">{{ $material->displayName() }}</p>
-                            <p class="mt-3 text-[13px] text-ink/80">This clears the reports on this file. The file stays up and visible to everyone.</p>
+                            <h2 class="text-[16px] font-bold tracking-tight text-ink">Dismiss the reports?</h2>
+                            <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
+                            <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This clears the reports on this file. The file stays up and visible to everyone. You can undo for a few minutes after.</p>
                             <div class="mt-5 flex items-center justify-end gap-2">
                                 <button type="button" onclick="this.closest('dialog').close()"
-                                        class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/40 hover:text-ink">Cancel</button>
+                                        class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
                                 <form method="POST" action="{{ route('operator.dismiss', $material->id) }}">
                                     @csrf
                                     <button type="submit"
-                                            class="inline-flex min-h-11 cursor-pointer items-center rounded-lg bg-neon px-5 text-[14px] font-semibold text-white transition hover:brightness-110">
+                                            class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
                                         Dismiss reports
                                     </button>
                                 </form>
@@ -203,20 +225,19 @@
                         </div>
                     </dialog>
 
-                    {{-- Remove confirmation modal (native <dialog>) --}}
                     <dialog id="remove-{{ $material->id }}"
-                            class="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl bg-surface p-0 shadow-xl backdrop:bg-ink/30 backdrop:backdrop-blur-sm">
+                            class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
                         <div class="px-6 py-6">
-                            <h2 class="text-[15px] font-bold text-ink">Remove this file?</h2>
-                            <p class="mt-1 truncate text-[13px] text-muted">{{ $material->displayName() }}</p>
-                            <p class="mt-3 text-[13px] text-ink/80">This permanently deletes the file and its reports. This can’t be undone.</p>
+                            <h2 class="text-[16px] font-bold tracking-tight text-ink">Remove this file?</h2>
+                            <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
+                            <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This deletes the file and its reports, and blocks these exact bytes from being uploaded again. You can undo for a few minutes after.</p>
                             <div class="mt-5 flex items-center justify-end gap-2">
                                 <button type="button" onclick="this.closest('dialog').close()"
-                                        class="inline-flex min-h-11 cursor-pointer items-center rounded-lg px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/40 hover:text-ink">Cancel</button>
+                                        class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
                                 <form method="POST" action="{{ route('operator.remove', $material->id) }}">
                                     @csrf
                                     <button type="submit"
-                                            class="btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-lg px-5 text-[14px] font-semibold transition">
+                                            class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 text-[14px] font-semibold">
                                         Remove file
                                     </button>
                                 </form>
@@ -227,11 +248,56 @@
             @endforeach
         </div>
     @else
-        <div class="rounded-xl border border-sky/40 bg-surface px-6 py-12 text-center">
-            <p class="text-[16px] font-semibold text-ink">Nothing reported</p>
-            <p class="mx-auto mt-1.5 max-w-sm text-[14px] text-muted">No files are currently flagged. Reports show up here when someone uses the report button on a file.</p>
+        <div class="op-card px-6 py-16 text-center">
+            <p class="text-[16px] font-semibold tracking-tight text-ink">Nothing reported</p>
+            <p class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">No files are currently flagged. Reports show up here when someone uses the report button on a file.</p>
         </div>
     @endif
+    @endif
+
+    {{-- Context, not the task — so it sits after the queue rather than pushing
+         it below the fold. Deltas only when they moved: "+0 this week" on every
+         tile is chrome that looks like a signal and isn't. --}}
+    <h2 class="mb-2 mt-10 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">At a glance</h2>
+    <div class="op-metrics">
+        <div class="op-metric">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Boards</p>
+            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['workspaces']) }}</p>
+            @if ($stats['workspaces_week'] > 0)
+                <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
+            @endif
+        </div>
+        {{-- Opened or downloaded from, not uploaded to: an archive nobody adds
+             to but everyone reads is still doing its job. Says so on the tile,
+             because a bare count could mean either and the difference is the point.
+             Before any board has been visited the count is 0 for a reason that
+             isn't "nobody came" — say which, or it reads as broken. --}}
+        <div class="op-metric">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Opened</p>
+            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
+            <p class="mt-0.5 text-[12px] text-muted">
+                {{ $stats['tracking_started'] ? 'or downloaded, last 7d' : 'no visits recorded yet' }}
+            </p>
+        </div>
+        <div class="op-metric">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Courses</p>
+            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['courses']) }}</p>
+            @if ($stats['courses_week'] > 0)
+                <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['courses_week'] }} this week</p>
+            @endif
+        </div>
+        <div class="op-metric">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Files</p>
+            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['files']) }}</p>
+            @if ($stats['files_week'] > 0)
+                <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['files_week'] }} this week</p>
+            @endif
+        </div>
+        <div class="op-metric">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Storage</p>
+            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['storage_mb'], 1) }} <span class="text-[14px] font-semibold text-muted">MB</span></p>
+            <p class="mt-0.5 text-[12px] text-muted">across all boards</p>
+        </div>
     </div>
 </div>
-</x-layouts.app>
+</x-layouts.operator>
