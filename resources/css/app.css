@@ -545,31 +545,72 @@ textarea:focus-visible {
    elevation on the product shot. Everything derives from the theme tokens.
 --------------------------------------------------------------------------- */
 
-/* Accent wash behind the hero. Sits on its own layer under the content so it
-   can never tint text, and fades out before the section hairline. */
+/* A warm supporting palette, landing page only. The product is blue-only on
+   purpose — one accent, so it always means "the action here". A page whose job
+   is to make a class want to use it can afford more than one colour, and warm
+   ones read as school rather than dashboard. Each pins --lp; everything below
+   colours itself from that, so a tint is one class on the element. */
+.lp-blue   { --lp: #2f5fd8; }
+.lp-amber  { --lp: #96460a; }
+.lp-rose   { --lp: #a8144f; }
+.lp-green  { --lp: #0f6a33; }
+
+html[data-theme='dark'] .lp-blue,
+html[data-theme='system'][data-system-theme='dark'] .lp-blue { --lp: #7ea5ff; }
+html[data-theme='dark'] .lp-amber,
+html[data-theme='system'][data-system-theme='dark'] .lp-amber { --lp: #fbbf24; }
+html[data-theme='dark'] .lp-rose,
+html[data-theme='system'][data-system-theme='dark'] .lp-rose { --lp: #f9a8d4; }
+html[data-theme='dark'] .lp-green,
+html[data-theme='system'][data-system-theme='dark'] .lp-green { --lp: #6ee7b7; }
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .lp-blue,
+    html[data-theme='system'] .lp-blue { --lp: #7ea5ff; }
+    :root:not([data-theme]) .lp-amber,
+    html[data-theme='system'] .lp-amber { --lp: #fbbf24; }
+    :root:not([data-theme]) .lp-rose,
+    html[data-theme='system'] .lp-rose { --lp: #f9a8d4; }
+    :root:not([data-theme]) .lp-green,
+    html[data-theme='system'] .lp-green { --lp: #6ee7b7; }
+}
+
+/* A tinted badge: the numeral on a step, the icon on a benefit. The fill is
+   only 10% because mixing the accent into its own backdrop is what eats the
+   contrast — at 14% the numerals sat at 3.7-4.2:1, under AA. At 10% every
+   tint clears 4.5:1 in both themes. */
+.lp-badge {
+    border: 1px solid color-mix(in srgb, var(--lp) 38%, transparent);
+    background-color: color-mix(in srgb, var(--lp) 10%, transparent);
+    color: var(--lp);
+}
+
+/* Soft wash behind the hero. Three hues rather than one — a single blue haze is
+   the stock SaaS gradient, and it was the techiest thing on the page. */
 .lp-glow {
     background:
         radial-gradient(
-            48% 62% at 72% 18%,
-            color-mix(in srgb, var(--color-neon) 22%, transparent),
-            transparent 72%
+            46% 58% at 74% 14%,
+            color-mix(in srgb, var(--color-neon) 20%, transparent),
+            transparent 70%
         ),
         radial-gradient(
-            40% 50% at 12% 6%,
-            color-mix(in srgb, var(--color-teal) 10%, transparent),
-            transparent 70%
+            42% 54% at 16% 4%,
+            color-mix(in srgb, #f2789b 16%, transparent),
+            transparent 68%
+        ),
+        radial-gradient(
+            38% 46% at 46% 34%,
+            color-mix(in srgb, #f0a132 12%, transparent),
+            transparent 66%
         );
 }
 
-/* Graph-paper grid, masked to nothing by the bottom of the hero. A flat page
-   needs something behind the type; a grid reads as structure, not decoration. */
-.lp-grid {
-    background-image:
-        linear-gradient(to right, color-mix(in srgb, var(--color-sky) 60%, transparent) 1px, transparent 1px),
-        linear-gradient(to bottom, color-mix(in srgb, var(--color-sky) 60%, transparent) 1px, transparent 1px);
-    background-size: 68px 68px;
-    -webkit-mask-image: radial-gradient(80% 70% at 50% 0%, black, transparent 75%);
-    mask-image: radial-gradient(80% 70% at 50% 0%, black, transparent 75%);
+/* Softer corners, landing page only. 18px is right for a dense file list where
+   a card is a row of data; a page selling a friendly tool can round further
+   without reading as sloppy. Scoped to the wrapper, so every op-card inside
+   picks it up without touching the shared token. */
+.lp {
+    --op-radius: 26px;
 }
 
 /* Cards answer the pointer. Transform + border only, same easing as .op-press. */

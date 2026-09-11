@@ -41,7 +41,7 @@
          bg-base throughout: op-card is bg-surface, so cards only lift if the
          page underneath them doesn't move. Sections are separated by the same
          hairline the rest of the app uses, not by alternating bands. --}}
-    <div class="op flex-1">
+    <div class="op lp flex-1">
 
         <header class="op-top px-4 sm:px-5">
             <div class="mx-auto flex max-w-6xl items-center justify-between gap-3">
@@ -64,11 +64,10 @@
         </header>
 
         <section class="relative isolate overflow-hidden px-4 pb-16 pt-12 sm:px-5 sm:pb-24 sm:pt-20">
-            {{-- Two layers behind the hero, both pointer-events-none and both
-                 derived from the theme tokens: a grid for structure and an accent
-                 wash for depth. They are the only decoration on the page, so the
-                 rest can stay as quiet as the product. --}}
-            <div class="lp-grid pointer-events-none absolute inset-x-0 top-0 -z-20 h-140" aria-hidden="true"></div>
+            {{-- One soft three-hue wash behind the hero, on its own layer so it can
+                 never tint text. The graph-paper grid that was here read as a
+                 blueprint — precise, technical, the opposite of the feeling a class
+                 noticeboard should give. --}}
             <div class="lp-glow pointer-events-none absolute inset-x-0 -top-24 -z-10 h-155" aria-hidden="true"></div>
 
             <div class="mx-auto grid max-w-6xl items-center gap-10 sm:gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
@@ -140,14 +139,16 @@
                 </h2>
                 <ol class="grid gap-4 sm:grid-cols-3 sm:gap-5">
                     @foreach ([
-                        ['title' => 'Name your board', 'body' => 'Make one for your class and add a space for each course.'],
-                        ['title' => 'Share the link',  'body' => 'Drop it in your class group chat. That\'s it.'],
-                        ['title' => 'Everyone chips in', 'body' => 'Classmates open a course and add slides, papers and notes.'],
+                        ['title' => 'Name your board', 'body' => 'Make one for your class and add a space for each course.', 'tint' => 'lp-rose'],
+                        ['title' => 'Share the link',  'body' => 'Drop it in your class group chat. That\'s it.', 'tint' => 'lp-blue'],
+                        ['title' => 'Everyone chips in', 'body' => 'Classmates open a course and add slides, papers and notes.', 'tint' => 'lp-amber'],
                     ] as $i => $step)
                         <li class="op-card lp-lift px-6 py-7 sm:px-7 sm:py-8">
-                            {{-- The accent earns its place here: three numerals are
-                                 the only thing telling you this is a sequence. --}}
-                            <span class="flex size-9 items-center justify-center rounded-full border border-neon/30 bg-neon/10 text-[14px] font-bold tabular-nums text-neon"
+                            {{-- Three colours, not three greys. The numerals are the
+                                 only thing saying this is a sequence, and giving each
+                                 its own tint is what the old sticky notes were really
+                                 doing — without the tape and the tilt. --}}
+                            <span class="lp-badge {{ $step['tint'] }} flex size-10 items-center justify-center rounded-full text-[15px] font-bold tabular-nums"
                                   aria-hidden="true">{{ $i + 1 }}</span>
                             <h3 class="op-title mt-4 text-[18px] font-bold text-ink sm:text-[20px]">{{ $step['title'] }}</h3>
                             <p class="mt-2 text-[14px] leading-relaxed text-muted">{{ $step['body'] }}</p>
@@ -195,13 +196,41 @@
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2 sm:gap-5">
+                    {{-- An icon each, in the same four tints. Four identical grey
+                         boxes of text is the shape of a pricing table, not of four
+                         friendly reasons. --}}
                     @foreach ([
-                        ['title' => 'Works anywhere', 'body' => 'Opens in any browser on any phone or laptop — nothing to install.'],
-                        ['title' => 'Always findable', 'body' => 'The newest files sit on top and search finds the rest — nothing scrolls out of reach weeks later.'],
-                        ['title' => 'Share on your terms', 'body' => 'Add your name or stay anonymous — your call on every file you upload.'],
-                        ['title' => 'Safer ownership', 'body' => 'One person owns the board, with a private link to recover access anytime.'],
+                        [
+                            'title' => 'Works anywhere',
+                            'body' => 'Opens in any browser on any phone or laptop — nothing to install.',
+                            'tint' => 'lp-blue',
+                            'icon' => '<rect x="3" y="4" width="14" height="10" rx="2"/><path d="M7 17h6M10 14v3"/>',
+                        ],
+                        [
+                            'title' => 'Always findable',
+                            'body' => 'The newest files sit on top and search finds the rest — nothing scrolls out of reach weeks later.',
+                            'tint' => 'lp-amber',
+                            'icon' => '<circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/>',
+                        ],
+                        [
+                            'title' => 'Share on your terms',
+                            'body' => 'Add your name or stay anonymous — your call on every file you upload.',
+                            'tint' => 'lp-rose',
+                            'icon' => '<circle cx="10" cy="7" r="3"/><path d="M4.5 16.5a5.5 5.5 0 0 1 11 0"/>',
+                        ],
+                        [
+                            'title' => 'Safer ownership',
+                            'body' => 'One person owns the board, with a private link to recover access anytime.',
+                            'tint' => 'lp-green',
+                            'icon' => '<path d="M10 2.8l6 2.4v4.3c0 3.6-2.5 6.6-6 7.7-3.5-1.1-6-4.1-6-7.7V5.2z"/><path d="M7.6 10l1.7 1.7 3.1-3.4"/>',
+                        ],
                     ] as $benefit)
                         <div class="op-card lp-lift px-5 py-6 sm:px-6 sm:py-7">
+                            <span class="lp-badge {{ $benefit['tint'] }} mb-4 flex size-10 items-center justify-center rounded-full" aria-hidden="true">
+                                <svg class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                    {!! $benefit['icon'] !!}
+                                </svg>
+                            </span>
                             <h3 class="text-[16px] font-semibold text-ink">{{ $benefit['title'] }}</h3>
                             <p class="mt-2 text-[14px] leading-relaxed text-muted">{{ $benefit['body'] }}</p>
                         </div>
