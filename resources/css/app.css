@@ -72,6 +72,10 @@
 
 :root {
     color-scheme: light;
+    /* Emil Kowalski / animations.dev — strong curves, not the CSS defaults. */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 html[data-theme='dark'] {
@@ -80,11 +84,13 @@ html[data-theme='dark'] {
 
 html[data-theme='dark'],
 html[data-theme='system'][data-system-theme='dark'] {
-    --color-base: #171b22;       /* deep charcoal-blue — the dark page */
-    --color-surface: #222833;    /* one value-step up — cards/panels (elevation by lightness) */
+    --color-base: #1a1c20;       /* soft neutral grey — the dark page (sat 10%, not the old 19% blue cast) */
+    --color-surface: #272a30;    /* one value-step up — cards/panels (elevation by lightness) */
     --color-teal: #f2f4f5;       /* near-white — headings */
     --color-neon: #5b8bff;       /* brighter royal blue — sings on charcoal, AA as text (5.5:1) */
-    --color-sky: #2f3744;        /* subtle value-step border — not a colored hairline */
+    --color-sky: #3a3f47;        /* hairlines + quiet fills — a step up from the old value, where
+                                    every edge sat ~1.2:1 from its background and cards,
+                                    rows, badges and button outlines all read as flat. */
     --color-ink: #e6e9ec;        /* cool off-white — body text */
     --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
     --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
@@ -98,11 +104,13 @@ html[data-theme='system'][data-system-theme='dark'] {
 
     html:not([data-theme]),
     html[data-theme='system'] {
-        --color-base: #171b22;       /* deep charcoal-blue — the dark page */
-        --color-surface: #222833;    /* one value-step up — cards/panels (elevation by lightness) */
+        --color-base: #1a1c20;       /* soft neutral grey — the dark page (sat 10%, not the old 19% blue cast) */
+        --color-surface: #272a30;    /* one value-step up — cards/panels (elevation by lightness) */
         --color-teal: #f2f4f5;       /* near-white — headings */
         --color-neon: #5b8bff;       /* brighter royal blue — sings on charcoal, AA as text (5.5:1) */
-        --color-sky: #2f3744;        /* subtle value-step border — not a colored hairline */
+        --color-sky: #3a3f47;        /* hairlines + quiet fills — a step up from the old value, where
+                                    every edge sat ~1.2:1 from its background and cards,
+                                    rows, badges and button outlines all read as flat. */
         --color-ink: #e6e9ec;        /* cool off-white — body text */
         --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
         --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
@@ -119,8 +127,8 @@ html[data-theme='dark'] textarea.bg-base,
 html[data-theme='system'][data-system-theme='dark'] input.bg-base,
 html[data-theme='system'][data-system-theme='dark'] select.bg-base,
 html[data-theme='system'][data-system-theme='dark'] textarea.bg-base {
-    background-color: #171a20;
-    border-color: #333a44;
+    background-color: #16181c;
+    border-color: #41474f;
 }
 
 /* The landing hero forces a white background in light mode. In dark mode fall
@@ -174,17 +182,24 @@ html[data-theme='system'][data-system-theme='dark'] .hero-vignette {
     html[data-theme='system'] input.bg-base,
     html[data-theme='system'] select.bg-base,
     html[data-theme='system'] textarea.bg-base {
-        background-color: #171a20;
-        border-color: #333a44;
+        background-color: #16181c;
+        border-color: #41474f;
     }
 }
 
-/* Primary buttons are royal blue (bg-neon) with white labels. Blue + white
-   passes AA (4.6:1 light, higher on the brighter dark-mode blue), so unlike the
-   old orange palette the label stays white — no dark-flip needed. Kept as an
-   explicit rule so the intent is documented where the old override lived. */
-.bg-neon.text-white {
+/* Primary buttons are royal blue (bg-neon) with white labels. In light mode
+   white on #3b6ef5 is 4.44:1 — on the AA line, so the label stays white.
+   Dark mode is the trap: --color-neon brightens to #5b8bff and white falls to
+   3.19:1, a clear AA failure. A brighter fill gives a white label LESS contrast,
+   not more. The fill is right (it's tuned to sing on charcoal) — the label is
+   wrong, so flip it to the page charcoal there: 5.41:1, vivid blue kept.
+   :not(:disabled) so the disabled state's own muted label still wins. */
+.bg-neon.text-white:not(:disabled) {
     color: #ffffff;
+}
+html[data-theme='dark'] .bg-neon.text-white:not(:disabled),
+html[data-theme='system'][data-system-theme='dark'] .bg-neon.text-white:not(:disabled) {
+    color: #1a1c20;
 }
 
 /* Destructive button (delete / remove file). ONE red across the app, distinct
@@ -257,8 +272,17 @@ html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal {
    .file-count-chip so headings/banners that also use teal stay put. */
 html[data-theme='dark'] .file-count-chip,
 html[data-theme='system'][data-system-theme='dark'] .file-count-chip {
-    border-color: color-mix(in srgb, var(--color-neon) 40%, transparent);
     background-color: color-mix(in srgb, var(--color-neon) 15%, transparent);
+    color: var(--color-neon);
+}
+
+/* Teal used as an *accent* (link text, success text) rather than as a heading.
+   In dark mode --color-teal is near-white because it doubles as the heading
+   colour, so these would render identical to body text and lose their meaning —
+   a link that no longer looks like one. Retint to neon, which is AA as text on
+   the dark page (5.5:1). Scoped by class so real headings keep the near-white. */
+html[data-theme='dark'] .teal-accent,
+html[data-theme='system'][data-system-theme='dark'] .teal-accent {
     color: var(--color-neon);
 }
 
@@ -276,9 +300,16 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     }
     :root:not([data-theme]) .file-count-chip,
     html[data-theme='system'] .file-count-chip {
-        border-color: color-mix(in srgb, var(--color-neon) 40%, transparent);
         background-color: color-mix(in srgb, var(--color-neon) 15%, transparent);
         color: var(--color-neon);
+    }
+    :root:not([data-theme]) .teal-accent,
+    html[data-theme='system'] .teal-accent {
+        color: var(--color-neon);
+    }
+    :root:not([data-theme]) .bg-neon.text-white:not(:disabled),
+    html[data-theme='system'] .bg-neon.text-white:not(:disabled) {
+        color: #1a1c20;
     }
     :root:not([data-theme]) .section-pill.bg-teal,
     html[data-theme='system'] .section-pill.bg-teal {
@@ -296,6 +327,26 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     textarea {
         font-size: 16px;
     }
+}
+
+/* Keyboard focus. Inputs carry their own focus:ring utilities, but buttons and
+   links had nothing beyond the UA default outline — which all but vanishes on a
+   pill button sitting on a tinted card. The offset puts the ring outside the
+   control, so it stays visible against a fill of any colour, including the
+   accent buttons whose fill is this very token. */
+:focus-visible {
+    outline: 2px solid var(--color-neon);
+    outline-offset: 2px;
+}
+
+/* Form controls already ship a designed focus style (focus:border-neon plus
+   focus:ring-2). They are the only elements that do — no button or link in the
+   app carries focus:ring — so the shared outline above lands on top of that
+   ring as a visible second line. Let their own ring stand alone. */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: none;
 }
 
 /* ---------------------------------------------------------------------------
@@ -391,7 +442,7 @@ html[data-theme='system'][data-system-theme='dark'] .nb-sticky {
    real elevation shadow (the light-mode shadow is invisible on charcoal). */
 html[data-theme='dark'] .hero-mock,
 html[data-theme='system'][data-system-theme='dark'] .hero-mock {
-    border-color: #3d4757;
+    border-color: #434953;
     box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
@@ -401,7 +452,7 @@ html[data-theme='system'][data-system-theme='dark'] .hero-mock {
 html[data-theme='dark'] .feature-chip,
 html[data-theme='system'][data-system-theme='dark'] .feature-chip {
     background-color: var(--color-surface);
-    border-color: #3d4757;
+    border-color: #434953;
     color: var(--color-ink);
 }
 
@@ -426,13 +477,13 @@ html[data-theme='system'][data-system-theme='dark'] .nb-cta::after {
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) .hero-mock,
     html[data-theme='system'] .hero-mock {
-        border-color: #3d4757;
+        border-color: #434953;
         box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
     }
     :root:not([data-theme]) .feature-chip,
     html[data-theme='system'] .feature-chip {
         background-color: var(--color-surface);
-        border-color: #3d4757;
+        border-color: #434953;
         color: var(--color-ink);
     }
     :root:not([data-theme]) .nb-cta,
@@ -450,17 +501,250 @@ html[data-theme='system'][data-system-theme='dark'] .nb-cta::after {
 }
 
 /* ---------------------------------------------------------------------------
-   Operator tabs (operator/dashboard.blade.php). CSS-only: two hidden radios
-   ahead of the tab bar + panels decide which panel shows and which pill reads
-   active. Active fill uses the theme tokens, so dark mode inverts for free
-   (near-white pill, charcoal label).
+   Shared surface vocabulary — started on the operator console, now also used
+   by the board page. A quiet surface: glass chrome, tight display type,
+   hairline-separated rows in one card rather than floating cards. Motion
+   follows Emil Kowalski: transform + opacity only, custom --ease-out, press
+   scale, no scale(0). Any page using .op-* must set .op for its tokens.
 --------------------------------------------------------------------------- */
-#tab-reported:checked ~ .op-panel-boards,
-#tab-boards:checked ~ .op-panel-reported {
-    display: none;
+.op {
+    --op-radius: 18px;
+    --op-hairline: color-mix(in srgb, var(--color-sky) 80%, transparent);
 }
-#tab-reported:checked ~ .op-tabs .op-tab-reported,
-#tab-boards:checked ~ .op-tabs .op-tab-boards {
-    background-color: var(--color-teal);
-    color: var(--color-base);
+
+.op-press {
+    transition: transform 160ms var(--ease-out);
+}
+.op-press:active {
+    transform: scale(0.97);
+}
+
+.op-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 0.85rem 0;
+    background: color-mix(in srgb, var(--color-base) 72%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid color-mix(in srgb, white 18%, var(--color-sky));
+}
+
+.op-kicker {
+    letter-spacing: 0.1em;
+}
+
+.op-title {
+    letter-spacing: -0.032em;
+    line-height: 1.05;
+}
+
+.op-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid var(--op-hairline);
+    border-radius: var(--op-radius);
+    background: var(--op-hairline);
+}
+.op-metric {
+    padding: 0.95rem 1.05rem;
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+}
+/* Five tiles in two columns leaves the last cell empty, and an empty cell shows
+   the grid's hairline background as a solid block. Let the odd one out span. */
+.op-metric:last-child {
+    grid-column: 1 / -1;
+}
+
+/* Full-width on phones: two auto-width pills plus their badges overflow the
+   viewport below ~340px, and an inline-flex bar has nothing to shrink. */
+.op-seg {
+    display: flex;
+    width: 100%;
+    padding: 3px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-sky) 70%, var(--color-base));
+    box-shadow: 0 1px 0 color-mix(in srgb, black 6%, transparent) inset;
+}
+.op-seg a {
+    display: inline-flex;
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.8rem 0.85rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-muted);
+    transition:
+        color 180ms ease,
+        background-color 180ms ease;
+}
+
+@media (min-width: 640px) {
+    .op-metrics {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .op-metric:last-child {
+        grid-column: auto;
+    }
+    .op-seg {
+        display: inline-flex;
+        width: auto;
+    }
+    .op-seg a {
+        flex: none;
+        padding: 0.35rem 0.85rem;
+    }
+}
+.op-seg a[aria-current='page'] {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: 0 1px 2px color-mix(in srgb, black 12%, transparent);
+}
+
+.op-card {
+    border: 1px solid var(--op-hairline);
+    border-radius: var(--op-radius);
+    background: var(--color-surface);
+}
+
+.op-row {
+    padding: 0.95rem 1.1rem;
+    border-bottom: 1px solid var(--op-hairline);
+    transition: background-color 160ms ease;
+}
+/* Phones: a file row spends its width on a checkbox and two icon buttons before
+   the filename gets any, so the row's own gutter is worth 8px back. */
+@media (max-width: 639px) {
+    .op-row {
+        padding-left: 0.85rem;
+        padding-right: 0.85rem;
+    }
+}
+.op-row:last-child {
+    border-bottom: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+    .op-row:hover {
+        background-color: color-mix(in srgb, var(--color-sky) 22%, transparent);
+    }
+}
+
+/* Inline inspect link — the eye icon nudges up on hover to read as "open". */
+.op-review {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 600;
+    color: var(--color-neon);
+    white-space: nowrap;
+}
+.op-review svg {
+    transition: transform 160ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+    .op-review:hover svg {
+        transform: translateY(-1px);
+    }
+}
+
+.op-toast {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border-radius: 14px;
+    border: 1px solid var(--op-hairline);
+    background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    padding: 0.8rem 1rem;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+        opacity 400ms ease,
+        transform 400ms ease;
+}
+.op-toast {
+    @starting-style {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
+
+.op-dialog {
+    transform-origin: center;
+    border: 1px solid var(--op-hairline);
+    background: var(--color-surface);
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+        opacity 250ms var(--ease-out),
+        transform 250ms var(--ease-out),
+        overlay 250ms var(--ease-out) allow-discrete,
+        display 250ms var(--ease-out) allow-discrete;
+}
+.op-dialog[open] {
+    opacity: 1;
+    transform: scale(1);
+}
+@starting-style {
+    .op-dialog[open] {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+}
+.op-dialog::backdrop {
+    /* Black, not --color-ink: ink is near-white in dark mode, which turned the
+       scrim into a mid-grey brighter than the dialog on top of it. */
+    background: color-mix(in srgb, black 38%, transparent);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity 250ms var(--ease-out);
+}
+.op-dialog[open]::backdrop {
+    opacity: 1;
+}
+@starting-style {
+    .op-dialog[open]::backdrop {
+        opacity: 0;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .op-seg a:hover {
+        color: var(--color-ink);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .op-press,
+    .op-press:active {
+        transition: none;
+        transform: none;
+    }
+    .op-review:hover svg {
+        transform: none;
+    }
+    .op-toast,
+    .op-dialog,
+    .op-dialog::backdrop {
+        transition: opacity 200ms ease;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .op-top,
+    .op-toast,
+    .op-metrics {
+        background: var(--color-surface);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
 }
