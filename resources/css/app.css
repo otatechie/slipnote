@@ -537,3 +537,67 @@ textarea:focus-visible {
         -webkit-backdrop-filter: none;
     }
 }
+
+/* ---------------------------------------------------------------------------
+   Landing page. The product pages are deliberately quiet, and a marketing page
+   that is only quiet reads as a dashboard. These add depth without a second
+   visual language: one accent glow, a faint grid, a hover lift, and real
+   elevation on the product shot. Everything derives from the theme tokens.
+--------------------------------------------------------------------------- */
+
+/* Accent wash behind the hero. Sits on its own layer under the content so it
+   can never tint text, and fades out before the section hairline. */
+.lp-glow {
+    background:
+        radial-gradient(
+            48% 62% at 72% 18%,
+            color-mix(in srgb, var(--color-neon) 22%, transparent),
+            transparent 72%
+        ),
+        radial-gradient(
+            40% 50% at 12% 6%,
+            color-mix(in srgb, var(--color-teal) 10%, transparent),
+            transparent 70%
+        );
+}
+
+/* Graph-paper grid, masked to nothing by the bottom of the hero. A flat page
+   needs something behind the type; a grid reads as structure, not decoration. */
+.lp-grid {
+    background-image:
+        linear-gradient(to right, color-mix(in srgb, var(--color-sky) 60%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--color-sky) 60%, transparent) 1px, transparent 1px);
+    background-size: 68px 68px;
+    -webkit-mask-image: radial-gradient(80% 70% at 50% 0%, black, transparent 75%);
+    mask-image: radial-gradient(80% 70% at 50% 0%, black, transparent 75%);
+}
+
+/* Cards answer the pointer. Transform + border only, same easing as .op-press. */
+.lp-lift {
+    transition:
+        transform 220ms var(--ease-out),
+        border-color 220ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+    .lp-lift:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--color-neon) 40%, var(--op-hairline));
+    }
+}
+
+/* The one product shot on the page. The app's flat cards are right in a list of
+   twenty; here a single card carrying the whole proof needs to sit above the
+   page rather than in it. */
+.lp-mock {
+    box-shadow: 0 24px 60px -30px color-mix(in srgb, var(--color-ink) 45%, transparent);
+}
+html[data-theme='dark'] .lp-mock,
+html[data-theme='system'][data-system-theme='dark'] .lp-mock {
+    box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.9);
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .lp-mock,
+    html[data-theme='system'] .lp-mock {
+        box-shadow: 0 30px 70px -28px rgba(0, 0, 0, 0.9);
+    }
+}

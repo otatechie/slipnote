@@ -63,7 +63,14 @@
             </div>
         </header>
 
-        <section class="px-4 pb-12 pt-10 sm:px-5 sm:pb-20 sm:pt-16">
+        <section class="relative isolate overflow-hidden px-4 pb-16 pt-12 sm:px-5 sm:pb-24 sm:pt-20">
+            {{-- Two layers behind the hero, both pointer-events-none and both
+                 derived from the theme tokens: a grid for structure and an accent
+                 wash for depth. They are the only decoration on the page, so the
+                 rest can stay as quiet as the product. --}}
+            <div class="lp-grid pointer-events-none absolute inset-x-0 top-0 -z-20 h-140" aria-hidden="true"></div>
+            <div class="lp-glow pointer-events-none absolute inset-x-0 -top-24 -z-10 h-155" aria-hidden="true"></div>
+
             <div class="mx-auto grid max-w-6xl items-center gap-10 sm:gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
                 <div class="text-center lg:text-left">
                     <h1 class="op-title text-[34px] font-bold text-ink sm:text-[52px] lg:text-[56px]">
@@ -89,7 +96,7 @@
                 <div class="mx-auto w-full max-w-md lg:max-w-none"
                      role="img"
                      aria-label="Example board: the Computer Science Level 100 class, showing its CS 101 course with three shared files (a quiz solution, lecture slides and a past paper), with a Download-all option for the whole section.">
-                    <div class="op-card overflow-hidden" aria-hidden="true">
+                    <div class="op-card lp-mock overflow-hidden" aria-hidden="true">
                         <div class="flex items-center gap-1.5 border-b border-sky px-4 py-3">
                             <span class="size-2.5 rounded-full bg-muted/25"></span>
                             <span class="size-2.5 rounded-full bg-muted/25"></span>
@@ -127,7 +134,8 @@
 
         <section id="how" class="border-t border-sky px-4 py-12 sm:px-5 sm:py-20">
             <div class="mx-auto max-w-6xl">
-                <h2 class="op-title mb-8 text-center text-[24px] font-bold text-ink sm:mb-12 sm:text-[30px]">
+                <p class="op-kicker mb-2 text-center text-[11px] font-semibold uppercase text-muted">How it works</p>
+                <h2 class="op-title mb-8 text-center text-[26px] font-bold text-ink sm:mb-12 sm:text-[34px]">
                     Three steps to a shared board
                 </h2>
                 <ol class="grid gap-4 sm:grid-cols-3 sm:gap-5">
@@ -136,8 +144,10 @@
                         ['title' => 'Share the link',  'body' => 'Drop it in your class group chat. That\'s it.'],
                         ['title' => 'Everyone chips in', 'body' => 'Classmates open a course and add slides, papers and notes.'],
                     ] as $i => $step)
-                        <li class="op-card px-6 py-7 sm:px-7 sm:py-8">
-                            <span class="flex size-8 items-center justify-center rounded-full border border-sky bg-base text-[13px] font-semibold tabular-nums text-muted"
+                        <li class="op-card lp-lift px-6 py-7 sm:px-7 sm:py-8">
+                            {{-- The accent earns its place here: three numerals are
+                                 the only thing telling you this is a sequence. --}}
+                            <span class="flex size-9 items-center justify-center rounded-full border border-neon/30 bg-neon/10 text-[14px] font-bold tabular-nums text-neon"
                                   aria-hidden="true">{{ $i + 1 }}</span>
                             <h3 class="op-title mt-4 text-[18px] font-bold text-ink sm:text-[20px]">{{ $step['title'] }}</h3>
                             <p class="mt-2 text-[14px] leading-relaxed text-muted">{{ $step['body'] }}</p>
@@ -162,16 +172,26 @@
         <section id="why" class="border-t border-sky px-4 py-12 sm:px-5 sm:py-20">
             <div class="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
                 <div>
-                    <h2 class="op-title max-w-md text-[24px] font-bold text-ink sm:text-[32px]">
+                    <p class="op-kicker mb-2 text-[11px] font-semibold uppercase text-muted">Why a board</p>
+                    <h2 class="op-title max-w-md text-[26px] font-bold text-ink sm:text-[34px]">
                         Better than losing files in a busy class group chat
                     </h2>
                     <p class="mt-4 max-w-lg text-[15px] leading-relaxed text-muted sm:text-[16px]">
                         Group chats are great for talking, but files get buried fast.
                         SlipNote keeps sharing just as easy (drop a file in) while keeping everything findable a week later.
                     </p>
-                    <p class="mt-5 text-[14px] font-semibold text-muted">
-                        Free · open source · no accounts, ever
-                    </p>
+                    {{-- Three claims, three chips. As one muted sentence this was the
+                         page's strongest selling line rendered as its quietest text. --}}
+                    <ul class="mt-6 flex flex-wrap gap-2">
+                        @foreach (['Free', 'Open source', 'No accounts, ever'] as $claim)
+                            <li class="inline-flex items-center gap-1.5 rounded-full border border-neon/25 bg-neon/10 px-3 py-1.5 text-[13px] font-semibold text-neon">
+                                <svg aria-hidden="true" class="size-3.5 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M4 10.5l4 4 8-9" />
+                                </svg>
+                                {{ $claim }}
+                            </li>
+                        @endforeach
+                    </ul>
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2 sm:gap-5">
@@ -181,7 +201,7 @@
                         ['title' => 'Share on your terms', 'body' => 'Add your name or stay anonymous — your call on every file you upload.'],
                         ['title' => 'Safer ownership', 'body' => 'One person owns the board, with a private link to recover access anytime.'],
                     ] as $benefit)
-                        <div class="op-card px-5 py-6 sm:px-6 sm:py-7">
+                        <div class="op-card lp-lift px-5 py-6 sm:px-6 sm:py-7">
                             <h3 class="text-[16px] font-semibold text-ink">{{ $benefit['title'] }}</h3>
                             <p class="mt-2 text-[14px] leading-relaxed text-muted">{{ $benefit['body'] }}</p>
                         </div>
@@ -190,11 +210,14 @@
             </div>
         </section>
 
-        <section class="border-t border-sky px-4 py-12 sm:px-5 sm:py-20">
-            <div class="op-card mx-auto max-w-5xl px-6 py-8 sm:px-10 sm:py-12">
+        <section class="relative isolate overflow-hidden border-t border-sky px-4 py-12 sm:px-5 sm:py-20">
+            {{-- Same accent wash as the hero, mirrored, so the page closes on the
+                 note it opened with instead of trailing off into flat grey. --}}
+            <div class="lp-glow pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-105 rotate-180" aria-hidden="true"></div>
+            <div class="op-card lp-mock mx-auto max-w-5xl px-6 py-8 sm:px-10 sm:py-12">
                 <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div>
-                        <h2 class="op-title max-w-xl text-[24px] font-bold text-ink sm:text-[30px]">
+                        <h2 class="op-title max-w-xl text-[26px] font-bold text-ink sm:text-[32px]">
                             Make your class's board in a minute
                         </h2>
                         <p class="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-muted">
