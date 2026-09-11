@@ -100,7 +100,7 @@ class CoursesController extends Controller
 
         RateLimiter::hit($key, 600);
 
-        return back()->withErrors(['ownerInput' => "That owner secret or link isn't right for this workspace."]);
+        return back()->withErrors(['ownerInput' => "That owner secret or link isn't right for this board — check you copied the whole thing."]);
     }
 
     public function saveRecoveryEmail(Request $request)

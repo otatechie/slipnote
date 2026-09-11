@@ -24,10 +24,18 @@ function requestRecovery() {
 <template>
     <Head title="Recover owner link" />
     <AppLayout>
-        <div class="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 sm:px-5 sm:py-12">
+        <div class="op mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 sm:px-5 sm:py-12">
             <header class="mb-7 text-center">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted">SlipNote</p>
-                <h1 class="text-3xl font-bold tracking-tight text-ink">Recover owner access</h1>
+                <!-- Linked, like /start: AppLayout has no nav, and someone who lands
+                     here has lost their way into a board already — a dead end is the
+                     last thing this page should be. alt="" because the adjacent text
+                     already names it. -->
+                <a href="/"
+                   class="mb-3 inline-flex items-center gap-2 py-1 text-[16px] font-bold tracking-[-0.01em] text-teal transition hover:opacity-80">
+                    <img src="/logo-mark.png" alt="" class="size-7 shrink-0">
+                    SlipNote
+                </a>
+                <h1 class="op-title text-[2.15rem] font-bold text-ink">Recover owner access</h1>
                 <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
                     For <span class="font-semibold text-ink">{{ workspace.name }}</span>.
                     If a recovery email was set for this board, we'll send a fresh
@@ -81,7 +89,7 @@ function requestRecovery() {
                         class="mt-4 w-full cursor-pointer rounded-lg bg-neon py-3.5 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
                     Send recovery link
                 </button>
-                <p class="mt-3 text-center text-[12px] text-muted/70">
+                <p class="mt-3 text-center text-[12px] text-muted">
                     No recovery email was set? The owner link can't be recovered —
                     that's the trade-off of no accounts.
                 </p>

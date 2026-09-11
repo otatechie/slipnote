@@ -68,6 +68,10 @@ class CourseController extends Controller
             'displayName' => $m->displayName(),
             'original_filename' => $m->original_filename,
             'fileTypeLabel' => $m->fileTypeLabel(),
+            // Shown in the row: two uploads can share a display name (both
+            // "Lucid_by_WeOrg"), leaving nothing on screen to tell them apart.
+            // Size also answers "is this worth it on mobile data?" before the tap.
+            'file_size' => $m->file_size,
             'uploader_name' => $m->uploader_name,
             // "just now" reads better than "0 seconds ago" for fresh uploads.
             // Short units ("28m ago") keep the meta line from truncating on phones.
