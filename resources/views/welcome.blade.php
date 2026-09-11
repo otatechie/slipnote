@@ -63,13 +63,7 @@
             </div>
         </header>
 
-        <section class="relative isolate overflow-hidden px-4 pb-16 pt-12 sm:px-5 sm:pb-24 sm:pt-20">
-            {{-- One soft three-hue wash behind the hero, on its own layer so it can
-                 never tint text. The graph-paper grid that was here read as a
-                 blueprint — precise, technical, the opposite of the feeling a class
-                 noticeboard should give. --}}
-            <div class="lp-glow pointer-events-none absolute inset-x-0 -top-24 -z-10 h-155" aria-hidden="true"></div>
-
+        <section class="px-4 pb-16 pt-12 sm:px-5 sm:pb-24 sm:pt-20">
             <div class="mx-auto grid max-w-6xl items-center gap-10 sm:gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
                 <div class="text-center lg:text-left">
                     <h1 class="op-title text-[34px] font-bold text-ink sm:text-[52px] lg:text-[56px]">
@@ -239,10 +233,7 @@
             </div>
         </section>
 
-        <section class="relative isolate overflow-hidden border-t border-sky px-4 py-12 sm:px-5 sm:py-20">
-            {{-- Same accent wash as the hero, mirrored, so the page closes on the
-                 note it opened with instead of trailing off into flat grey. --}}
-            <div class="lp-glow pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-105 rotate-180" aria-hidden="true"></div>
+        <section class="border-t border-sky px-4 py-12 sm:px-5 sm:py-20">
             <div class="op-card lp-mock mx-auto max-w-5xl px-6 py-8 sm:px-10 sm:py-12">
                 <div class="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div>

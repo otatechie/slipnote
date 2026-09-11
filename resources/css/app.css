@@ -540,9 +540,9 @@ textarea:focus-visible {
 
 /* ---------------------------------------------------------------------------
    Landing page. The product pages are deliberately quiet, and a marketing page
-   that is only quiet reads as a dashboard. These add depth without a second
-   visual language: one accent glow, a faint grid, a hover lift, and real
-   elevation on the product shot. Everything derives from the theme tokens.
+   that is only quiet reads as a dashboard. Warmth here comes from colour and
+   shape — a four-tint accent palette, softer corners, a hover lift and real
+   elevation on the product shot — not from washes or textures behind the type.
 --------------------------------------------------------------------------- */
 
 /* A warm supporting palette, landing page only. The product is blue-only on
@@ -582,27 +582,6 @@ html[data-theme='system'][data-system-theme='dark'] .lp-green { --lp: #6ee7b7; }
     border: 1px solid color-mix(in srgb, var(--lp) 38%, transparent);
     background-color: color-mix(in srgb, var(--lp) 10%, transparent);
     color: var(--lp);
-}
-
-/* Soft wash behind the hero. Three hues rather than one — a single blue haze is
-   the stock SaaS gradient, and it was the techiest thing on the page. */
-.lp-glow {
-    background:
-        radial-gradient(
-            46% 58% at 74% 14%,
-            color-mix(in srgb, var(--color-neon) 20%, transparent),
-            transparent 70%
-        ),
-        radial-gradient(
-            42% 54% at 16% 4%,
-            color-mix(in srgb, #f2789b 16%, transparent),
-            transparent 68%
-        ),
-        radial-gradient(
-            38% 46% at 46% 34%,
-            color-mix(in srgb, #f0a132 12%, transparent),
-            transparent 66%
-        );
 }
 
 /* Softer corners, landing page only. 18px is right for a dense file list where
