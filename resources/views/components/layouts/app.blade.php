@@ -18,7 +18,7 @@
     @else
         <meta name="robots" content="noindex,nofollow">
     @endif
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
         (() => {
             const key = 'slipnote-theme'
             const options = new Set(['system', 'light', 'dark'])

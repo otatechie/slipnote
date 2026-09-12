@@ -130,7 +130,7 @@
                     $courseUrl = route('course.show', ['workspace' => $workspace->slug, 'slug' => $material->course->slug]);
                     $boardUrl = route('courses.index', ['workspace' => $workspace->slug]);
                     $sectionLabel = \App\Models\Material::SECTIONS[$material->section] ?? $material->section;
-                    $reviewUrl = $material->previewUrl() ?? (filled($material->manage_token) ? route('material.download', ['token' => $material->manage_token]) : null);
+                    $reviewUrl = $material->previewUrl() ?? $material->downloadUrl();
                     $reviewLabel = $material->previewUrl() ? 'Review file' : 'Download to review';
                     $latest = $reasons->first();
                     $context = $material->course->code.' · '.$material->displayName();

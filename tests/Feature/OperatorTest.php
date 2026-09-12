@@ -30,6 +30,7 @@ class OperatorTest extends TestCase
             'original_filename' => 'bad.pdf',
             'stored_path' => UploadedFile::fake()->create('bad.pdf', 10)->store('materials', 'local'),
             'manage_token' => 'tok-'.str_repeat('a', 36),
+            'download_token' => 'dl-'.str_repeat('a', 37),
         ]);
         $this->material->reports()->create(['reason' => 'spam', 'reporter_ip' => '1.2.3.4']);
     }

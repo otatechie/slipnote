@@ -13,10 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Behind Cloudflare, the origin sees http:// and a private IP as the
-        // client. Without this, uploads 401 (signatures computed for https://
-        // don't match the http:// URL Laravel reconstructs from the request).
-        $middleware->trustProxies(at: '*');
+        // Trusted proxies are configured in AppServiceProvider from
+        // TRUSTED_PROXIES, not here: this closure runs before config is
+        // loaded, and '*' (the old value) let any client pick its own IP via
+        // X-Forwarded-For, which every per-IP rate limit is keyed on.
+        // Generated URLs are already forced to https by the provider, so
+        // proxy trust is only about the client IP, not the scheme.
 
         $middleware->append(SecureHeaders::class);
         $middleware->web(append: [

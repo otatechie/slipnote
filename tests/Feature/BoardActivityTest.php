@@ -49,7 +49,7 @@ class BoardActivityTest extends TestCase
         $material = $this->uploadOne();
         $this->workspace->forceFill(['last_accessed_at' => null])->saveQuietly();
 
-        $this->get(route('material.download', ['token' => $material->manage_token]))
+        $this->get(route('material.download', ['token' => $material->download_token]))
             ->assertOk();
 
         $this->assertNotNull($this->workspace->fresh()->last_accessed_at);

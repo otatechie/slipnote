@@ -90,32 +90,45 @@ bulk-delete files. Course slugs are unique *within* a workspace.
 
 Lose the owner link and the board is unrecoverable — unless the owner set a
 **recovery email** (encrypted at rest, owner-mode only). Visit
-`/<workspace>/recover`, enter that email, and the owner secret is rotated and a
-fresh link emailed back; the old link stops working. Responses are identical
-whether the email matches or not (no enumeration), rate-limited, and the
-feature is hidden when the mail driver is `log` or `array`.
+`/<workspace>/recover`, enter that email, and a signed, single-use restore link
+(valid for an hour) is emailed to the stored address. Opening it rotates the
+owner secret, retires the old link, and shows the new one once. Until it is
+opened nothing changes — so knowing someone's recovery address is not enough
+to revoke their access. Responses are identical whether the email matches or
+not (no enumeration), rate-limited, and the feature is hidden when the mail
+driver is `log` or `array`.
 
 ## Security
 
 - **Owner secret** stored only as a bcrypt hash; checks are timing-safe via
-  `Hash::check`. The owner-unlock form is rate-limited per workspace. Recovery
-  rotates the secret, invalidating the old link.
+  `Hash::check`. Both ways of presenting it — the unlock form and a
+  `?owner=` link — share one per-workspace rate limit, so a wrong guess
+  costs the same whichever door it comes through. Recovery rotates the
+  secret only when the mailed restore link is used.
+- **Two tokens per file.** The public download address (`download_token`) and
+  the uploader's private delete capability (`manage_token`) are separate
+  columns. The page hands every visitor the former and never the latter.
 - **Recovery email encrypted at rest**; recovery responses don't reveal whether
   an email matched (no enumeration).
 - **HTTP security headers** via `SecureHeaders` middleware: `nosniff`,
   `SAMEORIGIN`, `Referrer-Policy`, restrictive `Permissions-Policy`. Production
-  also adds HSTS and a locked-down CSP (`default-src 'self'`, fonts from
-  `fonts.bunny.net`) — omitted in dev where Vite and plain `http://` would
-  break under them.
+  also adds HSTS and a locked-down CSP (`default-src 'self'`, scripts by
+  per-request nonce, fonts self-hosted) — omitted in dev where Vite and plain
+  `http://` would break under them.
 - **Workspace isolation** enforced at the query layer by the `WorkspaceScope`
   global scope; `workspace_id` is never mass-assignable. Per-workspace session
   keys (`ws_owner_{id}`, `ws_upload_ok_{id}`) so unlocking one never leaks into
   another.
 - **Operator kill-switch** gated by `OPERATOR_SECRET`: timing-safe, rate-limited,
   session-held (never in a URL); `/operator` 404s when unset.
-- **Abuse throttling** — per-IP limits on uploads and workspace creation, a
-  fail-closed host-disk check, and a content-hash blocklist refusing re-upload
-  of operator-removed files.
+- **Abuse throttling** — per-IP limits on uploads, workspace creation, abuse
+  reports, section ZIPs and operator login; a fail-closed host-disk check; and
+  a content-hash blocklist refusing re-upload of operator-removed files.
+  Per-IP means the IP the app believes, so **set `TRUSTED_PROXIES`** to the
+  proxy actually in front (Cloudflare's ranges, or `127.0.0.1` for a local
+  reverse proxy). Left empty, `X-Forwarded-For` is ignored and every client
+  behind a proxy shares the proxy's address; set to `*` — never do this — any
+  client could pick its own.
 - **Upload hardening** — files are validated by real content type (`mimetypes`,
   via magic bytes) as well as extension, so a renamed executable is rejected;
   client filenames are sanitised before storage (no control chars / header
@@ -123,7 +136,11 @@ feature is hidden when the mail driver is `log` or `array`.
   **not** virus-scanned — treat downloads as untrusted (see the Terms page).
 
 For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
-`SESSION_SECURE_COOKIE=true`, and serve over HTTPS. Note that
+`SESSION_SECURE_COOKIE=true`, `TRUSTED_PROXIES`, and serve over HTTPS. The
+owner link is redeemed by a `?owner=` GET that immediately redirects to the
+clean URL, so the secret appears in exactly one request — but that request
+does reach the web server's access log. If you keep those logs, strip or
+hash the query string for lines containing `owner=`. Note that
 `SESSION_SECURE_COOKIE=true` **requires** HTTPS — over plain `http://` the
 session cookie is dropped and every POST fails with a 419 (leave it unset in
 local dev on http).

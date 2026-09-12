@@ -154,7 +154,8 @@ function confirmForget() {
                      washed the page blue and competed with the red block, which is
                      the one thing here that genuinely needs to be noticed. -->
                 <div class="op-card p-5 sm:p-6">
-                    <p class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
+                    <p v-if="flash.recovered" class="text-[15px] font-bold text-teal">Owner access to "{{ flash.createdName }}" is restored</p>
+                    <p v-else class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
 
                     <div class="mt-4">
                         <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-danger">

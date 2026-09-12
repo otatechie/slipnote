@@ -19,13 +19,7 @@ class CourseController extends Controller
     {
         $workspace = $this->workspace();
 
-        // Handle ?owner= URL param
-        $given = $request->query('owner');
-        if ($workspace->verifyOwner(is_string($given) ? $given : null)) {
-            session()->regenerate(); // anti-fixation on privilege change
-
-            session([$workspace->ownerSessionKey() => true]);
-
+        if ($this->redeemOwnerQuery($request, $workspace)) {
             return redirect()
                 ->route('course.show', ['workspace' => $workspace->slug, 'slug' => $slug])
                 ->withCookie(RecentWorkspaces::add($request, $workspace));
@@ -78,12 +72,13 @@ class CourseController extends Controller
             'created_at_human' => $m->created_at->diffInSeconds() < 45
                 ? 'just now'
                 : $m->created_at->diffForHumans(short: true),
-            'download_url' => filled($m->manage_token)
-                ? route('material.download', ['token' => $m->manage_token])
-                : null,
+            'download_url' => $m->downloadUrl(),
             'preview_url' => $m->previewUrl(),
+            // Owner delete goes through the session; the literal 'owner' is
+            // never a valid token. The uploader's manage_url is deliberately
+            // NOT here — it is the delete capability, and this array goes to
+            // every visitor.
             'delete_url' => route('material.destroy', ['material' => $m->id, 'token' => 'owner']),
-            'manage_url' => $m->manageUrl(),
             'title' => $m->title,
         ]);
 
@@ -111,10 +106,21 @@ class CourseController extends Controller
      * downloads — anyone with the board link can grab the whole section
      * (the real exam-time need: "all the past papers", not twelve clicks).
      * Built into a temp file then streamed and deleted after send.
+     *
+     * Rate-limited per client and board: each call materialises up to the
+     * whole workspace cap (500 MB) in the temp dir before a byte is sent, and
+     * the free-disk check only guards uploads. Ten a section per ten minutes
+     * is generous for a class and useless for filling the disk.
      */
-    public function downloadSection(string $workspaceSlug, string $slug, string $section)
+    public function downloadSection(Request $request, string $workspaceSlug, string $slug, string $section)
     {
         abort_unless(isset(Material::SECTIONS[$section]), 404);
+
+        $key = 'section_zip:'.$request->ip().':'.$this->workspace()->id;
+        if (RateLimiter::tooManyAttempts($key, 10)) {
+            abort(429, 'Too many section downloads. Try again in a few minutes.');
+        }
+        RateLimiter::hit($key, 600);
 
         $course = Course::where('slug', $slug)->firstOrFail();
 
@@ -352,6 +358,7 @@ class CourseController extends Controller
                 'stored_path' => $file->store('materials', 'local'),
                 'uploader_name' => $uploaderName,
                 'manage_token' => Str::random(40),
+                'download_token' => Str::random(40),
                 'file_size' => $size,
                 'content_hash' => $hash,
             ]);

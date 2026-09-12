@@ -28,10 +28,12 @@ Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::view('/terms', 'legal.terms')->name('terms');
 
 // Material download. Anonymous by design — but addressed by the file's
-// random manage_token, not a sequential id, so files can't be enumerated
-// across workspaces by guessing /download/1, /download/2, …
+// random download_token, not a sequential id, so files can't be enumerated
+// across workspaces by guessing /download/1, /download/2, … This is the
+// ADDRESS token only: it must never be accepted by the delete route below,
+// which takes the separate, uploader-private manage_token.
 Route::get('/download/{token}', function (Request $request, string $token) {
-    $material = Material::where('manage_token', $token)->firstOrFail();
+    $material = Material::where('download_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
 
@@ -109,4 +111,11 @@ Route::middleware('workspace')->group(function () {
 
     Route::get('/{workspace}/recover', [WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
     Route::post('/{workspace}/recover', [WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');
+    // The link that was mailed. Signed (tamper-proof, 1h expiry) and backed by
+    // a single-use nonce; rotating the owner secret happens HERE, not when the
+    // request is made, so a stranger who knows the recovery address can't
+    // revoke the owner's link by asking.
+    Route::get('/{workspace}/recover/{nonce}', [WorkspaceRecoveryController::class, 'redeem'])
+        ->middleware('signed')
+        ->name('workspace.recover.redeem');
 });

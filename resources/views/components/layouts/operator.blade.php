@@ -7,7 +7,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
     <meta name="robots" content="noindex,nofollow">
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
         (() => {
             const key = 'slipnote-theme'
             const options = new Set(['system', 'light', 'dark'])

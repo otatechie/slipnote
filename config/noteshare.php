@@ -52,6 +52,21 @@ return [
     'min_free_disk_bytes' => (int) env('MIN_FREE_DISK_BYTES', 1024 * 1024 * 1024),
     'workspace_max_files' => (int) env('WORKSPACE_MAX_FILES', 2000),
 
+    /*
+    | Proxies whose X-Forwarded-* headers are believed. Comma-separated IPs
+    | or CIDRs. Empty = trust nobody, so $request->ip() is the socket peer.
+    |
+    | Behind Cloudflare, list its published ranges (cloudflare.com/ips).
+    | Behind a single reverse proxy on the same host, its address (127.0.0.1).
+    | Never '*': with every hop trusted, the client's OWN X-Forwarded-For is
+    | taken as its IP, and every per-IP throttle (uploads, board creation,
+    | reports, operator login) becomes a header away from bypass.
+    */
+    'trusted_proxies' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('TRUSTED_PROXIES', ''))
+    ))),
+
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.
     'legal_updated' => '2026-07-02',

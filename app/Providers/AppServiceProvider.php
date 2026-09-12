@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Tenancy\Tenancy;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -29,6 +30,14 @@ class AppServiceProvider extends ServiceProvider
         // mixed-content blocks in the browser.
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
+        }
+
+        // Which proxies may speak for the client (see config/noteshare.php).
+        // Set here rather than in bootstrap/app.php because config is not
+        // loaded yet when that closure runs.
+        $proxies = config('noteshare.trusted_proxies', []);
+        if ($proxies !== []) {
+            TrustProxies::at($proxies);
         }
     }
 }

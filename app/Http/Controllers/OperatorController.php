@@ -171,7 +171,11 @@ class OperatorController extends Controller
         // Logging out commits whatever was waiting on Undo — the file stays
         // gone, the trash copy is dropped, the session no longer holds it.
         $this->commitUndo();
-        $request->session()->forget('operator_fp');
+        // Drop the whole session, not just the flag: a logout should leave
+        // nothing for a later visitor on the same browser to inherit, and a
+        // fresh id + CSRF token mirrors the regenerate() done at login.
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('operator.dashboard');
     }

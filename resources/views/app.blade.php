@@ -28,7 +28,7 @@
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <script>
+    <script nonce="{{ Vite::cspNonce() }}">
         (() => {
             const key = 'slipnote-theme'
             const options = new Set(['system', 'light', 'dark'])

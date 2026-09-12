@@ -108,7 +108,7 @@ class OwnerRecoveryTest extends TestCase
 
     // --- Recovery request flow ---
 
-    public function test_correct_email_rotates_the_secret_and_mails_the_new_link_to_the_stored_address(): void
+    public function test_correct_email_mails_a_restore_link_without_touching_the_current_owner_link(): void
     {
         $this->workspace->setRecoveryEmail('owner@example.com');
         $oldSecret = $this->ownerSecret;
@@ -117,13 +117,73 @@ class OwnerRecoveryTest extends TestCase
             'email' => 'owner@example.com',
         ])->assertRedirect();
 
-        // Old link is dead (rotated).
-        $this->assertFalse($this->workspace->fresh()->verifyOwner($oldSecret));
+        // Asking changes nothing: anyone who knows the recovery address could
+        // ask, and that must not revoke the owner's saved link.
+        $this->assertTrue($this->workspace->fresh()->verifyOwner($oldSecret));
 
         // Mailed to the STORED address.
         Mail::assertSent(OwnerLinkRecovery::class, function ($mail) {
             return $mail->hasTo('owner@example.com');
         });
+    }
+
+    private function requestRestoreLink(string $email = 'owner@example.com'): string
+    {
+        $this->workspace->setRecoveryEmail($email);
+        $this->post(route('workspace.recover.store', $this->wsParams()), ['email' => $email]);
+
+        $url = null;
+        Mail::assertSent(OwnerLinkRecovery::class, function ($mail) use (&$url) {
+            $url = $mail->restoreUrl;
+
+            return true;
+        });
+
+        return $url;
+    }
+
+    public function test_redeeming_the_mailed_link_rotates_the_secret_and_unlocks_this_browser(): void
+    {
+        $oldSecret = $this->ownerSecret;
+        $url = $this->requestRestoreLink();
+
+        $this->get($url)->assertRedirect(route('start'));
+
+        $fresh = $this->workspace->fresh();
+        $this->assertFalse($fresh->verifyOwner($oldSecret), 'old link retired on redeem');
+        $this->assertSame(true, session($this->workspace->ownerSessionKey()));
+
+        // The new owner link is shown once, on the same screen a new board gets.
+        parse_str((string) parse_url(session('ownerUrl'), PHP_URL_QUERY), $q);
+        $this->assertTrue($fresh->verifyOwner($q['owner']));
+        $this->assertTrue(session('recovered'));
+    }
+
+    public function test_the_restore_link_works_exactly_once(): void
+    {
+        $url = $this->requestRestoreLink();
+
+        $this->get($url)->assertRedirect(route('start'));
+        $this->get($url)
+            ->assertRedirect(route('workspace.recover', $this->wsParams()))
+            ->assertSessionHasErrors('email');
+    }
+
+    public function test_a_tampered_restore_link_is_rejected(): void
+    {
+        $url = $this->requestRestoreLink();
+
+        $this->get(str_replace('signature=', 'signature=0', $url))->assertForbidden();
+    }
+
+    public function test_a_restore_link_for_one_board_cannot_redeem_another(): void
+    {
+        $url = $this->requestRestoreLink();
+        [$beta] = Workspace::provision('Beta Board');
+
+        // Same nonce, different board in the path: the signature no longer matches.
+        $this->get(str_replace('/'.$this->workspace->slug.'/', '/'.$beta->slug.'/', $url))->assertForbidden();
+        $this->assertTrue($this->workspace->fresh()->verifyOwner($this->ownerSecret));
     }
 
     public function test_wrong_or_absent_email_sends_nothing_and_gives_identical_response(): void

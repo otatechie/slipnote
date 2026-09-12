@@ -15,13 +15,7 @@ class CoursesController extends Controller
     {
         $workspace = $this->workspace();
 
-        // Handle ?owner= URL param
-        $given = $request->query('owner');
-        if ($workspace->verifyOwner(is_string($given) ? $given : null)) {
-            session()->regenerate(); // anti-fixation on privilege change
-
-            session([$workspace->ownerSessionKey() => true]);
-
+        if ($this->redeemOwnerQuery($request, $workspace)) {
             return redirect()
                 ->route('courses.index', ['workspace' => $workspace->slug])
                 ->withCookie(RecentWorkspaces::add($request, $workspace));
@@ -75,7 +69,7 @@ class CoursesController extends Controller
     public function unlock(Request $request)
     {
         $workspace = $this->workspace();
-        $key = 'unlock_owner:'.$workspace->id;
+        $key = $this->ownerUnlockKey($workspace);
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors(['ownerInput' => 'Too many attempts. Try again in a few minutes.']);

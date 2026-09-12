@@ -103,7 +103,7 @@ class SearchIndexingTest extends TestCase
 
         $material = Material::firstOrFail();
 
-        $this->get(route('material.download', ['token' => $material->manage_token]))
+        $this->get(route('material.download', ['token' => $material->download_token]))
             ->assertOk()
             ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
     }

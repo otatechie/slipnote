@@ -99,10 +99,10 @@ class UploadTest extends TestCase
             'section' => 'notes',
             'original_filename' => 'lecture.pdf',
             'stored_path' => UploadedFile::fake()->create('lecture.pdf', 10)->store('materials', 'local'),
-            'manage_token' => 'tok-'.str_repeat('a', 36),
+            'download_token' => 'dl-'.str_repeat('a', 37),
         ]);
 
-        $this->get(route('material.download', ['token' => $material->manage_token]))
+        $this->get(route('material.download', ['token' => $material->download_token]))
             ->assertOk()
             ->assertDownload('lecture.pdf');
     }
@@ -633,15 +633,15 @@ class UploadTest extends TestCase
             'section' => 'notes',
             'original_filename' => 'lecture.pdf',
             'stored_path' => UploadedFile::fake()->create('lecture.pdf', 10)->store('materials', 'local'),
-            'manage_token' => 'tok-'.str_repeat('p', 37),
+            'download_token' => 'dl-'.str_repeat('p', 37),
         ]);
 
-        $inline = $this->get(route('material.download', ['token' => $material->manage_token, 'view' => 1]));
+        $inline = $this->get(route('material.download', ['token' => $material->download_token, 'view' => 1]));
         $inline->assertOk();
         $this->assertStringContainsString('inline', $inline->headers->get('content-disposition'));
 
         // Without ?view it still downloads as an attachment.
-        $attachment = $this->get(route('material.download', ['token' => $material->manage_token]));
+        $attachment = $this->get(route('material.download', ['token' => $material->download_token]));
         $this->assertStringContainsString('attachment', $attachment->headers->get('content-disposition'));
     }
 
@@ -652,10 +652,10 @@ class UploadTest extends TestCase
             'section' => 'notes',
             'original_filename' => 'essay.docx',
             'stored_path' => UploadedFile::fake()->create('essay.docx', 10)->store('materials', 'local'),
-            'manage_token' => 'tok-'.str_repeat('d', 37),
+            'download_token' => 'dl-'.str_repeat('d', 37),
         ]);
 
-        $res = $this->get(route('material.download', ['token' => $material->manage_token, 'view' => 1]));
+        $res = $this->get(route('material.download', ['token' => $material->download_token, 'view' => 1]));
         $this->assertStringContainsString('attachment', $res->headers->get('content-disposition'));
     }
 

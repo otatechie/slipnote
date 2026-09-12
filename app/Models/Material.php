@@ -25,6 +25,7 @@ class Material extends Model
         'stored_path',
         'uploader_name',
         'manage_token',
+        'download_token',
         'file_size',
         'content_hash',
     ];
@@ -32,6 +33,22 @@ class Material extends Model
     protected $casts = [
         'file_size' => 'integer',
     ];
+
+    /**
+     * Two tokens, two jobs. download_token is the file's public address —
+     * it goes to every visitor in the page props. manage_token is the
+     * uploader's private delete capability and must never appear in props
+     * or in any URL a visitor can see; the only place it is ever shown is
+     * the uploader's own post-upload receipt (flash.manageUrl).
+     */
+    public function downloadUrl(): ?string
+    {
+        if (! filled($this->download_token)) {
+            return null;
+        }
+
+        return route('material.download', ['token' => $this->download_token]);
+    }
 
     /**
      * The uploader-only URL that can delete this file. Null when the row
@@ -66,11 +83,11 @@ class Material extends Model
 
     public function previewUrl(): ?string
     {
-        if (! filled($this->manage_token) || ! $this->isPreviewable()) {
+        if (! filled($this->download_token) || ! $this->isPreviewable()) {
             return null;
         }
 
-        return route('material.download', ['token' => $this->manage_token, 'view' => 1]);
+        return route('material.download', ['token' => $this->download_token, 'view' => 1]);
     }
 
     public function course(): BelongsTo

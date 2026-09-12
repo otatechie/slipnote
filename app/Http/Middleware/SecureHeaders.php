@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 class SecureHeaders
@@ -17,6 +18,14 @@ class SecureHeaders
 
     public function handle(Request $request, Closure $next): Response
     {
+        // One CSP nonce per request, minted BEFORE the view renders so the
+        // @vite tags and the layouts' inline theme script carry the same
+        // value the header below declares. Done here rather than in a
+        // provider's boot(): anything that replaces the Vite instance after
+        // boot (the test harness's withoutVite() does) would drop a nonce
+        // minted there, and an empty 'nonce-' blocks every script.
+        Vite::useCspNonce();
+
         $response = $next($request);
 
         // Everything except the public pages is noindex. The Blade/Inertia
@@ -42,12 +51,18 @@ class SecureHeaders
 
         // CSP in production only — Vite dev server runs off a separate
         // origin we don't want polluting the prod policy.
+        // Scripts: self plus this request's nonce (AppServiceProvider calls
+        // Vite::useCspNonce(); @vite tags and the layouts' inline theme
+        // script carry it). Never 'unsafe-inline' here.
+        // Fonts are self-hosted (see @font-face in app.css), so no font CDN
+        // is allowed; 'unsafe-inline' for styles is needed by the inline
+        // style="" attributes Vue and the landing page use.
         if (app()->environment('production')) {
             $response->headers->set('Content-Security-Policy', implode('; ', [
                 "default-src 'self'",
-                "script-src 'self'",
-                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
-                "font-src 'self' https://fonts.bunny.net",
+                "script-src 'self' 'nonce-".Vite::cspNonce()."'",
+                "style-src 'self' 'unsafe-inline'",
+                "font-src 'self'",
                 "img-src 'self' data:",
                 "connect-src 'self'",
                 "frame-ancestors 'self'",
