@@ -173,6 +173,21 @@ class AmbassadorProgramTest extends TestCase
         $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="2" data-active="1"', $html);
     }
 
+    public function test_the_reward_currency_is_configurable(): void
+    {
+        config(['noteshare.ambassador_reward' => 500, 'noteshare.ambassador_currency' => 'NGN']);
+        Ambassador::create(['name' => 'Chidi', 'slug' => 'unilag-chidi']);
+        [$ws] = Workspace::provision('Live Board');
+        $ws->forceFill(['referrer' => 'unilag-chidi', 'last_accessed_at' => now()])->save();
+        $this->seedBoard($ws, 'CSC 101');
+
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
+
+        $this->assertStringContainsString('NGN 500 due', $html);
+        $this->assertStringContainsString('Due this month: NGN 500.', $html);
+        $this->assertStringNotContainsString('GHS', $html);
+    }
+
     public function test_an_empty_board_is_never_counted_as_used_however_often_it_is_opened(): void
     {
         Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
@@ -203,7 +218,7 @@ class AmbassadorProgramTest extends TestCase
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
 
-        config(['noteshare.ambassador_reward_ghs' => 12]);
+        config(['noteshare.ambassador_reward' => 12, 'noteshare.ambassador_currency' => 'GHS']);
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
 
         $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="1" data-active="1" data-due="12"', $html);

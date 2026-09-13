@@ -137,6 +137,7 @@
         </div>
         @php
             $group = null;
+            $currency = config('noteshare.ambassador_currency');
         @endphp
         @foreach ($ambassadorRows as $row)
             @php
@@ -181,7 +182,7 @@
                         <span class="whitespace-nowrap">{{ $row['seeded'] }} with files</span>
                     </p>
                     <p class="mt-0.5 text-[12px] tabular-nums sm:hidden">
-                        <span class="whitespace-nowrap font-semibold text-ink">{{ $row['active'] }} used this month</span>@if ($amb && $row['due'] > 0)<span class="text-muted"> · </span><span class="whitespace-nowrap font-semibold text-ink">GHS {{ $row['due'] }} due</span>@endif
+                        <span class="whitespace-nowrap font-semibold text-ink">{{ $row['active'] }} used this month</span>@if ($amb && $row['due'] > 0)<span class="text-muted"> · </span><span class="whitespace-nowrap font-semibold text-ink">{{ $currency }} {{ $row['due'] }} due</span>@endif
                     </p>
                 </div>
                 <p class="hidden text-right tabular-nums text-muted sm:block">{{ $row['boards'] }}</p>
@@ -191,7 +192,7 @@
                 <div class="hidden text-right tabular-nums sm:block">
                     <p class="font-semibold text-ink">{{ $row['active'] }}</p>
                     @if ($amb && $row['due'] > 0)
-                        <p class="text-[11px] text-muted">GHS {{ $row['due'] }} due</p>
+                        <p class="text-[11px] text-muted">{{ $currency }} {{ $row['due'] }} due</p>
                     @endif
                 </div>
                 @if ($amb && ! $amb->isRetired())
@@ -245,14 +246,15 @@
         @endforeach
     </div>
     @php
-        $rate = (int) config('noteshare.ambassador_reward_ghs');
+        $rate = (int) config('noteshare.ambassador_reward');
+        $currency = config('noteshare.ambassador_currency');
         $dueTotal = $ambassadorRows->filter(fn ($r) => $r['ambassador'] !== null)->sum('due');
     @endphp
     <p class="mt-3 text-[13px] text-muted">
         Created = a board made through their link. With files = it has at least one file. Used this month = someone opened it or downloaded from it in the last 30 days.
-        Due = used boards × GHS {{ $rate }} (<span class="font-mono">AMBASSADOR_REWARD_GHS</span>), paid by hand once a month.
+        Due = used boards × {{ $currency }} {{ $rate }} (<span class="font-mono">AMBASSADOR_REWARD</span>), paid by hand once a month.
         @if ($dueTotal > 0)
-            <span class="font-semibold text-ink">Due this month: GHS {{ $dueTotal }}.</span>
+            <span class="font-semibold text-ink">Due this month: {{ $currency }} {{ $dueTotal }}.</span>
         @endif
     </p>
     @endif

@@ -164,7 +164,7 @@ class OperatorController extends Controller
 
         // Due = used boards x the configured rate. Computed, never stored:
         // the payment record is the operator's own MoMo history.
-        $rate = (int) config('noteshare.ambassador_reward_ghs');
+        $rate = (int) config('noteshare.ambassador_reward');
         $withDue = fn (array $row) => $row + ['due' => $row['active'] * $rate];
 
         $rows = $ambassadors->map(fn (Ambassador $a) => $withDue(['ambassador' => $a, 'slug' => $a->slug]
