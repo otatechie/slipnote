@@ -315,7 +315,7 @@ textarea:focus-visible {
     background: color-mix(in srgb, var(--color-base) 72%, transparent);
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid color-mix(in srgb, white 18%, var(--color-sky));
+    border-bottom: 1px solid var(--color-sky);
 }
 
 .op-kicker {

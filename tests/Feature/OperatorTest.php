@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -81,6 +82,20 @@ class OperatorTest extends TestCase
             ->assertSee(route('operator.dashboard', ['tab' => 'boards']), false)
             ->assertSee(route('courses.index', ['workspace' => $this->workspace->slug]), false)
             ->assertDontSee('Review file', false);
+    }
+
+    public function test_at_a_glance_shows_the_activation_rate_and_empty_boards_say_so(): void
+    {
+        // setUp's workspace holds one file; this one holds nothing at all.
+        Workspace::provision('Made And Left');
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'boards']))
+            ->assertOk()
+            ->assertSee('With files', false)
+            ->assertSee('of 2 boards', false)
+            ->assertSee('Nothing added yet', false)
+            ->assertDontSee('0 courses', false);
     }
 
     public function test_rotating_the_operator_secret_invalidates_existing_sessions(): void

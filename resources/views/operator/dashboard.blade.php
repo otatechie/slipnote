@@ -11,12 +11,6 @@
         </form>
     </header>
 
-    {{-- States the job outright: this is a moderation console, and the numbers
-         are only a health check — not the main task. Scrolls away with the page
-         rather than riding the sticky bar: it orients you once, and pinning it
-         above a 50-row queue costs the same space on every screen after that. --}}
-    <p class="mb-7 text-[13px] text-muted">Clear reported files first. The usage numbers are just a health check.</p>
-
     @if (session('done') || $undo)
         <div class="op-toast mb-5 text-sm font-medium text-ink">
             <p>{{ session('done') ?? 'You can still undo the last action.' }}</p>
@@ -279,8 +273,16 @@
                         <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $ws->name }}</a>
                     </p>
                     <p class="mt-0.5 text-[12px] text-muted">
-                        {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} ·
-                        {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
+                        {{-- "0 courses · 0 files" on eight of ten rows is the same
+                             noise the right column already drops; one phrase says
+                             it. A board with a course but no file keeps its counts:
+                             getting partway is worth seeing. --}}
+                        @if ($ws->courses_count === 0 && $ws->materials_count === 0)
+                            Nothing added yet
+                        @else
+                            {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} ·
+                            {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
+                        @endif
                         {{-- Spelled out rather than a bare badge: on a list of
                              boards a lone red number could be any of these counts. --}}
                         @if ($ws->reported_count > 0)
@@ -472,6 +474,14 @@
                 <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
             @endif
         </div>
+        {{-- The activation rate, in place of a course count that decides nothing.
+             Boards -> With files -> Opened reads as the funnel: made, filled,
+             used. This is the number the empty-board work has to move. --}}
+        <div class="op-metric">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">With files</p>
+            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['workspaces'] - $stats['empty_boards']) }}</p>
+            <p class="mt-0.5 text-[12px] text-muted">of {{ number_format($stats['workspaces']) }} boards</p>
+        </div>
         {{-- Opened or downloaded from, not uploaded to: an archive nobody adds
              to but everyone reads is still doing its job. Says so on the tile,
              because a bare count could mean either and the difference is the point.
@@ -481,15 +491,8 @@
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Opened</p>
             <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
             <p class="mt-0.5 text-[12px] text-muted">
-                {{ $stats['tracking_started'] ? 'or downloaded, last 7d' : 'no visits recorded yet' }}
+                {{ $stats['tracking_started'] ? 'or downloaded from · last 7 days' : 'no visits recorded yet' }}
             </p>
-        </div>
-        <div class="op-metric">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Courses</p>
-            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['courses']) }}</p>
-            @if ($stats['courses_week'] > 0)
-                <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['courses_week'] }} this week</p>
-            @endif
         </div>
         <div class="op-metric">
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Files</p>
