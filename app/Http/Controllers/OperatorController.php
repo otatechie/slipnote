@@ -203,7 +203,14 @@ class OperatorController extends Controller
                 'slug' => $slug,
                 'boards' => $boards->count(),
                 'seeded' => $boards->where('materials_count', '>', 0)->count(),
-                'active' => $boards->filter(fn ($w) => $w->last_accessed_at?->gte($monthAgo))->count(),
+                // Used means used as a board, so it must HAVE something: opened
+                // recently AND holding at least one file. Without the file test
+                // an empty board someone opens once a month counts and gets
+                // paid, which is the sign-up farming the rule exists to stop.
+                // It also makes the three columns nest: created >= with files
+                // >= used.
+                'active' => $boards->filter(fn ($w) => $w->materials_count > 0
+                    && $w->last_accessed_at?->gte($monthAgo))->count(),
             ])
             ->sortByDesc('active')
             ->values();

@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -149,6 +150,13 @@ class AmbassadorProgramTest extends TestCase
             ->assertSessionHasErrors('slug');
     }
 
+    private function seedBoard(Workspace $ws, string $code): void
+    {
+        $course = $ws->courses()->create(['code' => $code, 'title' => 'T', 'slug' => Str::slug($code), 'workspace_id' => $ws->id]);
+        $course->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf',
+            'stored_path' => 'x/'.Str::slug($code).'.pdf', 'download_token' => 'dl-'.Str::slug($code), 'file_size' => 1]);
+    }
+
     public function test_used_this_month_is_a_thirty_day_window(): void
     {
         Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
@@ -156,11 +164,27 @@ class AmbassadorProgramTest extends TestCase
         [$stale] = Workspace::provision('Stale');
         $recent->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()->subDays(20)])->save();
         $stale->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()->subDays(40)])->save();
+        $this->seedBoard($recent, 'AAA 101');
+        $this->seedBoard($stale, 'BBB 101');
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
 
         // Opened 20 days ago counts for this month's payout; 40 days ago does not.
-        $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="0" data-active="1"', $html);
+        $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="2" data-active="1"', $html);
+    }
+
+    public function test_an_empty_board_is_never_counted_as_used_however_often_it_is_opened(): void
+    {
+        Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+        [$empty] = Workspace::provision('Opened But Empty');
+        $empty->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()])->save();
+
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
+
+        // Otherwise an ambassador could make boards and open them for the reward.
+        $this->assertStringContainsString('data-ref="kwame" data-boards="1" data-seeded="0" data-active="0" data-due="0"', $html);
+        // No amount shown either -- data-due="0" is the only "due" on the row.
+        $this->assertStringNotContainsString('GHS', substr($html, strpos($html, 'data-ref="kwame"'), 800));
     }
 
     public function test_the_referrals_table_counts_boards_seeded_and_active_and_flags_unknown_refs(): void

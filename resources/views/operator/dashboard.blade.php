@@ -173,9 +173,15 @@
                             <span class="ml-1 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger" title="No ambassador has this slug — a typo, or someone guessing">unknown ref</span>
                         </p>
                     @endif
-                    {{-- Phones: the three numbers as one line, in reward order. --}}
+                    {{-- Phones: two deliberate lines rather than one run that wraps
+                         wherever it lands -- context above, the pay line below,
+                         each part kept whole so no word is orphaned. --}}
                     <p class="mt-1 text-[12px] tabular-nums text-muted sm:hidden">
-                        {{ $row['boards'] }} created · {{ $row['seeded'] }} with files · <span class="font-semibold text-ink">{{ $row['active'] }} used this month</span>@if ($amb && $row['due'] > 0) · GHS {{ $row['due'] }} due @endif
+                        <span class="whitespace-nowrap">{{ $row['boards'] }} created</span> ·
+                        <span class="whitespace-nowrap">{{ $row['seeded'] }} with files</span>
+                    </p>
+                    <p class="mt-0.5 text-[12px] tabular-nums sm:hidden">
+                        <span class="whitespace-nowrap font-semibold text-ink">{{ $row['active'] }} used this month</span>@if ($amb && $row['due'] > 0)<span class="text-muted"> · </span><span class="whitespace-nowrap font-semibold text-ink">GHS {{ $row['due'] }} due</span>@endif
                     </p>
                 </div>
                 <p class="hidden text-right tabular-nums text-muted sm:block">{{ $row['boards'] }}</p>
