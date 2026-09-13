@@ -68,10 +68,18 @@
     {{-- Attribution only. A ref link is the normal URL with ?ref=slug; nothing
          is "created" — this form just puts a name to the slug, so the table
          below shows people, and records where the reward goes. --}}
-    <form method="POST" action="{{ route('operator.ambassadors.store') }}" class="op-card mb-5 p-5">
+    {{-- Adding happens a few times a semester; reading the list and the
+         numbers happens weekly. So the form leads only while there is no
+         list, then folds behind a summary. Open state survives a validation
+         error, which is the one time you need it back. --}}
+    <details class="op-card group mb-5" @if ($ambassadors->isEmpty() || $errors->any()) open @endif>
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:hidden">
+            <span class="text-[15px] font-bold tracking-tight text-ink">Add an ambassador</span>
+            <svg aria-hidden="true" class="size-4 shrink-0 text-muted transition-transform duration-150 group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+    <form method="POST" action="{{ route('operator.ambassadors.store') }}" class="border-t border-sky/60 px-5 pb-5 pt-4">
         @csrf
-        <h3 class="text-[15px] font-bold tracking-tight text-ink">Add an ambassador</h3>
-        <p class="mt-1 text-[13px] text-muted">Their link becomes <span class="font-mono">{{ url('/') }}/?ref=<em>slug</em></span>. Pick a slug you'll never reuse.</p>
+        <p class="text-[13px] text-muted">Their link becomes <span class="font-mono">{{ url('/') }}/?ref=<em>slug</em></span>. Pick a slug you'll never reuse.</p>
         <div class="mt-4 grid gap-3 sm:grid-cols-2">
             <div>
                 <label for="amb-name" class="mb-1.5 block text-[13px] font-semibold text-ink">Name</label>
@@ -95,7 +103,7 @@
             </div>
             <div class="grid grid-cols-[1fr_auto] gap-2">
                 <div>
-                    <label for="amb-phone" class="mb-1.5 block text-[13px] font-semibold text-ink">Phone <span class="font-normal text-muted">(for the bundle)</span></label>
+                    <label for="amb-phone" class="mb-1.5 block text-[13px] font-semibold text-ink">Phone <span class="font-normal text-muted">(optional — where the bundle goes)</span></label>
                     <input id="amb-phone" name="phone" value="{{ old('phone') }}" maxlength="30" inputmode="tel"
                            class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                 </div>
@@ -103,7 +111,7 @@
                     <label for="amb-network" class="mb-1.5 block text-[13px] font-semibold text-ink">Network</label>
                     <select id="amb-network" name="network"
                             class="h-[46px] rounded-xl border border-sky bg-surface px-3 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                        <option value="">—</option>
+                        <option value="">Not set</option>
                         @foreach (\App\Models\Ambassador::NETWORKS as $key => $label)
                             <option value="{{ $key }}" @selected(old('network') === $key)>{{ $label }}</option>
                         @endforeach
@@ -113,10 +121,14 @@
         </div>
         <button type="submit" class="op-press mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">Add ambassador</button>
     </form>
+    </details>
 
+    @if ($ambassadors->isEmpty())
+        <p class="mb-6 text-[13px] text-muted">No ambassadors yet. Add one above and send them their link.</p>
+    @else
     <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Ambassadors</h3>
     <div class="op-card mb-6 overflow-hidden">
-        @forelse ($ambassadors as $amb)
+        @foreach ($ambassadors as $amb)
             <div class="op-row flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4 {{ $amb->isRetired() ? 'opacity-55' : '' }}">
                 <div class="min-w-0">
                     <p class="text-[14px] font-semibold tracking-tight text-ink">
@@ -142,18 +154,17 @@
                     </div>
                 @endunless
             </div>
-        @empty
-            <p class="px-4 py-8 text-center text-[14px] text-muted">No ambassadors yet. Add one above and send them their link.</p>
-        @endforelse
+        @endforeach
     </div>
+    @endif
 
     {{-- Seeded and active are the reward columns. Boards is there so a row
-         with 30 boards and 0 active reads as what it is. --}}
+         with 30 boards and 0 active reads as what it is. Nothing renders
+         until a board has actually come through a ref: an empty table and
+         a footnote explaining its columns is chrome with no referent. --}}
+    @if ($referrers->isNotEmpty())
     <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Referrals</h3>
     <div class="op-card overflow-hidden">
-        @if ($referrers->isEmpty())
-            <p class="px-4 py-8 text-center text-[14px] text-muted">No boards have come through a ref link yet.</p>
-        @else
             <div class="overflow-x-auto">
                 <table class="w-full text-[13px]">
                     <thead>
@@ -187,9 +198,11 @@
                     </tbody>
                 </table>
             </div>
-        @endif
     </div>
     <p class="mt-3 text-[13px] text-muted">Seeded = has at least one file. Active = opened or downloaded from in the last 7 days. Pay on live boards, never on sign-ups.</p>
+    @elseif ($ambassadors->isNotEmpty())
+    <p class="text-[13px] text-muted">No boards have come through a ref link yet. Boards created via an ambassador's link will be counted here.</p>
+    @endif
     @endif
 
     @if ($tab === 'boards')
