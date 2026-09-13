@@ -827,7 +827,9 @@ html[data-theme='system'][data-system-theme='dark'] .lp {
     border: 1px solid var(--paper-edge);
     border-radius: 10px;
     background: color-mix(in srgb, var(--paper-raised) 72%, transparent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pencil) 9%, transparent);
+    /* A blur, not a 3px ring: the ring read as a second border in dark mode,
+       where --pencil is light and 9% of it on near-black is a visible band. */
+    box-shadow: 0 0 14px color-mix(in srgb, var(--pencil) 9%, transparent);
 }
 
 /* Warm tint, ink glyph. The accent version measured 2.60:1 in dark mode --
