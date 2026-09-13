@@ -12,16 +12,21 @@
          search. --}}
     @if (app(\App\Tenancy\Tenancy::class)->has())
         @php($ogWorkspace = app(\App\Tenancy\Tenancy::class)->current())
+        {{-- A course link pasted into the class group should unfurl as the
+             course ("CS 101 · Computer Science L100"), not just the board:
+             that card is the pitch. Set by CourseController::show. --}}
+        @php($ogTitle = isset($ogCourse) ? $ogCourse->code.' · '.$ogWorkspace->name : $ogWorkspace->name)
+        @php($ogUrl = isset($ogCourse) ? url('/'.$ogWorkspace->slug.'/c/'.$ogCourse->slug) : url('/'.$ogWorkspace->slug))
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="SlipNote">
-        <meta property="og:title" content="{{ $ogWorkspace->name }} · SlipNote">
-        <meta property="og:description" content="A shared board for course notes, slides and past papers. Free, no accounts, no setup.">
-        <meta property="og:url" content="{{ url('/'.$ogWorkspace->slug) }}">
+        <meta property="og:title" content="{{ $ogTitle }} · SlipNote">
+        <meta property="og:description" content="{{ isset($ogCourse) ? $ogCourse->title.' — notes, slides and past papers. Free, no accounts.' : 'A shared board for course notes, slides and past papers. Free, no accounts, no setup.' }}">
+        <meta property="og:url" content="{{ $ogUrl }}">
         <meta property="og:image" content="{{ url('/og.png') }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="{{ $ogWorkspace->name }} · SlipNote">
+        <meta name="twitter:title" content="{{ $ogTitle }} · SlipNote">
         <meta name="twitter:image" content="{{ url('/og.png') }}">
     @endif
     <link rel="icon" href="/favicon.ico" sizes="any">

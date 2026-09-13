@@ -25,6 +25,20 @@ const page = usePage()
 const flash = computed(() => page.props.flash)
 const errors = computed(() => page.props.errors)
 
+// Share, offered at the one moment it is earned: a file just landed. The
+// board link (never a course link, never the owner one) goes to the group.
+const boardUrl = computed(() => window.location.origin + '/' + props.workspace.slug)
+const shareCopied = ref(false)
+function shareBoard() {
+    window.copyText(boardUrl.value).then(() => {
+        shareCopied.value = true
+        setTimeout(() => { shareCopied.value = false }, 2000)
+    }).catch(() => { })
+}
+const whatsAppUrl = computed(() => 'https://wa.me/?text=' + encodeURIComponent(
+    `${props.course.code} files are on the class board — no account needed: ${boardUrl.value}`
+))
+
 // Search / sort / section filter — server-side via router
 const localSearch = ref(props.search)
 const localSort = ref(props.sort)
@@ -406,6 +420,22 @@ watch(() => props.materials, () => { selected.value = [] })
                     </form>
                     <span class="mt-1 block text-xs font-semibold text-danger">Only works right now — refresh or leave, and it's gone.</span>
                 </template>
+                <!-- The share moment. This is the first time the board is worth
+                     opening, so this is where the link gets pasted into the
+                     class group — pre-written, no composing. -->
+                <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-sky/60 pt-3">
+                    <span class="text-[13px] font-semibold text-ink">Tell the class it's here:</span>
+                    <button type="button" @click="shareBoard"
+                        class="op-press inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-muted/50 bg-surface px-3.5 text-[13px] font-semibold text-muted">
+                        <span v-if="!shareCopied">Copy board link</span>
+                        <span v-else>Copied ✓</span>
+                    </button>
+                    <a :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
+                        class="op-press inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-muted/50 bg-surface px-3.5 text-[13px] font-semibold text-muted">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Zm37.6-49.3-14.3-8.2a8,8,0,0,0-8.7.5l-8,6a2,2,0,0,1-2.2.2,52.3,52.3,0,0,1-21.6-21.6,2,2,0,0,1,.2-2.2l6-8a8,8,0,0,0,.5-8.7L109.3,90.4A8,8,0,0,0,102.4,86a26.2,26.2,0,0,0-24.7,20.2,60.1,60.1,0,0,0,72.1,72.1A26.2,26.2,0,0,0,170,153.6,8,8,0,0,0,165.6,146.7Z"/></svg>
+                        <span>WhatsApp</span>
+                    </a>
+                </div>
             </div>
 
             <!-- Report receipt -->
@@ -596,7 +626,9 @@ watch(() => props.materials, () => { selected.value = [] })
                                         {{ material.displayName }}
                                     </span>
                                     <div class="mt-0.5 truncate text-[12px] text-muted">
-                                        {{ material.uploader_name || 'Anonymous' }} · {{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template>
+                                        <!-- Since this browser last opened the course — the reason to
+                                             check weekly instead of once a semester. -->
+                                        <span v-if="material.is_new" class="mr-1 rounded-full bg-neon/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.06em] text-neon">New</span>{{ material.uploader_name || 'Anonymous' }} · {{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template>
                                     </div>
                                 </div>
                             </div>

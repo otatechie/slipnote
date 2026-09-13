@@ -7,6 +7,7 @@ const props = defineProps({
     workspace: Object,
     courses: Array,
     totalCourses: Number,
+    totalFiles: Number,
     isOwner: Boolean,
     recoveryAvailable: Boolean,
     needsRecoveryEmail: Boolean,
@@ -48,6 +49,12 @@ watch(localSort, (val) => {
 // Workspace share URL (never the ?owner= one)
 const workspaceUrl = computed(() => window.location.origin + '/' + props.workspace.slug)
 const shareCopied = ref(false)
+// The link goes into the class WhatsApp group. Pre-written so the rep does
+// not have to compose the pitch; the "no account" line is what gets a
+// classmate to tap.
+const whatsAppUrl = computed(() => 'https://wa.me/?text=' + encodeURIComponent(
+    `${props.workspace.name} — notes, slides and past papers for the class. No account needed: ${workspaceUrl.value}`
+))
 function share() {
     window.copyText(workspaceUrl.value).then(() => {
         shareCopied.value = true
@@ -328,7 +335,7 @@ function persistOrder() {
 
             <!-- Share and QR are occasional; owner mode is a state, not an action.
                  None of them earn a place in the pinned bar. -->
-            <div v-if="totalCourses > 0 || isOwner" class="mb-7 flex flex-wrap items-center gap-2">
+            <div v-if="totalCourses > 0 || isOwner" class="flex flex-wrap items-center gap-2" :class="isOwner && totalCourses > 0 && totalFiles === 0 ? 'mb-2' : 'mb-7'">
                 <!-- Share leads nowhere on an empty board, so it appears once there's a course to find. -->
                 <button v-if="totalCourses > 0" type="button" @click="share"
                     class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
@@ -340,6 +347,11 @@ function persistOrder() {
                     <span v-if="!shareCopied">Share board</span>
                     <span v-else>Link copied ✓</span>
                 </button>
+                <a v-if="totalCourses > 0" :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
+                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Zm37.6-49.3-14.3-8.2a8,8,0,0,0-8.7.5l-8,6a2,2,0,0,1-2.2.2,52.3,52.3,0,0,1-21.6-21.6,2,2,0,0,1,.2-2.2l6-8a8,8,0,0,0,.5-8.7L109.3,90.4A8,8,0,0,0,102.4,86a26.2,26.2,0,0,0-24.7,20.2,60.1,60.1,0,0,0,72.1,72.1A26.2,26.2,0,0,0,170,153.6,8,8,0,0,0,165.6,146.7Z"/></svg>
+                    <span>WhatsApp</span>
+                </a>
                 <!-- QR for the "get the notes here" moment in a lecture hall. -->
                 <button v-if="totalCourses > 0" type="button" @click="toggleQr"
                     :aria-expanded="qrOpen" aria-label="Show QR code for this board"
@@ -386,6 +398,13 @@ function persistOrder() {
             </div>
 
             <!-- Empty state -->
+            <!-- Activation, not decoration: a board shared before it has a file is
+                 a board a classmate opens once. Owners only, and only in the
+                 gap between "has a course" and "has a file". -->
+            <p v-if="isOwner && totalCourses > 0 && totalFiles === 0" class="mb-7 text-[13px] text-muted">
+                Add a file before you share — a board that opens empty rarely gets opened twice.
+            </p>
+
             <template v-if="totalCourses === 0">
                 <div class="op-card mt-8 px-6 py-16 text-center sm:mt-12">
                     <p class="text-[16px] font-semibold tracking-tight text-ink">No courses yet</p>
@@ -496,6 +515,11 @@ function persistOrder() {
                                      matches the operator's count badge; the hue does
                                      not — red there means "needs attention", and a
                                      file count is neutral news. -->
+                                <span v-if="course.new_count > 0"
+                                    class="shrink-0 rounded-full bg-neon/10 px-2 py-0.5 text-[11px] font-semibold text-neon"
+                                    :title="`${course.new_count} added since you last opened this course`">
+                                    {{ course.new_count }} new
+                                </span>
                                 <span v-if="course.materials_count > 0"
                                     class="file-count-chip shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-teal">
                                     {{ plural(course.materials_count, 'file') }}

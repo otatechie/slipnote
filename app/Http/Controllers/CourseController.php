@@ -6,8 +6,10 @@ use App\Models\BlockedUpload;
 use App\Models\Course;
 use App\Models\Material;
 use App\Services\TelegramNotifier;
+use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -26,6 +28,16 @@ class CourseController extends Controller
         }
 
         $course = Course::where('slug', $slug)->firstOrFail();
+
+        // Link previews for a course link name the course, not just the board
+        // (see app.blade.php). Still no counts or filenames.
+        view()->share('ogCourse', $course);
+
+        // What landed since this browser last opened this course. Read before
+        // the cookie is bumped below, so today's visit is measured against the
+        // previous one.
+        $seenAt = LastSeen::for($request, $course->id);
+        Cookie::queue(LastSeen::mark($request, $course->id));
 
         $search = trim($request->input('search', ''));
         $sort = $request->input('sort', 'newest');
@@ -72,6 +84,7 @@ class CourseController extends Controller
             'created_at_human' => $m->created_at->diffInSeconds() < 45
                 ? 'just now'
                 : $m->created_at->diffForHumans(short: true),
+            'is_new' => $seenAt !== null && $m->created_at->getTimestamp() > $seenAt,
             'download_url' => $m->downloadUrl(),
             'preview_url' => $m->previewUrl(),
             // Owner delete goes through the session; the literal 'owner' is

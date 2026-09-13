@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -24,7 +25,22 @@ class CoursesController extends Controller
         $search = trim($request->input('search', ''));
         $sort = $request->input('sort', 'manual');
 
-        $query = Course::withCount('materials')->withMax('materials', 'created_at');
+        // Files newer than this browser's last visit to each course. One query:
+        // an OR group per course that has a baseline; courses without one
+        // count zero, so a first visit never says everything is new.
+        $seen = LastSeen::read($request);
+        $query = Course::withCount([
+            'materials',
+            'materials as new_count' => function ($q) use ($seen) {
+                $q->where(function ($q) use ($seen) {
+                    $q->whereRaw('1 = 0');
+                    foreach ($seen as $courseId => $ts) {
+                        $q->orWhere(fn ($q) => $q->where('course_id', $courseId)
+                            ->where('created_at', '>', date('Y-m-d H:i:s', $ts)));
+                    }
+                });
+            },
+        ])->withMax('materials', 'created_at');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -51,9 +67,13 @@ class CoursesController extends Controller
                 'slug' => $c->slug,
                 'position' => $c->position,
                 'materials_count' => $c->materials_count,
+                'new_count' => $c->new_count,
                 'materials_max_created_at' => $c->materials_max_created_at,
             ]),
             'totalCourses' => Course::count(),
+            // A board with courses but no files is still empty to a visitor;
+            // the share nudge keys off this, not the course count.
+            'totalFiles' => $workspace->materials()->count(),
             'isOwner' => $isOwner,
             'recoveryAvailable' => ! in_array(config('mail.default'), ['log', 'array', null], true),
             'needsRecoveryEmail' => blank($workspace->recovery_email),
