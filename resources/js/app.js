@@ -160,6 +160,12 @@ if (document.readyState === 'loading') {
     initBladeUi()
 }
 
+// Makes the site installable (see public/sw.js). Registered on every page:
+// which manifest the install uses is the page's own <link rel="manifest">.
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+}
+
 // Plain blade pages (welcome, operator, legal) have no Inertia root — only the
 // app pages render one. Mounting Inertia without it throws (null el). Guard on
 // the root's presence so this script is a no-op on blade pages.

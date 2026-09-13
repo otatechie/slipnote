@@ -29,6 +29,17 @@
         <meta name="twitter:title" content="{{ $ogTitle }} · SlipNote">
         <meta name="twitter:image" content="{{ url('/og.png') }}">
     @endif
+    {{-- Installable as the board, not as "SlipNote": the manifest carries the
+         board's name and opens on the board. Built from the slug, so an
+         ?owner= on this page never reaches a start_url. --}}
+    @if (app(\App\Tenancy\Tenancy::class)->has())
+        <link rel="manifest" href="{{ route('workspace.manifest', ['workspace' => $ogWorkspace->slug]) }}">
+        <meta name="apple-mobile-web-app-title" content="{{ mb_strimwidth($ogWorkspace->name, 0, 12, '…') }}">
+    @else
+        <link rel="manifest" href="{{ route('manifest') }}">
+    @endif
+    <meta name="theme-color" content="#f3f5fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a1c20" media="(prefers-color-scheme: dark)">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">

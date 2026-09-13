@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ ($title ?? null) ? $title.' · SlipNote' : 'SlipNote' }}</title>
+    <link rel="manifest" href="{{ route('manifest') }}">
+    <meta name="theme-color" content="#f3f5fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a1c20" media="(prefers-color-scheme: dark)">
     <link rel="icon" href="/favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
     <link rel="icon" type="image/png" href="/favicon-192.png" sizes="192x192">

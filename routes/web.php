@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CoursesController;
+use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\OperatorController;
 use App\Http\Controllers\WorkspaceRecoveryController;
 use App\Http\Controllers\WorkspacesController;
@@ -25,6 +26,7 @@ Route::post('/workspaces/forget', [WorkspacesController::class, 'forget'])->name
 // Static routes below are declared BEFORE the /{workspace} catch-all so their
 // paths (privacy, terms, download, operator, …) aren't read as workspace slugs.
 Route::view('/privacy', 'legal.privacy')->name('privacy');
+Route::get('/manifest.webmanifest', [ManifestController::class, 'site'])->name('manifest');
 Route::view('/terms', 'legal.terms')->name('terms');
 
 // Material download. Anonymous by design — but addressed by the file's
@@ -96,6 +98,7 @@ Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::cl
 // group is declared last (static routes above win).
 Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}', [CoursesController::class, 'index'])->name('courses.index');
+    Route::get('/{workspace}/manifest.webmanifest', [ManifestController::class, 'board'])->name('workspace.manifest');
     Route::post('/{workspace}/courses', [CoursesController::class, 'store'])->name('courses.store');
     Route::post('/{workspace}/courses/reorder', [CoursesController::class, 'reorder'])->name('courses.reorder');
     Route::put('/{workspace}/c/{slug}', [CoursesController::class, 'update'])->name('courses.update');
