@@ -421,11 +421,10 @@ textarea:focus-visible {
     border-bottom: 0;
 }
 
-/* Row overflow menu. <details> for a no-JS toggle under the nonce-only CSP;
-   the panel is positioned against the row, which carries `relative`. */
-.op-menu {
-    position: relative;
-}
+/* Row overflow menu: <details> for a no-JS toggle under the nonce-only CSP.
+   No position here on purpose -- an unlayered rule outranks every Tailwind
+   utility, and it silently overrode the responsive absolute/relative switch
+   in the markup. Only the marker is hidden. */
 .op-menu > summary::-webkit-details-marker {
     display: none;
 }

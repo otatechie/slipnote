@@ -186,7 +186,12 @@
                          under the nonce-only CSP; app.js adds outside-click and
                          Escape. Absolute on phones so it pins to the row's corner
                          instead of dropping below the figures. --}}
-                    <details class="op-menu absolute right-3 top-3 sm:static sm:justify-self-end">
+                    {{-- Positioning lives entirely in utilities: absolute on phones
+                         (pinned to the row corner), relative from sm so the panel
+                         anchors to the button. Offsets are reset at sm too --
+                         top/right on a relative element are a translate, and
+                         left in place they nudged the button 12px down and left. --}}
+                    <details class="op-menu absolute right-3 top-3 sm:relative sm:right-auto sm:top-auto sm:justify-self-end">
                         <summary aria-label="Actions for {{ $amb->name }}"
                                  class="op-press flex size-9 cursor-pointer list-none items-center justify-center rounded-full border border-sky/50 bg-surface text-muted marker:hidden sm:size-8">
                             <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="4" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>
