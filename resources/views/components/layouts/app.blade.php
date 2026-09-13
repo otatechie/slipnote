@@ -87,15 +87,9 @@
                     </button>
                 </div>
                 <p class="flex flex-wrap items-center justify-center gap-x-1.5 text-[12px] text-muted">
-                    {{-- The holder is the person named in LICENSE, not the product --
-                         "SlipNote" is not a legal person and cannot hold copyright.
-                         "Code" is load-bearing: the MIT licence covers this repository
-                         only, and grants nothing over a hosted instance's boards or
-                         uploaded files (README, License). --}}
-                    <span>&copy; {{ date('Y') }} Ato Augustine</span>
-                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
-                    <span>Code is MIT licensed</span>
-                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    {{-- No copyright or licence line: neither is required, the
+                         legal position lives on the Terms page, and the GitHub
+                         link beside this leads to LICENSE for anyone who cares. --}}
                     <span class="inline-flex items-center gap-1.5">
                         Made with <svg aria-hidden="true" class="size-3.5 fill-none stroke-current text-teal" viewBox="0 0 20 20" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17.25C10 17.25 2 12 2 6.5A4.5 4.5 0 0 1 10 3.914 4.5 4.5 0 0 1 18 6.5C18 12 10 17.25 10 17.25Z"/></svg> for students
                     </span>
