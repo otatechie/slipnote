@@ -118,6 +118,8 @@ function initBladeActions() {
         if (!el) return
 
         if (el.hasAttribute('data-dialog-open')) {
+            // The dialog takes over, so fold the menu it was opened from.
+            el.closest('details.op-menu')?.removeAttribute('open')
             document.getElementById(el.getAttribute('data-dialog-open'))?.showModal()
         } else if (el.hasAttribute('data-dialog-close')) {
             el.closest('dialog')?.close()
@@ -131,10 +133,25 @@ function initBladeActions() {
     })
 }
 
+// A <details> menu stays open until something closes it; a real menu closes
+// when you click away or press Escape.
+function initMenuDismiss() {
+    document.addEventListener('click', (event) => {
+        document.querySelectorAll('details.op-menu[open]').forEach((menu) => {
+            if (!menu.contains(event.target)) menu.removeAttribute('open')
+        })
+    })
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return
+        document.querySelectorAll('details.op-menu[open]').forEach((menu) => menu.removeAttribute('open'))
+    })
+}
+
 function initBladeUi() {
     initThemeToggle()
     initLandingMotion()
     initBladeActions()
+    initMenuDismiss()
 }
 
 if (document.readyState === 'loading') {

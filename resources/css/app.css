@@ -420,6 +420,15 @@ textarea:focus-visible {
 .op-row:last-child {
     border-bottom: 0;
 }
+
+/* Row overflow menu. <details> for a no-JS toggle under the nonce-only CSP;
+   the panel is positioned against the row, which carries `relative`. */
+.op-menu {
+    position: relative;
+}
+.op-menu > summary::-webkit-details-marker {
+    display: none;
+}
 @media (hover: hover) and (pointer: fine) {
     .op-row:hover {
         background-color: color-mix(in srgb, var(--color-sky) 22%, transparent);

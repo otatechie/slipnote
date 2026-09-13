@@ -129,8 +129,8 @@
          group, so an anomaly never reads as a peer. --}}
     <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Ambassadors</h3>
     <div class="op-card overflow-hidden">
-        <div class="hidden gap-x-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem_15rem]">
-            <span>Ambassador</span><span class="text-right">Boards</span><span class="text-right">Seeded</span><span class="text-right">Active</span><span></span>
+        <div class="hidden gap-x-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem_2.5rem]">
+            <span>Ambassador</span><span class="text-right">Boards</span><span class="text-right">Seeded</span><span class="text-right">Active</span><span class="sr-only">Actions</span>
         </div>
         @php
             $group = null;
@@ -141,14 +141,16 @@
                 $thisGroup = $amb === null ? 'unknown' : ($amb->isRetired() ? 'retired' : 'live');
             @endphp
             @if ($thisGroup !== $group && $thisGroup !== 'live')
-                <p class="border-t border-sky/60 bg-base/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                {{-- No border-t: the row above already ends in an .op-row
+                     hairline, and adding one here stacked two 1px lines. --}}
+                <p class="bg-base/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                     {{ $thisGroup === 'unknown' ? 'Refs nobody owns' : 'Retired' }}
                 </p>
             @endif
             @php
                 $group = $thisGroup;
             @endphp
-            <div class="op-row grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem_15rem] sm:items-center {{ $thisGroup === 'retired' ? 'opacity-55' : '' }}"
+            <div class="op-row relative grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem_2.5rem] sm:items-center {{ $thisGroup === 'retired' ? 'opacity-55' : '' }}"
                  data-ref="{{ $row['slug'] }}" data-boards="{{ $row['boards'] }}" data-seeded="{{ $row['seeded'] }}" data-active="{{ $row['active'] }}">
                 <div class="min-w-0">
                     @if ($amb)
@@ -176,18 +178,34 @@
                 <p class="hidden text-right tabular-nums text-muted sm:block">{{ $row['boards'] }}</p>
                 <p class="hidden text-right tabular-nums text-ink sm:block">{{ $row['seeded'] }}</p>
                 <p class="hidden text-right tabular-nums font-semibold text-ink sm:block">{{ $row['active'] }}</p>
-                <div class="flex flex-wrap items-center gap-2 sm:justify-end">
-                    @if ($amb && ! $amb->isRetired())
-                        <button type="button" data-copy="{{ $amb->link() }}"
-                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy link</button>
-                        <button type="button" data-copy="{{ $amb->inviteMessage() }}"
-                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy invite</button>
-                        {{-- Irreversible (the slug is never reused), so it confirms
-                             like Remove does -- not a one-click text button beside
-                             two harmless ones. --}}
-                        <button type="button" data-dialog-open="retire-{{ $amb->id }}"
-                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full px-3 text-[13px] font-semibold text-muted hover:text-danger sm:h-8 sm:text-[12px]">Retire</button>
-                        <dialog id="retire-{{ $amb->id }}" class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
+                @if ($amb && ! $amb->isRetired())
+                    {{-- Overflow menu, not three inline buttons: every action here
+                         is per-ambassador admin done a few times a semester, while
+                         the row is read weekly for its numbers. Three buttons also
+                         wrapped to a second line. <details> so it opens with no JS
+                         under the nonce-only CSP; app.js adds outside-click and
+                         Escape. Absolute on phones so it pins to the row's corner
+                         instead of dropping below the figures. --}}
+                    <details class="op-menu absolute right-3 top-3 sm:static sm:justify-self-end">
+                        <summary aria-label="Actions for {{ $amb->name }}"
+                                 class="op-press flex size-9 cursor-pointer list-none items-center justify-center rounded-full border border-sky/50 bg-surface text-muted marker:hidden sm:size-8">
+                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="10" cy="4" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="10" cy="16" r="1.6"/></svg>
+                        </summary>
+                        <div class="absolute right-0 top-full z-20 mt-1 w-56 rounded-xl border border-sky bg-surface p-1 text-left shadow-xl">
+                            <button type="button" data-copy="{{ $amb->link() }}"
+                                    class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-muted hover:bg-sky/30 hover:text-ink">Copy link</button>
+                            <button type="button" data-copy="{{ $amb->inviteMessage() }}"
+                                    class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-muted hover:bg-sky/30 hover:text-ink">Copy invite message</button>
+                            <span class="my-1 block h-px bg-sky/60"></span>
+                            {{-- Irreversible (the slug is never reused), so it
+                                 confirms like Remove does. --}}
+                            <button type="button" data-dialog-open="retire-{{ $amb->id }}"
+                                    class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10">Retire</button>
+                        </div>
+                    </details>
+                    {{-- Outside the <details>: a closed one hides its children, and
+                         showModal() on a hidden dialog paints nothing. --}}
+                    <dialog id="retire-{{ $amb->id }}" class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
                             <div class="px-6 py-6">
                                 <h2 class="text-[16px] font-bold tracking-tight text-ink">Retire {{ $amb->name }}?</h2>
                                 <p class="mt-3 text-[13px] leading-relaxed text-ink/80">Their boards keep the ref <span class="font-mono">{{ $amb->slug }}</span> and it will never be handed to anyone else. Their numbers stay on this page. This can't be undone.</p>
@@ -200,9 +218,8 @@
                                     </form>
                                 </div>
                             </div>
-                        </dialog>
-                    @endif
-                </div>
+                    </dialog>
+                @endif
             </div>
         @endforeach
     </div>
