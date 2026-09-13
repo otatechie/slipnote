@@ -149,6 +149,20 @@ class AmbassadorProgramTest extends TestCase
             ->assertSessionHasErrors('slug');
     }
 
+    public function test_used_this_month_is_a_thirty_day_window(): void
+    {
+        Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+        [$recent] = Workspace::provision('Recent');
+        [$stale] = Workspace::provision('Stale');
+        $recent->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()->subDays(20)])->save();
+        $stale->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()->subDays(40)])->save();
+
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
+
+        // Opened 20 days ago counts for this month's payout; 40 days ago does not.
+        $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="0" data-active="1"', $html);
+    }
+
     public function test_the_referrals_table_counts_boards_seeded_and_active_and_flags_unknown_refs(): void
     {
         Ambassador::create(['name' => 'Kwame Mensah', 'slug' => 'kwame']);
@@ -165,8 +179,13 @@ class AmbassadorProgramTest extends TestCase
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
 
-        $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="1" data-active="1"', $html);
-        $this->assertStringContainsString('data-ref="nobody" data-boards="1" data-seeded="0" data-active="0"', $html);
+        config(['noteshare.ambassador_reward_ghs' => 12]);
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
+
+        $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="1" data-active="1" data-due="12"', $html);
+        $this->assertStringContainsString('data-ref="nobody" data-boards="1" data-seeded="0" data-active="0" data-due="0"', $html);
+        $this->assertStringContainsString('GHS 12 due', $html);
+        $this->assertStringContainsString('Due this month: GHS 12.', $html);
         $this->assertStringContainsString('unknown ref', $html);
         $this->assertStringContainsString('?ref=kwame', $html);
         // Live ambassadors first, unknown refs after them, each under its own heading.

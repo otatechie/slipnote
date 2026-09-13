@@ -132,8 +132,8 @@
         {{-- Plain words, in funnel order: made through their link -> got a file
              -> being opened. "Boards / Seeded / Active" needed the footnote to
              be read at all; these read on their own. --}}
-        <div class="hidden gap-x-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted sm:grid sm:grid-cols-[1fr_5rem_5.5rem_7rem_2.5rem]">
-            <span>Ambassador</span><span class="text-right">Created</span><span class="text-right">With files</span><span class="text-right">Used this week</span><span class="sr-only">Actions</span>
+        <div class="hidden gap-x-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted sm:grid sm:grid-cols-[1fr_5rem_5.5rem_7.5rem_2.5rem]">
+            <span>Ambassador</span><span class="text-right">Created</span><span class="text-right">With files</span><span class="text-right">Used this month</span><span class="sr-only">Actions</span>
         </div>
         @php
             $group = null;
@@ -153,8 +153,8 @@
             @php
                 $group = $thisGroup;
             @endphp
-            <div class="op-row relative grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_5rem_5.5rem_7rem_2.5rem] sm:items-center {{ $thisGroup === 'retired' ? 'opacity-55' : '' }}"
-                 data-ref="{{ $row['slug'] }}" data-boards="{{ $row['boards'] }}" data-seeded="{{ $row['seeded'] }}" data-active="{{ $row['active'] }}">
+            <div class="op-row relative grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_5rem_5.5rem_7.5rem_2.5rem] sm:items-center {{ $thisGroup === 'retired' ? 'opacity-55' : '' }}"
+                 data-ref="{{ $row['slug'] }}" data-boards="{{ $row['boards'] }}" data-seeded="{{ $row['seeded'] }}" data-active="{{ $row['active'] }}" data-due="{{ $row['due'] }}">
                 <div class="min-w-0">
                     @if ($amb)
                         <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
@@ -175,12 +175,19 @@
                     @endif
                     {{-- Phones: the three numbers as one line, in reward order. --}}
                     <p class="mt-1 text-[12px] tabular-nums text-muted sm:hidden">
-                        {{ $row['boards'] }} created · {{ $row['seeded'] }} with files · <span class="font-semibold text-ink">{{ $row['active'] }} used this week</span>
+                        {{ $row['boards'] }} created · {{ $row['seeded'] }} with files · <span class="font-semibold text-ink">{{ $row['active'] }} used this month</span>@if ($amb && $row['due'] > 0) · GHS {{ $row['due'] }} due @endif
                     </p>
                 </div>
                 <p class="hidden text-right tabular-nums text-muted sm:block">{{ $row['boards'] }}</p>
                 <p class="hidden text-right tabular-nums text-ink sm:block">{{ $row['seeded'] }}</p>
-                <p class="hidden text-right tabular-nums font-semibold text-ink sm:block">{{ $row['active'] }}</p>
+                {{-- The pay column, with what it comes to underneath. Quiet on
+                     purpose: a number to act on, not a price tag on a person. --}}
+                <div class="hidden text-right tabular-nums sm:block">
+                    <p class="font-semibold text-ink">{{ $row['active'] }}</p>
+                    @if ($amb && $row['due'] > 0)
+                        <p class="text-[11px] text-muted">GHS {{ $row['due'] }} due</p>
+                    @endif
+                </div>
                 @if ($amb && ! $amb->isRetired())
                     {{-- Overflow menu, not three inline buttons: every action here
                          is per-ambassador admin done a few times a semester, while
@@ -231,7 +238,17 @@
             </div>
         @endforeach
     </div>
-    <p class="mt-3 text-[13px] text-muted">Created = a board made through their link. With files = it has at least one file. Used this week = someone opened it or downloaded from it in the last 7 days. Pay on used boards, never on sign-ups.</p>
+    @php
+        $rate = (int) config('noteshare.ambassador_reward_ghs');
+        $dueTotal = $ambassadorRows->filter(fn ($r) => $r['ambassador'] !== null)->sum('due');
+    @endphp
+    <p class="mt-3 text-[13px] text-muted">
+        Created = a board made through their link. With files = it has at least one file. Used this month = someone opened it or downloaded from it in the last 30 days.
+        Due = used boards × GHS {{ $rate }} (<span class="font-mono">AMBASSADOR_REWARD_GHS</span>), paid by hand once a month.
+        @if ($dueTotal > 0)
+            <span class="font-semibold text-ink">Due this month: GHS {{ $dueTotal }}.</span>
+        @endif
+    </p>
     @endif
     @endif
 

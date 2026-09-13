@@ -74,6 +74,13 @@ return [
     */
     'ambassador_form_url' => env('AMBASSADOR_FORM_URL'),
 
+    /*
+    | What one used board is worth to an ambassador, per month, in cedis.
+    | Default is a 2 GB MTN bundle at 2026 pricing. The dashboard shows the
+    | amount due per ambassador from this; nothing is paid automatically.
+    */
+    'ambassador_reward_ghs' => (int) env('AMBASSADOR_REWARD_GHS', 12),
+
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.
     'legal_updated' => '2026-07-02',

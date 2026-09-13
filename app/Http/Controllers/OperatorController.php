@@ -162,12 +162,17 @@ class OperatorController extends Controller
         $stats = $this->referrerStats()->keyBy('slug');
         $zero = ['boards' => 0, 'seeded' => 0, 'active' => 0];
 
-        $rows = $ambassadors->map(fn (Ambassador $a) => ['ambassador' => $a, 'slug' => $a->slug]
-            + ($stats->get($a->slug) ?? $zero));
+        // Due = used boards x the configured rate. Computed, never stored:
+        // the payment record is the operator's own MoMo history.
+        $rate = (int) config('noteshare.ambassador_reward_ghs');
+        $withDue = fn (array $row) => $row + ['due' => $row['active'] * $rate];
+
+        $rows = $ambassadors->map(fn (Ambassador $a) => $withDue(['ambassador' => $a, 'slug' => $a->slug]
+            + ($stats->get($a->slug) ?? $zero)));
 
         $unknown = $stats
             ->reject(fn ($row) => $ambassadors->contains('slug', $row['slug']))
-            ->map(fn ($row) => ['ambassador' => null] + $row);
+            ->map(fn ($row) => $withDue(['ambassador' => null] + $row));
 
         $byLive = fn ($r) => [-$r['active'], -$r['seeded'], -$r['boards'], $r['ambassador']?->name ?? $r['slug']];
 
@@ -177,16 +182,17 @@ class OperatorController extends Controller
     }
 
     /**
-     * Per ref slug: boards created, seeded (has a file), active this week.
-     * The last two columns are the only ones that count; the reward is paid
-     * on live boards, never on sign-ups. Slugs with no matching ambassador
-     * are shown too — a typo or someone guessing, either way worth seeing.
+     * Per ref slug: boards created, seeded (has a file), used this month.
+     * Only the last one is paid on -- and it is a 30-day window, not 7,
+     * because payouts are monthly and a class that opened its board on the
+     * 3rd and the 20th is live even if you look on the 28th. Slugs with no
+     * matching ambassador are shown too: a typo, or someone guessing.
      *
      * @return \Illuminate\Support\Collection<int, array{slug:string, boards:int, seeded:int, active:int}>
      */
     private function referrerStats()
     {
-        $weekAgo = now()->subDays(7);
+        $monthAgo = now()->subDays(30);
 
         return Workspace::query()
             ->whereNotNull('referrer')
@@ -197,7 +203,7 @@ class OperatorController extends Controller
                 'slug' => $slug,
                 'boards' => $boards->count(),
                 'seeded' => $boards->where('materials_count', '>', 0)->count(),
-                'active' => $boards->filter(fn ($w) => $w->last_accessed_at?->gte($weekAgo))->count(),
+                'active' => $boards->filter(fn ($w) => $w->last_accessed_at?->gte($monthAgo))->count(),
             ])
             ->sortByDesc('active')
             ->values();
