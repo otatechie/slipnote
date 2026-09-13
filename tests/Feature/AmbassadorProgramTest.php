@@ -1,0 +1,178 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Ambassador;
+use App\Models\Course;
+use App\Models\Workspace;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+/**
+ * ?ref= attribution and the operator's ambassadors tab. No accounts anywhere:
+ * a ref is a cookie until a board is created, then a column on that board.
+ */
+class AmbassadorProgramTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local');
+        config(['noteshare.operator_secret' => 'op-secret']);
+    }
+
+    private function asOperator(): static
+    {
+        $this->post(route('operator.login'), ['secret' => 'op-secret']);
+
+        return $this;
+    }
+
+    // --- The cookie ---
+
+    public function test_a_valid_ref_on_any_page_is_kept_in_a_cookie(): void
+    {
+        $this->get('/?ref=Kwame')->assertOk()->assertCookie('slipnote_ref', 'kwame');
+        $this->get('/start?ref=knust-ama')->assertOk()->assertCookie('slipnote_ref', 'knust-ama');
+    }
+
+    public function test_a_malformed_ref_is_ignored(): void
+    {
+        $this->get('/?ref=<script>')->assertOk()->assertCookieMissing('slipnote_ref');
+        $this->get('/?ref='.str_repeat('a', 41))->assertOk()->assertCookieMissing('slipnote_ref');
+        $this->get('/?ref[]=x')->assertOk()->assertCookieMissing('slipnote_ref');
+    }
+
+    public function test_first_touch_wins_so_ambassadors_cannot_poach_each_other(): void
+    {
+        $this->withCookie('slipnote_ref', 'kwame')
+            ->get('/?ref=yaw')
+            ->assertOk()
+            ->assertCookieMissing('slipnote_ref'); // no new cookie set; the old one stands
+    }
+
+    // --- Attribution at creation ---
+
+    public function test_creating_a_board_with_a_ref_cookie_records_the_referrer_and_clears_the_cookie(): void
+    {
+        $this->withCookie('slipnote_ref', 'kwame')
+            ->post(route('workspaces.store'), ['name' => 'Physics Level 200'])
+            ->assertRedirect()
+            ->assertCookieExpired('slipnote_ref');
+
+        $this->assertSame('kwame', Workspace::firstOrFail()->referrer);
+    }
+
+    public function test_a_board_created_without_a_ref_has_no_referrer(): void
+    {
+        $this->post(route('workspaces.store'), ['name' => 'Physics Level 200']);
+
+        $this->assertNull(Workspace::firstOrFail()->referrer);
+    }
+
+    public function test_referrer_cannot_be_set_through_the_form(): void
+    {
+        $this->post(route('workspaces.store'), ['name' => 'Physics', 'referrer' => 'kwame']);
+
+        $this->assertNull(Workspace::firstOrFail()->referrer);
+    }
+
+    // --- The operator tab ---
+
+    public function test_operator_can_add_an_ambassador_and_the_slug_is_normalised(): void
+    {
+        $this->asOperator()
+            ->post(route('operator.ambassadors.store'), [
+                'name' => 'Kwame Mensah', 'slug' => '  KNUST-Kwame ', 'campus' => 'KNUST',
+                'phone' => '0244000000', 'network' => 'mtn',
+            ])
+            ->assertRedirect(route('operator.dashboard', ['tab' => 'ambassadors']));
+
+        $amb = Ambassador::firstOrFail();
+        $this->assertSame('knust-kwame', $amb->slug);
+        $this->assertSame('0244000000', $amb->phone);
+        $this->assertStringContainsString('?ref=knust-kwame', $amb->link());
+        $this->assertStringContainsString($amb->link(), $amb->inviteMessage());
+    }
+
+    public function test_phone_is_encrypted_at_rest(): void
+    {
+        $this->asOperator()->post(route('operator.ambassadors.store'), [
+            'name' => 'Kwame', 'slug' => 'kwame', 'phone' => '0244000000',
+        ]);
+
+        $raw = \DB::table('ambassadors')->value('phone');
+        $this->assertNotSame('0244000000', $raw);
+    }
+
+    public function test_slugs_are_unique_and_a_bad_slug_is_rejected(): void
+    {
+        Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+
+        $this->asOperator()->post(route('operator.ambassadors.store'), ['name' => 'Other', 'slug' => 'kwame'])
+            ->assertSessionHasErrors('slug');
+        $this->asOperator()->post(route('operator.ambassadors.store'), ['name' => 'Other', 'slug' => 'not ok!'])
+            ->assertSessionHasErrors('slug');
+
+        $this->assertSame(1, Ambassador::count());
+    }
+
+    public function test_only_the_operator_can_add_or_retire(): void
+    {
+        $amb = Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+
+        $this->post(route('operator.ambassadors.store'), ['name' => 'X', 'slug' => 'x'])->assertForbidden();
+        $this->post(route('operator.ambassadors.retire', $amb))->assertForbidden();
+
+        $this->assertSame(1, Ambassador::count());
+        $this->assertNull($amb->fresh()->retired_at);
+    }
+
+    public function test_retiring_keeps_the_history_and_the_slug(): void
+    {
+        $amb = Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+
+        $this->asOperator()->post(route('operator.ambassadors.retire', $amb))->assertRedirect();
+
+        $this->assertNotNull($amb->fresh()->retired_at);
+        $this->asOperator()->post(route('operator.ambassadors.store'), ['name' => 'New', 'slug' => 'kwame'])
+            ->assertSessionHasErrors('slug');
+    }
+
+    public function test_the_referrals_table_counts_boards_seeded_and_active_and_flags_unknown_refs(): void
+    {
+        Ambassador::create(['name' => 'Kwame Mensah', 'slug' => 'kwame']);
+
+        [$live] = Workspace::provision('Live Board');
+        [$emptyBoard] = Workspace::provision('Empty Board');
+        [$stranger] = Workspace::provision('Guessed');
+        $live->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()])->save();
+        $emptyBoard->forceFill(['referrer' => 'kwame'])->save();
+        $stranger->forceFill(['referrer' => 'nobody'])->save();
+
+        $course = $live->courses()->create(['code' => 'PHY 101', 'title' => 'Physics', 'slug' => 'phy-101', 'workspace_id' => $live->id]);
+        $course->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf', 'stored_path' => 'x/a.pdf', 'download_token' => 'dl-a', 'file_size' => 1]);
+
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/Kwame Mensah.*?<td[^>]*>2<\/td>\s*<td[^>]*>1<\/td>\s*<td[^>]*>1<\/td>/s', $html);
+        $this->assertStringContainsString('unknown ref', $html);
+        $this->assertStringContainsString('?ref=kwame', $html);
+    }
+
+    // --- The footer link ---
+
+    public function test_footer_links_to_the_application_form_only_when_configured(): void
+    {
+        $this->get('/')->assertOk()->assertDontSee('Campus ambassador?');
+
+        config(['noteshare.ambassador_form_url' => 'https://forms.example/apply']);
+
+        $this->get('/')->assertOk()
+            ->assertSee('Campus ambassador?')
+            ->assertSee('https://forms.example/apply');
+    }
+}

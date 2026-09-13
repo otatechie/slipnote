@@ -19,6 +19,7 @@ class HandleInertiaRequests extends Middleware
             // Needed by native <form> POSTs (e.g. the per-row owner delete),
             // which can't rely on the XSRF cookie header that axios sends.
             'csrf_token' => csrf_token(),
+            'ambassadorFormUrl' => config('noteshare.ambassador_form_url'),
             'flash' => [
                 'success' => $session->get('success'),
                 'created' => $session->get('created'),

@@ -62,6 +62,13 @@
                         </svg>
                         <span class="sr-only">(opens in a new tab)</span>
                     </a>
+                    @if ($ambassadorForm = config('noteshare.ambassador_form_url'))
+                        <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                        <a href="{{ $ambassadorForm }}" class="inline-flex items-center gap-1 py-1.5 hover:text-neon" target="_blank" rel="noopener noreferrer">
+                            Campus ambassador?
+                            <span class="sr-only">(opens in a new tab)</span>
+                        </a>
+                    @endif
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <button type="button"
                             data-theme-toggle

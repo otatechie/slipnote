@@ -106,9 +106,35 @@ if (themeMedia.addEventListener) {
     themeMedia.addListener(() => applyTheme(storedTheme()))
 }
 
+// Blade pages can't use inline onclick= under the production CSP (script-src
+// is 'self' plus a nonce; there is no 'unsafe-inline' and there must not
+// be). One delegated listener reads data- attributes instead:
+//   data-dialog-open="id"  opens <dialog id>
+//   data-dialog-close      closes the enclosing <dialog>
+//   data-copy="text"       copies text; the button reads "Copied" for 2s
+function initBladeActions() {
+    document.addEventListener('click', (event) => {
+        const el = event.target.closest('[data-dialog-open], [data-dialog-close], [data-copy]')
+        if (!el) return
+
+        if (el.hasAttribute('data-dialog-open')) {
+            document.getElementById(el.getAttribute('data-dialog-open'))?.showModal()
+        } else if (el.hasAttribute('data-dialog-close')) {
+            el.closest('dialog')?.close()
+        } else {
+            const label = el.textContent
+            window.copyText(el.getAttribute('data-copy')).then(() => {
+                el.textContent = 'Copied ✓'
+                setTimeout(() => { el.textContent = label }, 2000)
+            }).catch(() => {})
+        }
+    })
+}
+
 function initBladeUi() {
     initThemeToggle()
     initLandingMotion()
+    initBladeActions()
 }
 
 if (document.readyState === 'loading') {

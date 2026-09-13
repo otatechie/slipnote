@@ -89,6 +89,8 @@ Route::post('/operator/logout', [OperatorController::class, 'logout'])->name('op
 Route::post('/operator/material/{material}/remove', [OperatorController::class, 'remove'])->name('operator.remove');
 Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');
+Route::post('/operator/ambassadors', [OperatorController::class, 'storeAmbassador'])->name('operator.ambassadors.store');
+Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::class, 'retireAmbassador'])->name('operator.ambassadors.retire');
 
 // Workspace-scoped routes. The catch-all /{workspace} lives here, so this
 // group is declared last (static routes above win).

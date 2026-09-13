@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Workspace;
 use App\Support\RecentWorkspaces;
+use App\Support\Referral;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -49,6 +50,13 @@ class WorkspacesController extends Controller
         [$workspace, $secret] = Workspace::provision($clean);
         RateLimiter::hit($rlKey, 3600); // count only successful creations
 
+        // Ambassador attribution, if this browser arrived via ?ref=. Written
+        // once, here, and never again; forceFill because referrer is
+        // deliberately not mass-assignable.
+        if (($referrer = Referral::read($request)) !== null) {
+            $workspace->forceFill(['referrer' => $referrer])->save();
+        }
+
         // The creator owns it; unlock the owner session immediately so they
         // don't have to re-paste the secret on the next page. Regenerate the
         // session ID on every privilege change (anti-fixation).
@@ -57,6 +65,7 @@ class WorkspacesController extends Controller
 
         return back()
             ->withCookie(RecentWorkspaces::add($request, $workspace))
+            ->withCookie(Referral::forget())
             ->with([
                 'createdName' => $workspace->name,
                 'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),

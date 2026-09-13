@@ -45,6 +45,7 @@
                 <li>Standard <strong>server logs</strong> (IP address, request path, timestamp), used for security and debugging, not analytics.</li>
                 <li>A <strong>session cookie</strong> to remember owner-mode unlocks and passphrase entries within a single visit, and the <strong>session record</strong> it points at on our server. That record holds your IP address and your browser's user-agent string (browser and operating system version), which is how the session is kept secure. It is deleted when the session expires.</li>
                 <li>A small browser-side <strong>recent boards</strong> cookie if you open a board in owner mode, so this browser can show shortcuts back to boards you've recently managed.</li>
+                <li>A short-lived <strong>referral</strong> cookie if you arrive through a campus ambassador's link, holding only that ambassador's code. It is used once, when a board is created, to note which ambassador introduced it, and is then removed. It records nothing about you.</li>
                 <li>A small browser-side <strong>last visited</strong> cookie recording when this browser last opened each course, so files added since can be marked as new. It holds course ids and timestamps only, and never leaves your browser except to load the page.</li>
                 <li>A browser-side <strong>theme preference</strong> (light, dark, or system) stored locally on this device only.</li>
             </ul>

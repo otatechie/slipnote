@@ -53,7 +53,143 @@
             Newest boards
             <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $recent->count() }}</span>
         </a>
+        <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}"
+           @if ($tab === 'ambassadors') aria-current="page" @endif
+           class="op-press">
+            Ambassadors
+            @if ($ambassadors->whereNull('retired_at')->count() > 0)
+                <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $ambassadors->whereNull('retired_at')->count() }}</span>
+            @endif
+        </a>
     </div>
+
+    @if ($tab === 'ambassadors')
+    {{-- Attribution only. A ref link is the normal URL with ?ref=slug; nothing
+         is "created" — this form just puts a name to the slug, so the table
+         below shows people, and records where the reward goes. --}}
+    <form method="POST" action="{{ route('operator.ambassadors.store') }}" class="op-card mb-5 p-5">
+        @csrf
+        <h3 class="text-[15px] font-bold tracking-tight text-ink">Add an ambassador</h3>
+        <p class="mt-1 text-[13px] text-muted">Their link becomes <span class="font-mono">{{ url('/') }}/?ref=<em>slug</em></span>. Pick a slug you'll never reuse.</p>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <div>
+                <label for="amb-name" class="mb-1.5 block text-[13px] font-semibold text-ink">Name</label>
+                <input id="amb-name" name="name" value="{{ old('name') }}" required maxlength="80"
+                       @error('name') aria-invalid="true" @enderror
+                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                @error('name')<span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>@enderror
+            </div>
+            <div>
+                <label for="amb-slug" class="mb-1.5 block text-[13px] font-semibold text-ink">Ref slug</label>
+                <input id="amb-slug" name="slug" value="{{ old('slug') }}" required maxlength="40" placeholder="knust-kwame"
+                       autocapitalize="none" spellcheck="false"
+                       @error('slug') aria-invalid="true" @enderror
+                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 font-mono text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                @error('slug')<span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>@enderror
+            </div>
+            <div>
+                <label for="amb-campus" class="mb-1.5 block text-[13px] font-semibold text-ink">Campus <span class="font-normal text-muted">(optional)</span></label>
+                <input id="amb-campus" name="campus" value="{{ old('campus') }}" maxlength="80"
+                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+            </div>
+            <div class="grid grid-cols-[1fr_auto] gap-2">
+                <div>
+                    <label for="amb-phone" class="mb-1.5 block text-[13px] font-semibold text-ink">Phone <span class="font-normal text-muted">(for the bundle)</span></label>
+                    <input id="amb-phone" name="phone" value="{{ old('phone') }}" maxlength="30" inputmode="tel"
+                           class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                </div>
+                <div>
+                    <label for="amb-network" class="mb-1.5 block text-[13px] font-semibold text-ink">Network</label>
+                    <select id="amb-network" name="network"
+                            class="h-[46px] rounded-xl border border-sky bg-surface px-3 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                        <option value="">—</option>
+                        @foreach (\App\Models\Ambassador::NETWORKS as $key => $label)
+                            <option value="{{ $key }}" @selected(old('network') === $key)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="op-press mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">Add ambassador</button>
+    </form>
+
+    <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Ambassadors</h3>
+    <div class="op-card mb-6 overflow-hidden">
+        @forelse ($ambassadors as $amb)
+            <div class="op-row flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4 {{ $amb->isRetired() ? 'opacity-55' : '' }}">
+                <div class="min-w-0">
+                    <p class="text-[14px] font-semibold tracking-tight text-ink">
+                        {{ $amb->name }}
+                        @if ($amb->isRetired())<span class="ml-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">retired</span>@endif
+                    </p>
+                    <p class="mt-0.5 text-[12px] text-muted">
+                        @if ($amb->campus){{ $amb->campus }} · @endif
+                        @if ($amb->phone){{ $amb->phone }}@if ($amb->network) ({{ \App\Models\Ambassador::NETWORKS[$amb->network] ?? $amb->network }})@endif · @endif
+                        <span class="font-mono">{{ $amb->link() }}</span>
+                    </p>
+                </div>
+                @unless ($amb->isRetired())
+                    <div class="flex shrink-0 flex-wrap items-center gap-2">
+                        <button type="button" data-copy="{{ $amb->link() }}"
+                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy link</button>
+                        <button type="button" data-copy="{{ $amb->inviteMessage() }}"
+                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy invite message</button>
+                        <form method="POST" action="{{ route('operator.ambassadors.retire', $amb) }}">
+                            @csrf
+                            <button type="submit" class="op-press inline-flex h-11 cursor-pointer items-center rounded-full px-3 text-[13px] font-semibold text-muted hover:text-danger sm:h-8 sm:text-[12px]">Retire</button>
+                        </form>
+                    </div>
+                @endunless
+            </div>
+        @empty
+            <p class="px-4 py-8 text-center text-[14px] text-muted">No ambassadors yet. Add one above and send them their link.</p>
+        @endforelse
+    </div>
+
+    {{-- Seeded and active are the reward columns. Boards is there so a row
+         with 30 boards and 0 active reads as what it is. --}}
+    <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Referrals</h3>
+    <div class="op-card overflow-hidden">
+        @if ($referrers->isEmpty())
+            <p class="px-4 py-8 text-center text-[14px] text-muted">No boards have come through a ref link yet.</p>
+        @else
+            <div class="overflow-x-auto">
+                <table class="w-full text-[13px]">
+                    <thead>
+                        <tr class="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                            <th class="px-4 py-2.5 font-semibold">Ambassador</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">Boards</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">Seeded</th>
+                            <th class="px-4 py-2.5 text-right font-semibold">Active this week</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($referrers as $row)
+                            @php
+                                $amb = $ambassadors->firstWhere('slug', $row['slug']);
+                            @endphp
+                            <tr class="border-t border-sky/60">
+                                <td class="px-4 py-2.5">
+                                    @if ($amb)
+                                        <span class="font-semibold text-ink">{{ $amb->name }}</span>
+                                        <span class="ml-1 font-mono text-[12px] text-muted">{{ $row['slug'] }}</span>
+                                    @else
+                                        <span class="font-mono text-ink">{{ $row['slug'] }}</span>
+                                        <span class="ml-1 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger" title="No ambassador has this slug — a typo, or someone guessing">unknown ref</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2.5 text-right tabular-nums text-muted">{{ $row['boards'] }}</td>
+                                <td class="px-4 py-2.5 text-right tabular-nums text-ink">{{ $row['seeded'] }}</td>
+                                <td class="px-4 py-2.5 text-right tabular-nums font-semibold text-ink">{{ $row['active'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </div>
+    <p class="mt-3 text-[13px] text-muted">Seeded = has at least one file. Active = opened or downloaded from in the last 7 days. Pay on live boards, never on sign-ups.</p>
+    @endif
 
     @if ($tab === 'boards')
     <div class="op-card overflow-hidden">
@@ -193,12 +329,12 @@
                     {{-- Two decisions only — inspect lives inline above. Dialogs
                          repeat course + filename so the wrong row is harder to confirm. --}}
                     <div class="grid shrink-0 grid-cols-2 items-center gap-2.5 sm:flex sm:justify-end">
-                        <button type="button" onclick="document.getElementById('dismiss-{{ $material->id }}').showModal()"
+                        <button type="button" data-dialog-open="dismiss-{{ $material->id }}"
                                 title="Clear the reports — the file stays up"
                                 class="op-press inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:w-auto sm:text-[12px]">
                             Dismiss
                         </button>
-                        <button type="button" onclick="document.getElementById('remove-{{ $material->id }}').showModal()"
+                        <button type="button" data-dialog-open="remove-{{ $material->id }}"
                                 title="Delete the file and block re-upload"
                                 class="op-press btn-danger inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full px-3.5 text-[13px] font-semibold sm:h-8 sm:w-auto sm:text-[12px]">
                             Remove
@@ -212,7 +348,7 @@
                             <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
                             <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This clears the reports on this file. The file stays up and visible to everyone. You can undo for a few minutes after.</p>
                             <div class="mt-5 flex items-center justify-end gap-2">
-                                <button type="button" onclick="this.closest('dialog').close()"
+                                <button type="button" data-dialog-close
                                         class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
                                 <form method="POST" action="{{ route('operator.dismiss', $material->id) }}">
                                     @csrf
@@ -232,7 +368,7 @@
                             <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
                             <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This deletes the file and its reports, and blocks these exact bytes from being uploaded again. You can undo for a few minutes after.</p>
                             <div class="mt-5 flex items-center justify-end gap-2">
-                                <button type="button" onclick="this.closest('dialog').close()"
+                                <button type="button" data-dialog-close
                                         class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
                                 <form method="POST" action="{{ route('operator.remove', $material->id) }}">
                                     @csrf

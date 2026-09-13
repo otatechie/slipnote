@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Ambassador;
 use App\Models\BlockedUpload;
 use App\Models\Course;
 use App\Models\Material;
@@ -54,15 +55,20 @@ class OperatorController extends Controller
             && hash_equals($this->secretFingerprint(), session('operator_fp'));
     }
 
+    private const TABS = ['reported', 'boards', 'ambassadors'];
+
     /** Reported is the default: action before browsing. */
     private function tab(Request $request): string
     {
-        return $request->query('tab') === 'boards' ? 'boards' : 'reported';
+        $tab = $request->query('tab');
+
+        return in_array($tab, self::TABS, true) ? $tab : 'reported';
     }
 
-    private function dashboardRedirect(Request $request): RedirectResponse
+    private function dashboardRedirect(Request $request, ?string $tab = null): RedirectResponse
     {
-        $params = $this->tab($request) === 'boards' ? ['tab' => 'boards'] : [];
+        $tab ??= $this->tab($request);
+        $params = $tab === 'reported' ? [] : ['tab' => $tab];
 
         return redirect()->route('operator.dashboard', $params);
     }
@@ -137,7 +143,80 @@ class OperatorController extends Controller
             'recent' => $recent,
             'tab' => $this->tab($request),
             'undo' => $undo,
+            'ambassadors' => Ambassador::query()
+                ->orderByRaw('retired_at is not null')
+                ->orderBy('name')
+                ->get(),
+            'referrers' => $this->referrerStats(),
         ]);
+    }
+
+    /**
+     * Per ref slug: boards created, seeded (has a file), active this week.
+     * The last two columns are the only ones that count; the reward is paid
+     * on live boards, never on sign-ups. Slugs with no matching ambassador
+     * are shown too — a typo or someone guessing, either way worth seeing.
+     *
+     * @return \Illuminate\Support\Collection<int, array{slug:string, boards:int, seeded:int, active:int}>
+     */
+    private function referrerStats()
+    {
+        $weekAgo = now()->subDays(7);
+
+        return Workspace::query()
+            ->whereNotNull('referrer')
+            ->withCount('materials')
+            ->get(['id', 'referrer', 'last_accessed_at'])
+            ->groupBy('referrer')
+            ->map(fn ($boards, $slug) => [
+                'slug' => $slug,
+                'boards' => $boards->count(),
+                'seeded' => $boards->where('materials_count', '>', 0)->count(),
+                'active' => $boards->filter(fn ($w) => $w->last_accessed_at?->gte($weekAgo))->count(),
+            ])
+            ->sortByDesc('active')
+            ->values();
+    }
+
+    /** Add an ambassador: a name, a unique ref slug, and where to send the reward. */
+    public function storeAmbassador(Request $request)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $request->merge(['slug' => strtolower(trim((string) $request->input('slug', '')))]);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:80',
+            'slug' => ['required', 'string', 'max:40', 'regex:'.Ambassador::SLUG_PATTERN, 'unique:ambassadors,slug'],
+            'campus' => 'nullable|string|max:80',
+            'phone' => 'nullable|string|max:30',
+            'network' => 'nullable|in:'.implode(',', array_keys(Ambassador::NETWORKS)),
+        ], [
+            'slug.regex' => 'Lowercase letters, digits and hyphens only, e.g. knust-kwame.',
+            'slug.unique' => 'That ref is already taken. Never reuse one — a retired ambassador\'s boards still carry it.',
+        ]);
+
+        $ambassador = Ambassador::create([
+            'name' => strip_tags($data['name']),
+            'slug' => $data['slug'],
+            'campus' => isset($data['campus']) ? strip_tags($data['campus']) : null,
+            'phone' => $data['phone'] ?? null,
+            'network' => $data['network'] ?? null,
+        ]);
+
+        return $this->dashboardRedirect($request, 'ambassadors')
+            ->with('done', "{$ambassador->name} added. Copy their link or the invite message below.");
+    }
+
+    /** Retire: keeps the history, and the slug is never handed out again. */
+    public function retireAmbassador(Request $request, Ambassador $ambassador)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $ambassador->forceFill(['retired_at' => now()])->save();
+
+        return $this->dashboardRedirect($request, 'ambassadors')
+            ->with('done', "{$ambassador->name} retired. Their boards keep the ref; it won't be reused.");
     }
 
     /** Enter the operator secret (timing-safe, rate-limited). */

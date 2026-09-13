@@ -67,6 +67,13 @@ return [
         explode(',', (string) env('TRUSTED_PROXIES', ''))
     ))),
 
+    /*
+    | Where a student applies to be a campus ambassador — a Google Form or
+    | similar. Applications are a human decision, so they stay out of the
+    | app. When set, the site footer links to it; leave empty to hide.
+    */
+    'ambassador_form_url' => env('AMBASSADOR_FORM_URL'),
+
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.
     'legal_updated' => '2026-07-02',

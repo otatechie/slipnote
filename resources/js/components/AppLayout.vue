@@ -24,6 +24,13 @@ const year = new Date().getFullYear()
                         </svg>
                         <span class="sr-only">(opens in a new tab)</span>
                     </a>
+                    <template v-if="$page.props.ambassadorFormUrl">
+                        <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                        <a :href="$page.props.ambassadorFormUrl" class="inline-flex items-center gap-1 py-1.5 hover:text-neon" target="_blank" rel="noopener noreferrer">
+                            Campus ambassador?
+                            <span class="sr-only">(opens in a new tab)</span>
+                        </a>
+                    </template>
                 </nav>
                 <span aria-hidden="true" class="text-muted/50">&middot;</span>
                 <!-- Labelled, not icon-only: the icon shows the current mode but a
