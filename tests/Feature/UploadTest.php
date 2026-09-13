@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
 
@@ -104,7 +105,69 @@ class UploadTest extends TestCase
 
         $this->get(route('material.download', ['token' => $material->download_token]))
             ->assertOk()
-            ->assertDownload('lecture.pdf');
+            ->assertDownload('MATH 251 - lecture.pdf');
+    }
+
+    private function fileNamed(string $original, ?string $title = null, ?Course $course = null): Material
+    {
+        return ($course ?? $this->course)->materials()->create([
+            'section' => 'notes',
+            'original_filename' => $original,
+            'title' => $title,
+            'stored_path' => UploadedFile::fake()->create('f.pdf', 1)->store('materials', 'local'),
+            'download_token' => 'dl-'.Str::random(37),
+        ]);
+    }
+
+    private function downloadNameOf(Material $m): string
+    {
+        $disposition = $this->get(route('material.download', ['token' => $m->download_token]))
+            ->assertOk()
+            ->headers->get('content-disposition');
+        preg_match('/filename=(?:"([^"]*)"|([^;]+))/', $disposition, $match);
+
+        return $match[1] !== '' ? $match[1] : $match[2];
+    }
+
+    public function test_a_download_is_named_by_its_title_and_its_course(): void
+    {
+        // The board shows the title; the download should keep it, with the
+        // real extension, and say which course once it leaves the board.
+        $this->assertSame('MATH 251 - Recursion slides.pptx',
+            $this->downloadNameOf($this->fileNamed('lec12_final_v2.pptx', 'Recursion slides')));
+
+        // Already carries the code (spaces and case ignored): left alone.
+        $this->assertSame('math251_wk3.pdf', $this->downloadNameOf($this->fileNamed('math251_wk3.pdf')));
+
+        // Never worse than the original: a title with a path separator is
+        // scrubbed rather than refused (Symfony rejects "/" in a disposition).
+        $this->assertSame('MATH 251 - Week 7 8 notes.pdf',
+            $this->downloadNameOf($this->fileNamed('w.pdf', 'Week 7/8 notes')));
+    }
+
+    public function test_a_long_course_code_is_a_name_and_is_not_prefixed(): void
+    {
+        $course = Course::create(['code' => 'Computer Science Level 200', 'title' => 'CS', 'slug' => 'cs-200']);
+
+        $this->assertSame('lecture.pdf', $this->downloadNameOf($this->fileNamed('lecture.pdf', null, $course)));
+    }
+
+    public function test_zip_entries_use_the_same_download_names(): void
+    {
+        $this->fileNamed('lec12_final_v2.pptx', 'Recursion slides');
+        $this->fileNamed('a.pdf');
+        $this->fileNamed('a.pdf');
+
+        $res = $this->get(route('course.download-section', $this->wsParams([
+            'slug' => $this->course->slug, 'section' => 'notes',
+        ])))->assertOk();
+
+        $zip = new \ZipArchive;
+        $zip->open($res->baseResponse->getFile()->getPathname());
+        $names = collect(range(0, $zip->numFiles - 1))->map(fn ($i) => $zip->getNameIndex($i))->sort()->values()->all();
+        $zip->close();
+
+        $this->assertSame(['MATH 251 - Recursion slides.pptx', 'MATH 251 - a (1).pdf', 'MATH 251 - a.pdf'], $names);
     }
 
     public function test_files_cannot_be_enumerated_by_sequential_id(): void

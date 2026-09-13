@@ -137,6 +137,48 @@ class Material extends Model
     }
 
     /**
+     * The name a download is saved under. The uploader's title if they gave
+     * one (the board shows it; the download should keep it), with the real
+     * extension, and the course code in front so the file still says which
+     * course it came from once it is in a Downloads folder or forwarded in
+     * a chat -- the two places the board's context is lost. Three limits keep
+     * it from ever being worse than the original: the code is skipped when
+     * the name already carries it (spaces and case ignored, so CS101 matches
+     * "CS 101"), when it is over 16 characters (that is a name typed into
+     * the code field, not a code), and when it is empty after scrubbing.
+     * The stored file and original_filename are untouched.
+     */
+    public function downloadName(): string
+    {
+        $ext = pathinfo($this->original_filename, PATHINFO_EXTENSION);
+        $base = filled($this->title) ? $this->title : pathinfo($this->original_filename, PATHINFO_FILENAME);
+        if ($base === '') {
+            $base = $this->original_filename;
+        }
+        $name = self::scrubName($ext !== '' ? "{$base}.{$ext}" : $base);
+
+        $code = self::scrubName((string) $this->course?->code);
+        $squash = fn (string $v) => mb_strtolower(preg_replace('/\s+/u', '', $v));
+        if ($code === '' || mb_strlen($code) > 16 || str_contains($squash($name), $squash($code))) {
+            return $name;
+        }
+
+        return "{$code} - {$name}";
+    }
+
+    /**
+     * Control characters and path/filesystem-reserved characters become a
+     * space. Symfony refuses a Content-Disposition name with a path
+     * separator, and a title is free text the upload form never scrubbed.
+     */
+    private static function scrubName(string $name): string
+    {
+        $clean = preg_replace('/[\x00-\x1f\x7f\/\\:*?"<>|]+/u', ' ', $name);
+
+        return trim(preg_replace('/\s+/u', ' ', $clean));
+    }
+
+    /**
      * Short, unambiguous format label shown next to the file name,
      * e.g. "PDF", "DOCX", "JPG". Falls back to "FILE" when there is
      * no recognisable extension.

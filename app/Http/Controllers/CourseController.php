@@ -158,12 +158,13 @@ class CourseController extends Controller
                 continue;
             }
 
-            $name = $material->original_filename;
+            $key = $material->downloadName();
+            $name = $key;
             if (isset($used[$name])) {
                 $ext = pathinfo($name, PATHINFO_EXTENSION);
                 $base = pathinfo($name, PATHINFO_FILENAME);
                 $name = $ext !== '' ? "{$base} ({$used[$name]}).{$ext}" : "{$base} ({$used[$name]})";
-                $used[$material->original_filename]++;
+                $used[$key]++;
             } else {
                 $used[$name] = 1;
             }

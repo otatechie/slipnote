@@ -48,13 +48,13 @@ Route::get('/download/{token}', function (Request $request, string $token) {
     if ($request->boolean('view') && $material->isPreviewable()) {
         return Storage::disk('local')->response(
             $material->stored_path,
-            $material->original_filename,
+            $material->downloadName(),
         );
     }
 
     return Storage::disk('local')->download(
         $material->stored_path,
-        $material->original_filename,
+        $material->downloadName(),
     );
 })->name('material.download');
 
