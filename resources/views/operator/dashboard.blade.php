@@ -34,15 +34,16 @@
         <div class="op-toast mb-5 text-sm font-medium text-danger" role="alert">{{ $message }}</div>
     @enderror
 
-    {{-- Tab lives in the URL so refresh doesn't yank you off Newest boards.
-         Reported stays the default: action before browsing. Eyebrow names the
-         work region so the two jobs (act vs. browse) read as distinct. --}}
-    <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Needs review</h2>
+    {{-- Tab lives in the URL so refresh doesn't yank you off a tab. Reported
+         stays the default: action before browsing. No eyebrow: "Needs review"
+         described act-vs-browse, and Ambassadors is neither. Labels shorten
+         below sm so three cells fit a phone without wrapping; the badges
+         still say which is which. --}}
     <div class="op-seg mb-5" role="tablist">
         <a href="{{ route('operator.dashboard') }}"
            @if ($tab === 'reported') aria-current="page" @endif
            class="op-press">
-            Reported files
+            <span class="sm:hidden">Reported</span><span class="hidden sm:inline">Reported files</span>
             @if ($reportedTotal > 0)
                 <span class="rounded-full bg-base px-1.5 text-[11px] font-semibold tabular-nums text-danger">{{ $reportedTotal }}</span>
             @endif
@@ -50,7 +51,7 @@
         <a href="{{ route('operator.dashboard', ['tab' => 'boards']) }}"
            @if ($tab === 'boards') aria-current="page" @endif
            class="op-press">
-            Newest boards
+            <span class="sm:hidden">Boards</span><span class="hidden sm:inline">Newest boards</span>
             <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $recent->count() }}</span>
         </a>
         <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}"
