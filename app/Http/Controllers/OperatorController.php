@@ -143,12 +143,37 @@ class OperatorController extends Controller
             'recent' => $recent,
             'tab' => $this->tab($request),
             'undo' => $undo,
-            'ambassadors' => Ambassador::query()
-                ->orderByRaw('retired_at is not null')
-                ->orderBy('name')
-                ->get(),
-            'referrers' => $this->referrerStats(),
+            'ambassadors' => $ambassadors = Ambassador::query()->orderBy('name')->get(),
+            'ambassadorRows' => $this->ambassadorRows($ambassadors),
         ]);
+    }
+
+    /**
+     * One row per ambassador with their numbers attached, so "who do I pay"
+     * and "what's their number" are answered in the same place. Order is
+     * the reward order: active ambassadors by live boards, then refs nobody
+     * owns (worth a look), then retired ones with their history kept.
+     *
+     * @param  \Illuminate\Support\Collection<int, Ambassador>  $ambassadors
+     * @return \Illuminate\Support\Collection<int, array{ambassador: ?Ambassador, slug: string, boards: int, seeded: int, active: int}>
+     */
+    private function ambassadorRows($ambassadors)
+    {
+        $stats = $this->referrerStats()->keyBy('slug');
+        $zero = ['boards' => 0, 'seeded' => 0, 'active' => 0];
+
+        $rows = $ambassadors->map(fn (Ambassador $a) => ['ambassador' => $a, 'slug' => $a->slug]
+            + ($stats->get($a->slug) ?? $zero));
+
+        $unknown = $stats
+            ->reject(fn ($row) => $ambassadors->contains('slug', $row['slug']))
+            ->map(fn ($row) => ['ambassador' => null] + $row);
+
+        $byLive = fn ($r) => [-$r['active'], -$r['seeded'], -$r['boards'], $r['ambassador']?->name ?? $r['slug']];
+
+        return $rows->reject(fn ($r) => $r['ambassador']->isRetired())->sortBy($byLive)->values()
+            ->concat($unknown->sortBy($byLive)->values())
+            ->concat($rows->filter(fn ($r) => $r['ambassador']->isRetired())->sortBy(fn ($r) => $r['ambassador']->name)->values());
     }
 
     /**

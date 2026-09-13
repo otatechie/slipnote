@@ -66,12 +66,8 @@
 
     @if ($tab === 'ambassadors')
     {{-- Attribution only. A ref link is the normal URL with ?ref=slug; nothing
-         is "created" — this form just puts a name to the slug, so the table
+         is "created" -- this form just puts a name to the slug, so the list
          below shows people, and records where the reward goes. --}}
-    {{-- Adding happens a few times a semester; reading the list and the
-         numbers happens weekly. So the form leads only while there is no
-         list, then folds behind a summary. Open state survives a validation
-         error, which is the one time you need it back. --}}
     <details class="op-card group mb-5" @if ($ambassadors->isEmpty() || $errors->any()) open @endif>
         <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:hidden">
             <span class="text-[15px] font-bold tracking-tight text-ink">Add an ambassador</span>
@@ -123,85 +119,94 @@
     </form>
     </details>
 
-    @if ($ambassadors->isEmpty())
+    @if ($ambassadorRows->isEmpty())
         <p class="mb-6 text-[13px] text-muted">No ambassadors yet. Add one above and send them their link.</p>
     @else
+    {{-- One list, not a list plus a table: an ambassador's numbers sit on
+         their row, next to the phone the bundle goes to. Stat cells line up
+         as columns from sm; on phones they fold into one line. Unknown refs
+         and retired ambassadors sit below the live ones, each in its own
+         group, so an anomaly never reads as a peer. --}}
     <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Ambassadors</h3>
-    <div class="op-card mb-6 overflow-hidden">
-        @foreach ($ambassadors as $amb)
-            <div class="op-row flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4 {{ $amb->isRetired() ? 'opacity-55' : '' }}">
+    <div class="op-card overflow-hidden">
+        <div class="hidden gap-x-3 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted sm:grid sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem_15rem]">
+            <span>Ambassador</span><span class="text-right">Boards</span><span class="text-right">Seeded</span><span class="text-right">Active</span><span></span>
+        </div>
+        @php
+            $group = null;
+        @endphp
+        @foreach ($ambassadorRows as $row)
+            @php
+                $amb = $row['ambassador'];
+                $thisGroup = $amb === null ? 'unknown' : ($amb->isRetired() ? 'retired' : 'live');
+            @endphp
+            @if ($thisGroup !== $group && $thisGroup !== 'live')
+                <p class="border-t border-sky/60 bg-base/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                    {{ $thisGroup === 'unknown' ? 'Refs nobody owns' : 'Retired' }}
+                </p>
+            @endif
+            @php
+                $group = $thisGroup;
+            @endphp
+            <div class="op-row grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_4.5rem_4.5rem_4.5rem_15rem] sm:items-center {{ $thisGroup === 'retired' ? 'opacity-55' : '' }}"
+                 data-ref="{{ $row['slug'] }}" data-boards="{{ $row['boards'] }}" data-seeded="{{ $row['seeded'] }}" data-active="{{ $row['active'] }}">
                 <div class="min-w-0">
-                    <p class="text-[14px] font-semibold tracking-tight text-ink">
-                        {{ $amb->name }}
-                        @if ($amb->isRetired())<span class="ml-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">retired</span>@endif
-                    </p>
-                    <p class="mt-0.5 text-[12px] text-muted">
-                        @if ($amb->campus){{ $amb->campus }} · @endif
-                        @if ($amb->phone){{ $amb->phone }}@if ($amb->network) ({{ \App\Models\Ambassador::NETWORKS[$amb->network] ?? $amb->network }})@endif · @endif
-                        <span class="font-mono">{{ $amb->link() }}</span>
+                    @if ($amb)
+                        <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
+                            {{ $amb->name }}
+                            <span class="ml-1 font-mono text-[12px] font-normal text-muted">{{ $amb->slug }}</span>
+                        </p>
+                        @if ($amb->campus || $amb->phone)
+                            <p class="mt-0.5 truncate text-[12px] text-muted">
+                                {{ $amb->campus }}@if ($amb->campus && $amb->phone) · @endif
+                                @if ($amb->phone){{ $amb->phone }}@if ($amb->network) ({{ \App\Models\Ambassador::NETWORKS[$amb->network] ?? $amb->network }})@endif @endif
+                            </p>
+                        @endif
+                    @else
+                        <p class="text-[14px] tracking-tight text-ink">
+                            <span class="font-mono">{{ $row['slug'] }}</span>
+                            <span class="ml-1 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger" title="No ambassador has this slug — a typo, or someone guessing">unknown ref</span>
+                        </p>
+                    @endif
+                    {{-- Phones: the three numbers as one line, in reward order. --}}
+                    <p class="mt-1 text-[12px] tabular-nums text-muted sm:hidden">
+                        {{ $row['boards'] }} {{ Str::plural('board', $row['boards']) }} · {{ $row['seeded'] }} seeded · <span class="font-semibold text-ink">{{ $row['active'] }} active</span>
                     </p>
                 </div>
-                @unless ($amb->isRetired())
-                    <div class="flex shrink-0 flex-wrap items-center gap-2">
+                <p class="hidden text-right tabular-nums text-muted sm:block">{{ $row['boards'] }}</p>
+                <p class="hidden text-right tabular-nums text-ink sm:block">{{ $row['seeded'] }}</p>
+                <p class="hidden text-right tabular-nums font-semibold text-ink sm:block">{{ $row['active'] }}</p>
+                <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+                    @if ($amb && ! $amb->isRetired())
                         <button type="button" data-copy="{{ $amb->link() }}"
                                 class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy link</button>
                         <button type="button" data-copy="{{ $amb->inviteMessage() }}"
-                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy invite message</button>
-                        <form method="POST" action="{{ route('operator.ambassadors.retire', $amb) }}">
-                            @csrf
-                            <button type="submit" class="op-press inline-flex h-11 cursor-pointer items-center rounded-full px-3 text-[13px] font-semibold text-muted hover:text-danger sm:h-8 sm:text-[12px]">Retire</button>
-                        </form>
-                    </div>
-                @endunless
+                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:text-[12px]">Copy invite</button>
+                        {{-- Irreversible (the slug is never reused), so it confirms
+                             like Remove does -- not a one-click text button beside
+                             two harmless ones. --}}
+                        <button type="button" data-dialog-open="retire-{{ $amb->id }}"
+                                class="op-press inline-flex h-11 cursor-pointer items-center rounded-full px-3 text-[13px] font-semibold text-muted hover:text-danger sm:h-8 sm:text-[12px]">Retire</button>
+                        <dialog id="retire-{{ $amb->id }}" class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
+                            <div class="px-6 py-6">
+                                <h2 class="text-[16px] font-bold tracking-tight text-ink">Retire {{ $amb->name }}?</h2>
+                                <p class="mt-3 text-[13px] leading-relaxed text-ink/80">Their boards keep the ref <span class="font-mono">{{ $amb->slug }}</span> and it will never be handed to anyone else. Their numbers stay on this page. This can't be undone.</p>
+                                <div class="mt-5 flex items-center justify-end gap-2">
+                                    <button type="button" data-dialog-close
+                                            class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
+                                    <form method="POST" action="{{ route('operator.ambassadors.retire', $amb) }}">
+                                        @csrf
+                                        <button type="submit" class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 text-[14px] font-semibold">Retire</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </dialog>
+                    @endif
+                </div>
             </div>
         @endforeach
     </div>
-    @endif
-
-    {{-- Seeded and active are the reward columns. Boards is there so a row
-         with 30 boards and 0 active reads as what it is. Nothing renders
-         until a board has actually come through a ref: an empty table and
-         a footnote explaining its columns is chrome with no referent. --}}
-    @if ($referrers->isNotEmpty())
-    <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Referrals</h3>
-    <div class="op-card overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-[13px]">
-                    <thead>
-                        <tr class="text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                            <th class="px-4 py-2.5 font-semibold">Ambassador</th>
-                            <th class="px-4 py-2.5 text-right font-semibold">Boards</th>
-                            <th class="px-4 py-2.5 text-right font-semibold">Seeded</th>
-                            <th class="px-4 py-2.5 text-right font-semibold">Active this week</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($referrers as $row)
-                            @php
-                                $amb = $ambassadors->firstWhere('slug', $row['slug']);
-                            @endphp
-                            <tr class="border-t border-sky/60">
-                                <td class="px-4 py-2.5">
-                                    @if ($amb)
-                                        <span class="font-semibold text-ink">{{ $amb->name }}</span>
-                                        <span class="ml-1 font-mono text-[12px] text-muted">{{ $row['slug'] }}</span>
-                                    @else
-                                        <span class="font-mono text-ink">{{ $row['slug'] }}</span>
-                                        <span class="ml-1 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger" title="No ambassador has this slug — a typo, or someone guessing">unknown ref</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-2.5 text-right tabular-nums text-muted">{{ $row['boards'] }}</td>
-                                <td class="px-4 py-2.5 text-right tabular-nums text-ink">{{ $row['seeded'] }}</td>
-                                <td class="px-4 py-2.5 text-right tabular-nums font-semibold text-ink">{{ $row['active'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-    </div>
     <p class="mt-3 text-[13px] text-muted">Seeded = has at least one file. Active = opened or downloaded from in the last 7 days. Pay on live boards, never on sign-ups.</p>
-    @elseif ($ambassadors->isNotEmpty())
-    <p class="text-[13px] text-muted">No boards have come through a ref link yet. Boards created via an ambassador's link will be counted here.</p>
     @endif
     @endif
 

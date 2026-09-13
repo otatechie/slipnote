@@ -134,10 +134,17 @@ class AmbassadorProgramTest extends TestCase
     public function test_retiring_keeps_the_history_and_the_slug(): void
     {
         $amb = Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+        [$ws] = Workspace::provision('Old Board');
+        $ws->forceFill(['referrer' => 'kwame'])->save();
 
         $this->asOperator()->post(route('operator.ambassadors.retire', $amb))->assertRedirect();
 
         $this->assertNotNull($amb->fresh()->retired_at);
+
+        // Still listed, faded, with their numbers -- under Retired.
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
+        $this->assertStringContainsString('data-ref="kwame" data-boards="1"', $html);
+        $this->assertStringContainsString('Retired', $html);
         $this->asOperator()->post(route('operator.ambassadors.store'), ['name' => 'New', 'slug' => 'kwame'])
             ->assertSessionHasErrors('slug');
     }
@@ -158,9 +165,13 @@ class AmbassadorProgramTest extends TestCase
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('/Kwame Mensah.*?<td[^>]*>2<\/td>\s*<td[^>]*>1<\/td>\s*<td[^>]*>1<\/td>/s', $html);
+        $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="1" data-active="1"', $html);
+        $this->assertStringContainsString('data-ref="nobody" data-boards="1" data-seeded="0" data-active="0"', $html);
         $this->assertStringContainsString('unknown ref', $html);
         $this->assertStringContainsString('?ref=kwame', $html);
+        // Live ambassadors first, unknown refs after them, each under its own heading.
+        $this->assertLessThan(strpos($html, 'data-ref="nobody"'), strpos($html, 'data-ref="kwame"'));
+        $this->assertStringContainsString('Refs nobody owns', $html);
     }
 
     // --- The footer link ---
