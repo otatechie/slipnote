@@ -26,7 +26,8 @@
                     <template v-if="$page.props.ambassadorFormUrl">
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>
                         <a :href="$page.props.ambassadorFormUrl" class="inline-flex items-center gap-1 py-1.5 hover:text-neon" target="_blank" rel="noopener noreferrer">
-                            Campus ambassador?
+                            Become a campus ambassador
+                            <svg aria-hidden="true" class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
                             <span class="sr-only">(opens in a new tab)</span>
                         </a>
                     </template>

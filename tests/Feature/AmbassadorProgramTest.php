@@ -167,12 +167,12 @@ class AmbassadorProgramTest extends TestCase
 
     public function test_footer_links_to_the_application_form_only_when_configured(): void
     {
-        $this->get('/')->assertOk()->assertDontSee('Campus ambassador?');
+        $this->get('/')->assertOk()->assertDontSee('Become a campus ambassador');
 
         config(['noteshare.ambassador_form_url' => 'https://forms.example/apply']);
 
         $this->get('/')->assertOk()
-            ->assertSee('Campus ambassador?')
+            ->assertSee('Become a campus ambassador')
             ->assertSee('https://forms.example/apply');
     }
 }
