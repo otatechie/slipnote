@@ -33,25 +33,25 @@
                     </template>
                 </nav>
                 <span aria-hidden="true" class="text-muted/50">&middot;</span>
-                <!-- Labelled, not icon-only: the icon shows the current mode but a
-                     three-way cycle gives no hint of what the next press does. The
-                     text is filled in by applyTheme() in app.js, which looks for
-                     [data-theme-label] — this layout was the one copy missing it. -->
-                <button type="button"
-                        data-theme-toggle
-                        aria-label="Switch theme mode"
-                        class="op-press group inline-flex min-h-8 cursor-pointer items-center justify-center gap-1 rounded-full border border-sky bg-surface px-2.5 py-1 text-muted transition hover:border-neon hover:text-neon sm:min-h-0 sm:px-2">
-                    <svg aria-hidden="true" data-theme-icon="system" class="size-3.5 group-data-[active-theme=light]:hidden group-data-[active-theme=dark]:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/>
-                    </svg>
-                    <svg aria-hidden="true" data-theme-icon="light" class="hidden size-3.5 group-data-[active-theme=light]:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/>
-                    </svg>
-                    <svg aria-hidden="true" data-theme-icon="dark" class="hidden size-3.5 group-data-[active-theme=dark]:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/>
-                    </svg>
-                    <span data-theme-label class="text-[11px] font-semibold">Theme: System</span>
-                </button>
+                <!-- All three modes visible, so nothing is hidden behind a cycle. applyTheme()
+                     in app.js sets aria-pressed on the current one, which drives its fill. -->
+                <div data-theme-switch role="group" aria-label="Theme" class="inline-flex items-center rounded-full border border-sky bg-surface p-px">
+                    <button type="button" data-theme-set="system" aria-pressed="false" title="System theme"
+                            class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                        <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+                        <span class="sr-only">System</span>
+                    </button>
+                    <button type="button" data-theme-set="light" aria-pressed="false" title="Light theme"
+                            class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                        <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+                        <span class="sr-only">Light</span>
+                    </button>
+                    <button type="button" data-theme-set="dark" aria-pressed="false" title="Dark theme"
+                            class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                        <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/></svg>
+                        <span class="sr-only">Dark</span>
+                    </button>
+                </div>
                 </div>
                 <!-- Full-strength muted: at /70 this measured 2.96:1 on the light
                      page, under AA. The token is only "AA-safe at /70" in dark. -->

@@ -24,12 +24,8 @@ function applyTheme(theme) {
     root.style.colorScheme = resolved
     window.localStorage.setItem(THEME_KEY, active)
 
-    document.querySelectorAll('[data-theme-toggle]').forEach((toggle) => {
-        const label = toggle.querySelector('[data-theme-label]')
-        if (label) label.textContent = `Theme: ${active[0].toUpperCase()}${active.slice(1)}`
-        toggle.dataset.activeTheme = active
-        toggle.setAttribute('aria-label', `Switch theme mode. Current mode: ${active}.`)
-        toggle.setAttribute('title', `Theme: ${active}`)
+    document.querySelectorAll('[data-theme-set]').forEach((button) => {
+        button.setAttribute('aria-pressed', String(button.dataset.themeSet === active))
     })
 }
 
@@ -42,33 +38,11 @@ function cycleTheme() {
 function initThemeToggle() {
     applyTheme(storedTheme())
 
-    document.querySelectorAll('[data-theme-toggle]').forEach((toggle) => {
-        if (toggle.dataset.themeReady === 'true') return
-        toggle.dataset.themeReady = 'true'
-        toggle.addEventListener('click', cycleTheme)
+    document.querySelectorAll('[data-theme-set]').forEach((button) => {
+        if (button.dataset.themeReady === 'true') return
+        button.dataset.themeReady = 'true'
+        button.addEventListener('click', () => applyTheme(button.dataset.themeSet))
     })
-}
-
-function initLandingMotion() {
-    const items = document.querySelectorAll('.lp [data-reveal]')
-    if (!items.length || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-    document.documentElement.classList.add('lp-motion-ready')
-
-    if (!('IntersectionObserver' in window)) {
-        items.forEach((item) => item.classList.add('is-visible'))
-        return
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-            if (!entry.isIntersecting) return
-            entry.target.classList.add('is-visible')
-            observer.unobserve(entry.target)
-        })
-    }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' })
-
-    items.forEach((item) => observer.observe(item))
 }
 
 window.SlipNoteTheme = {
@@ -149,7 +123,6 @@ function initMenuDismiss() {
 
 function initBladeUi() {
     initThemeToggle()
-    initLandingMotion()
     initBladeActions()
     initMenuDismiss()
 }
