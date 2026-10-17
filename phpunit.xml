@@ -24,6 +24,9 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <!-- Pinned so a developer's .env (which may point at a real form) never leaks into tests. -->
         <env name="AMBASSADOR_FORM_URL" value=""/>
+        <env name="FEEDBACK_WHATSAPP" value=""/>
+        <env name="FEEDBACK_EMAIL" value=""/>
+        <env name="CONTACT_EMAIL" value=""/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>

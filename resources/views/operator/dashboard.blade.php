@@ -48,6 +48,11 @@
             <span class="sm:hidden">Boards</span><span class="hidden sm:inline">Newest boards</span>
             <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $recent->count() }}</span>
         </a>
+        <a href="{{ route('operator.dashboard', ['tab' => 'visitors']) }}"
+           @if ($tab === 'visitors') aria-current="page" @endif
+           class="op-press">
+            Visitors
+        </a>
         <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}"
            @if ($tab === 'ambassadors') aria-current="page" @endif
            class="op-press">
@@ -251,6 +256,73 @@
             <span class="font-semibold text-ink">Due this month: {{ $currency }} {{ $dueTotal }}.</span>
         @endif
     </p>
+    @endif
+    @endif
+
+    @if ($tab === 'visitors')
+    {{-- Counts only: the tallies hold a number per day, board, country and
+         source, never a visitor. An arrival is a page opened from outside the
+         site, so clicking around a board doesn't inflate anything. --}}
+    @if ($visitors['total'] === 0)
+        <div class="op-card px-6 py-10 text-center">
+            <p class="text-[15px] font-semibold text-ink">No arrivals counted yet</p>
+            <p class="mx-auto mt-1.5 max-w-md text-[13px] text-muted">
+                Counting starts with the next visit. Countries need Cloudflare in front of the site and its
+                ranges in TRUSTED_PROXIES; without them every country reads Unknown.
+            </p>
+        </div>
+    @else
+        <p class="mb-4 text-[13px] text-muted">
+            <span class="font-semibold text-ink">{{ number_format($visitors['total']) }} {{ Str::plural('arrival', $visitors['total']) }}</span>
+            in the last {{ $visitors['days'] }} days.
+            @if ($visitors['first_day'] && $visitors['first_day'] > now()->subDays($visitors['days'])->toDateString())
+                Counting since {{ \Illuminate\Support\Carbon::parse($visitors['first_day'])->isoFormat('MMM D') }}.
+            @endif
+        </p>
+
+        <div class="grid gap-5 sm:grid-cols-2">
+            <section>
+                <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Countries</h2>
+                <div class="op-card overflow-hidden">
+                    @foreach ($visitors['countries'] as $row)
+                        <div class="op-row flex items-center justify-between gap-3">
+                            <span class="truncate text-[14px] text-ink">{{ $row['label'] }}</span>
+                            <span class="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{{ number_format($row['total']) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            </section>
+            <section>
+                <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">How they found it</h2>
+                <div class="op-card overflow-hidden">
+                    @foreach ($visitors['sources'] as $row)
+                        <div class="op-row flex items-center justify-between gap-3">
+                            <span class="truncate text-[14px] text-ink">{{ $row['source'] }}</span>
+                            <span class="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{{ number_format($row['total']) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+                {{-- "direct" is the bucket people misread as "nobody". --}}
+                <p class="mt-2 text-[12px] text-muted">"direct" is a typed link, a QR scan, the installed app, or a tap in an app that hides where it came from. WhatsApp usually does.</p>
+            </section>
+        </div>
+
+        @if ($visitors['boards']->isNotEmpty())
+            <h2 class="mb-2 mt-6 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Boards people arrive at</h2>
+            <div class="op-card overflow-hidden">
+                @foreach ($visitors['boards'] as $row)
+                    <div class="op-row flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
+                                <a href="{{ route('courses.index', ['workspace' => $row['workspace']->slug]) }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $row['workspace']->name }}</a>
+                            </p>
+                            <p class="mt-0.5 truncate text-[12px] text-muted">{{ implode(' · ', $row['countries']) }}</p>
+                        </div>
+                        <span class="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{{ number_format($row['total']) }}</span>
+                    </div>
+                @endforeach
+            </div>
+        @endif
     @endif
     @endif
 

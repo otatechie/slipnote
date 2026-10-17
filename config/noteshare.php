@@ -85,8 +85,17 @@ return [
     'ambassador_reward' => (int) env('AMBASSADOR_REWARD', 12),
     'ambassador_currency' => env('AMBASSADOR_CURRENCY', 'GHS'),
 
+    /*
+    | Where "Using SlipNote a lot? Tell us how" sends people. A WhatsApp
+    | number in international form, digits only (e.g. 233241234567), and/or
+    | an email. The prompt shows on boards that have files, and is hidden
+    | entirely when both are empty. Email falls back to CONTACT_EMAIL.
+    */
+    'feedback_whatsapp' => preg_replace('/\D+/', '', (string) env('FEEDBACK_WHATSAPP', '')),
+    'feedback_email' => env('FEEDBACK_EMAIL', env('CONTACT_EMAIL')),
+
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.
-    'legal_updated' => '2026-07-02',
+    'legal_updated' => '2026-10-17',
 
 ];

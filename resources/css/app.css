@@ -355,18 +355,26 @@ textarea:focus-visible {
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-sky) 70%, var(--color-base));
     box-shadow: 0 1px 0 color-mix(in srgb, black 6%, transparent) inset;
+    /* Four cells with badges can outgrow a 320px phone. Scroll sideways
+       rather than squeeze: cells keep their natural width (flex-shrink 0)
+       and still share any spare room. */
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.op-seg::-webkit-scrollbar {
+    display: none;
 }
 .op-seg a {
     display: inline-flex;
-    flex: 1;
+    flex: 1 0 auto;
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
     border-radius: 999px;
-    /* Tighter on phones: three cells share ~330px. Never wrap -- a label
+    /* Tighter on phones: four cells share ~330px. Never wrap -- a label
        breaking to two lines inside a pill leaves its count badge floating
        between them. Below sm the labels are also shortened in the markup. */
-    padding: 0.8rem 0.6rem;
+    padding: 0.8rem 0.55rem;
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;

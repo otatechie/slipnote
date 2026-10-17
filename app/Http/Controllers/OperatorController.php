@@ -9,6 +9,7 @@ use App\Models\Report;
 use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -54,7 +55,7 @@ class OperatorController extends Controller
             && hash_equals($this->secretFingerprint(), session('operator_fp'));
     }
 
-    private const TABS = ['reported', 'boards', 'ambassadors'];
+    private const TABS = ['reported', 'boards', 'visitors', 'ambassadors'];
 
     /** Reported is the default: action before browsing. */
     private function tab(Request $request): string
@@ -142,7 +143,90 @@ class OperatorController extends Controller
             'undo' => $undo,
             'ambassadors' => $ambassadors = Ambassador::query()->orderBy('name')->get(),
             'ambassadorRows' => $this->ambassadorRows($ambassadors),
+            'visitors' => $this->tab($request) === 'visitors' ? $this->visitorStats() : null,
         ]);
+    }
+
+    /** The window the Visitors tab covers. Long enough to span a teaching block. */
+    private const VISITOR_DAYS = 30;
+
+    /**
+     * Where arrivals came from over the window: by country, by source, and
+     * the boards that drew them. Built from the daily tallies only, which
+     * hold counts and nothing about any visitor.
+     *
+     * @return array<string, mixed>
+     */
+    private function visitorStats(): array
+    {
+        $since = now()->subDays(self::VISITOR_DAYS - 1)->toDateString();
+        $base = fn () => DB::table('visit_tallies')->where('day', '>=', $since);
+
+        $sum = fn (string $column, int $limit) => $base()
+            ->select($column, DB::raw('SUM(arrivals) as total'))
+            ->groupBy($column)
+            ->orderByDesc('total')
+            ->limit($limit)
+            ->get();
+
+        $boards = $base()
+            ->where('workspace_id', '>', 0)
+            ->select('workspace_id', DB::raw('SUM(arrivals) as total'))
+            ->groupBy('workspace_id')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get();
+
+        // Each listed board's leading country: "which board is the one used
+        // from Saudi Arabia" is exactly the question this tab exists for.
+        $countriesByBoard = $base()
+            ->whereIn('workspace_id', $boards->pluck('workspace_id'))
+            ->select('workspace_id', 'country', DB::raw('SUM(arrivals) as total'))
+            ->groupBy('workspace_id', 'country')
+            ->get()
+            ->groupBy('workspace_id')
+            ->map(fn ($rows) => $rows->sortByDesc('total')->values()->map(fn ($r) => $r->country)->all());
+
+        $names = Workspace::query()->whereIn('id', $boards->pluck('workspace_id'))->get(['id', 'name', 'slug'])->keyBy('id');
+
+        return [
+            'days' => self::VISITOR_DAYS,
+            'total' => (int) $base()->sum('arrivals'),
+            'first_day' => DB::table('visit_tallies')->min('day'),
+            'countries' => $sum('country', 15)->map(fn ($r) => [
+                'code' => $r->country,
+                'label' => self::countryLabel($r->country),
+                'total' => (int) $r->total,
+            ]),
+            'sources' => $sum('source', 12)->map(fn ($r) => [
+                'source' => $r->source,
+                'total' => (int) $r->total,
+            ]),
+            'boards' => $boards->map(fn ($r) => [
+                'workspace' => $names->get($r->workspace_id),
+                'total' => (int) $r->total,
+                'countries' => array_map(
+                    fn ($c) => self::countryLabel($c),
+                    array_slice($countriesByBoard->get($r->workspace_id, []), 0, 3),
+                ),
+            ])->filter(fn ($r) => $r['workspace'] !== null)->values(),
+        ];
+    }
+
+    /** "🇸🇦 Saudi Arabia" from "SA"; '' is the honest "Unknown". */
+    private static function countryLabel(string $code): string
+    {
+        if ($code === '') {
+            return 'Unknown';
+        }
+
+        $flag = implode('', array_map(
+            fn ($ch) => mb_chr(0x1F1E6 + ord($ch) - ord('A')),
+            str_split($code),
+        ));
+        $name = class_exists(\Locale::class) ? \Locale::getDisplayRegion('-'.$code, 'en') : $code;
+
+        return $flag.' '.($name !== '' ? $name : $code);
     }
 
     /**

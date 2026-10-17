@@ -42,6 +42,7 @@
                 <li>When a board was <strong>last opened</strong>. One timestamp per board, overwritten each visit &mdash; it tells the operator which boards are still in use. It records no visitor details and keeps no history.</li>
                 <li>The board's <strong>owner secret</strong>, and an <strong>upload passphrase</strong> if the owner sets one — both stored only as one-way hashes, so we can't read them back.</li>
                 <li>An optional <strong>recovery email</strong> if the owner opts in. It is stored encrypted at rest and used only to send a fresh owner link when requested.</li>
+                <li><strong>Daily visit counts</strong>. When someone opens the site or a board from outside it, a counter goes up by one for that day, that board, the visitor's country, and where the visit came from (for example "google", "direct", or the referring website's address). Only the number is stored: no IP address, no browser details, no cookie, and nothing that tells one visitor from another. The country comes from our network provider's routing, not from looking you up.</li>
                 <li>Standard <strong>server logs</strong> (IP address, request path, timestamp), used for security and debugging, not analytics.</li>
                 <li>A <strong>session cookie</strong> to remember owner-mode unlocks and passphrase entries within a single visit, and the <strong>session record</strong> it points at on our server. That record holds your IP address and your browser's user-agent string (browser and operating system version), which is how the session is kept secure. It is deleted when the session expires.</li>
                 <li>A small browser-side <strong>recent boards</strong> cookie if you open a board in owner mode, so this browser can show shortcuts back to boards you've recently managed.</li>
@@ -53,7 +54,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">How long we keep it</h2>
-            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, workspaces, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
+            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, workspaces, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
         </section>
 
         <section>
@@ -69,7 +70,7 @@
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">What we don't do</h2>
             <ul class="ml-5 list-disc space-y-1.5 text-[14px] text-ink">
-                <li>No analytics product, no advertising, no profile building, and no tracking of you across boards or visits. The one usage figure kept is a single "last opened" timestamp per board, which records nothing about who opened it.</li>
+                <li>No analytics product, no advertising, no profile building, and no tracking of you across boards or visits. The usage figures kept are a "last opened" timestamp per board and the daily visit counts above, neither of which records anything about who visited.</li>
                 <li>No selling or sharing of data with third parties.</li>
                 <li>No account, password, or email is required to browse, create a board, or upload files.</li>
             </ul>

@@ -17,6 +17,7 @@ const props = defineProps({
     storagePct: Number,
     search: String,
     sort: String,
+    feedback: Object,
 })
 
 const page = usePage()
@@ -60,6 +61,18 @@ function share() {
         shareCopied.value = true
         setTimeout(() => { shareCopied.value = false }, 2000)
     }).catch(() => { })
+}
+
+// "Tell us how you use it". Asked only where there is use to tell about (a
+// board with files), and once dismissed it stays gone in this browser. Storage
+// can throw in private windows, so a failure just means it shows again.
+const FEEDBACK_KEY = 'slipnote_feedback_dismissed'
+const feedbackDismissed = ref(false)
+try { feedbackDismissed.value = window.localStorage.getItem(FEEDBACK_KEY) === '1' } catch { }
+const showFeedback = computed(() => !!props.feedback && props.totalFiles > 0 && !feedbackDismissed.value)
+function dismissFeedback() {
+    feedbackDismissed.value = true
+    try { window.localStorage.setItem(FEEDBACK_KEY, '1') } catch { }
 }
 
 // QR code — for the "get the notes here" moment in a room. Generated lazily
@@ -473,7 +486,7 @@ function persistOrder() {
                         <div v-if="draggable && courses.length > 1" class="-my-1 flex shrink-0 flex-col items-center">
                             <button type="button" @click.stop.prevent="moveCourse(idx, -1)" :disabled="idx === 0"
                                 :aria-label="`Move ${course.code} up`"
-                                class="flex h-11 w-9 items-center justify-center rounded text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
+                                class="flex h-11 w-9 items-center justify-center rounded-full text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
                                 <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M4 10l4-4 4 4" />
@@ -489,7 +502,7 @@ function persistOrder() {
                             </svg>
                             <button type="button" @click.stop.prevent="moveCourse(idx, 1)"
                                 :disabled="idx === dragList.length - 1" :aria-label="`Move ${course.code} down`"
-                                class="flex h-11 w-9 items-center justify-center rounded text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
+                                class="flex h-11 w-9 items-center justify-center rounded-full text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
                                 <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M4 6l4 4 4-4" />
@@ -540,7 +553,7 @@ function persistOrder() {
 
                         <button v-if="isOwner" type="button" @click.stop.prevent="openEdit(course)"
                             :aria-label="`Edit ${course.code}`"
-                            class="mt-0.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted transition hover:bg-sky/40 hover:text-neon focus:opacity-100 sm:size-auto sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100">
+                            class="mt-0.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-neon focus:opacity-100 sm:size-auto sm:p-1.5 sm:opacity-0 sm:group-hover:opacity-100">
                             <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                                 stroke-width="1.7">
                                 <path d="M13.5 3.5l3 3L7 16l-4 1 1-4 9.5-9.5z" stroke-linecap="round"
@@ -554,6 +567,33 @@ function persistOrder() {
                 <p v-if="draggable && courses.length > 1" class="mt-3 text-[13px] text-muted">
                     Use the arrows (or drag) to reorder — saved automatically.
                 </p>
+
+                <!-- Below the list, never above it: the board is for finding notes,
+                     and this is a favour asked of the people who already do. -->
+                <aside v-if="showFeedback" aria-label="Feedback"
+                    class="op-card mt-6 flex items-start gap-3 px-4 py-3.5">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-[14px] font-semibold tracking-tight text-ink">Using SlipNote a lot? Tell us how 👋</p>
+                        <p class="mt-0.5 text-[13px] text-muted">One line helps: what your class uses it for, and what's missing.</p>
+                        <div class="mt-2.5 flex flex-wrap gap-2">
+                            <a v-if="feedback.whatsapp" :href="feedback.whatsapp" target="_blank" rel="noopener noreferrer"
+                                class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-ink sm:h-8">
+                                <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Z"/></svg>
+                                WhatsApp us
+                                <span class="sr-only">(opens in a new tab)</span>
+                            </a>
+                            <a v-if="feedback.email" :href="feedback.email"
+                                class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-ink sm:h-8">
+                                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+                                Email us
+                            </a>
+                        </div>
+                    </div>
+                    <button type="button" @click="dismissFeedback" aria-label="Dismiss feedback prompt"
+                        class="-mr-1.5 -mt-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-8">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                    </button>
+                </aside>
             </template>
 
             <!-- Owner: create-course slide-in panel -->
