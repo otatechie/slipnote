@@ -14,8 +14,26 @@ class WorkspacesController extends Controller
 {
     public function index(Request $request)
     {
+        // The cookie holds only slug + name. Look the boards up so each row can
+        // say where it stands ("1 course · no files yet"), carry its current
+        // name, and drop boards that have since been deleted rather than list
+        // a link that 404s.
+        $recent = RecentWorkspaces::read($request);
+        $boards = Workspace::whereIn('slug', array_column($recent, 'slug'))
+            ->withCount(['courses', 'materials'])
+            ->get()
+            ->keyBy('slug');
+
         return Inertia::render('WorkspacesLanding', [
-            'recent' => RecentWorkspaces::read($request),
+            'recent' => collect($recent)
+                ->filter(fn ($item) => $boards->has($item['slug']))
+                ->map(fn ($item) => [
+                    'slug' => $item['slug'],
+                    'name' => $boards[$item['slug']]->name,
+                    'courses' => $boards[$item['slug']]->courses_count,
+                    'files' => $boards[$item['slug']]->materials_count,
+                ])
+                ->values(),
         ]);
     }
 

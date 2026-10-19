@@ -102,4 +102,26 @@ class WorkspaceLandingTest extends TestCase
         $this->post('/workspaces/open', ['openName' => '   '])
             ->assertSessionHasErrors(['openName']);
     }
+
+    public function test_start_lists_managed_boards_with_their_counts_and_drops_deleted_ones(): void
+    {
+        [$ws] = Workspace::provision('Nursing Level 200');
+        $course = $ws->courses()->create(['code' => 'NUR 201', 'title' => 'T', 'slug' => 'nur-201', 'workspace_id' => $ws->id]);
+        $course->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf',
+            'stored_path' => 'x/a.pdf', 'download_token' => 'dl-a', 'file_size' => 1]);
+
+        $cookie = json_encode([
+            ['slug' => 'nursing-level-200', 'name' => 'Old name'],
+            ['slug' => 'deleted-board', 'name' => 'Gone'],
+        ]);
+
+        $this->withCookie('recent_workspaces', $cookie)
+            ->get('/start')
+            ->assertInertia(fn ($page) => $page
+                ->has('recent', 1)
+                ->where('recent.0.slug', 'nursing-level-200')
+                ->where('recent.0.name', 'Nursing Level 200')
+                ->where('recent.0.courses', 1)
+                ->where('recent.0.files', 1));
+    }
 }

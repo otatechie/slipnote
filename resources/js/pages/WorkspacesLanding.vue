@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { Head, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 
@@ -13,8 +13,27 @@ const page = usePage()
 const flash = computed(() => page.props.flash)
 const errors = computed(() => page.props.errors)
 
+// Two pages in one. A browser that already manages a board is coming back
+// to it ("All boards" on a board links here), so it gets the list first and
+// the create form behind "New board". A first visit gets the form.
+const returning = computed(() => props.recent.length > 0)
+
 // Create form
 const createForm = useForm({ name: '' })
+const creating = ref(!returning.value || !!errors.value?.name)
+const nameField = ref(null)
+
+function startCreating() {
+    creating.value = true
+    nextTick(() => nameField.value?.focus())
+}
+
+function boardSummary(ws) {
+    if (ws.courses === 0) return 'No courses yet'
+    const courses = ws.courses === 1 ? '1 course' : `${ws.courses} courses`
+    if (ws.files === 0) return `${courses} · no files yet`
+    return `${courses} · ${ws.files === 1 ? '1 file' : `${ws.files} files`}`
+}
 
 const slugPreview = computed(() => {
     const s = createForm.name.trim().toLowerCase()
@@ -41,14 +60,22 @@ function recoveryUrl() {
 }
 
 const openNameRef = ref(null)
+// Finding by name is the rare path, so its field stays folded into a line of
+// links until asked for.
+const finding = ref(!!errors.value?.openName)
+
+function startFinding() {
+    finding.value = true
+    nextTick(() => openNameRef.value?.focus())
+}
 
 function recover() {
     const url = recoveryUrl()
-    // Nothing typed yet: the recovery URL is built from the name in the field
-    // above, so put the cursor there. Disabling the control instead meant the
-    // page had to explain, in a second line of text, how to un-disable it.
+    // Nothing typed yet: the recovery URL is built from the board name, so
+    // open the name field and put the cursor there. Disabling the control
+    // instead meant explaining, in more text, how to un-disable it.
     if (!url) {
-        openNameRef.value?.focus()
+        startFinding()
         return
     }
     router.visit(url)
@@ -115,7 +142,7 @@ function confirmForget() {
 </script>
 
 <template>
-    <Head title="Create your board" />
+    <Head :title="flash.ownerUrl ? 'Save your owner link' : (returning ? 'Your boards' : 'Create a board')" />
     <AppLayout>
         <div class="op mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 sm:px-5 sm:py-12">
             <header class="mb-7 text-center">
@@ -139,10 +166,14 @@ function confirmForget() {
                         It's shown only once — copy it or download it before you continue.
                     </p>
                 </template>
+                <template v-else-if="returning">
+                    <h1 class="op-title text-[2.15rem] font-bold text-ink">Your boards</h1>
+                    <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">The boards you manage on this browser.</p>
+                </template>
                 <template v-else>
-                    <h1 class="op-title text-[2.15rem] font-bold text-ink">Create your board</h1>
-                    <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
-                        The board where your class keeps its notes, slides and past papers. One link, no accounts, no passwords.
+                    <h1 class="op-title text-[2.15rem] font-bold text-ink">Create a board</h1>
+                    <p class="mx-auto mt-2 max-w-xs text-balance text-[15px] text-muted">
+                        Where your class keeps its notes, slides and past papers. One link, no accounts.
                     </p>
                 </template>
             </header>
@@ -157,94 +188,136 @@ function confirmForget() {
                     <p v-if="flash.recovered" class="text-[15px] font-bold text-teal">Owner access to "{{ flash.createdName }}" is restored</p>
                     <p v-else class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
 
+                    <!-- One red thing: the label. The box, the label and a third red
+                         warning line made the whole top half shout, so the box is
+                         only faintly tinted and the consequence line is muted. -->
                     <div class="mt-4">
                         <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-danger">
                             <svg aria-hidden="true" class="size-3.5 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="4" y="8.5" width="12" height="8" rx="2" />
                                 <path d="M7 8.5V6a3 3 0 0 1 6 0v2.5" />
                             </svg>
-                            Private owner link: never share this
+                            Owner link · keep it private
                         </p>
-                        <p class="w-full cursor-text break-all rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all"
+                        <p class="w-full cursor-text break-all rounded-lg border border-danger/25 bg-danger/5 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all"
                            @click="$event.target.select?.() || window.getSelection().selectAllChildren($event.target)">{{ flash.ownerUrl }}</p>
-                        <p class="mt-1.5 text-[11px] text-danger">Anyone with this link can control or delete the board.</p>
+                        <p class="mt-1.5 text-[12px] text-muted">Anyone with this link can control or delete the board.</p>
+
+                        <!-- "Copy owner link", not "Copy link": the share link below
+                             has its own Copy, and mixing the two up is the one
+                             mistake on this screen with no way back. Download is a
+                             plain text button so the card has one filled control. -->
+                        <div class="mt-3 flex items-center gap-2">
+                            <button type="button" @click="copyOwnerLink"
+                                    class="op-press min-h-11 flex-1 cursor-pointer rounded-full bg-neon text-[13px] font-semibold text-white sm:min-h-9">
+                                <span v-if="!copied">Copy owner link</span>
+                                <span v-else>Copied ✓</span>
+                            </button>
+                            <button type="button" @click="downloadTxt"
+                                    class="op-press min-h-11 shrink-0 cursor-pointer rounded-full px-4 text-[13px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink sm:min-h-9">
+                                <span v-if="!downloaded">Download .txt</span>
+                                <span v-else>Saved ✓</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="mt-2.5 flex gap-2">
-                        <button type="button" @click="copyOwnerLink"
-                                class="op-press min-h-11 flex-1 cursor-pointer rounded-full bg-neon text-[13px] font-semibold text-white sm:min-h-9">
-                            <span v-if="!copied">Copy link</span>
-                            <span v-else>Copied ✓</span>
-                        </button>
-                        <!-- Neutral, not a second accent. "Copy link" is the one
-                             primary action on this screen; when the accent also
-                             marks both secondaries and a section label, it stops
-                             pointing at anything. -->
-                        <button type="button" @click="downloadTxt"
-                                class="op-press min-h-11 flex-1 cursor-pointer rounded-full border border-muted/50 bg-base text-[13px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink sm:min-h-9">
-                            <span v-if="!downloaded">Download .txt</span>
-                            <span v-else>Saved ✓</span>
-                        </button>
-                    </div>
-
-                    <div class="mt-4">
+                    <div class="mt-5 border-t border-sky pt-4">
                         <!-- Labelled "once it has files": an empty board shared
                              into a group chat converts nobody and doesn't get a
                              second look. Save the link now, share it later. -->
-                        <!-- Muted, not accent. Paired against the red "never share
-                             this" label above, red-vs-neutral says one section is
-                             dangerous and one is ordinary; red-vs-blue said both
-                             were special and left the reader to work out which. -->
                         <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">
                             <svg aria-hidden="true" class="size-3.5 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M8.5 11.5a3 3 0 0 0 4.24 0l2.12-2.12a3 3 0 0 0-4.24-4.24l-.7.7" />
                                 <path d="M11.5 8.5a3 3 0 0 0-4.24 0L5.14 10.62a3 3 0 0 0 4.24 4.24l.7-.7" />
                             </svg>
-                            Share with classmates — once it has files
+                            Share link · once it has files
                         </p>
                         <!-- Not a live link on purpose: navigating away here would
-                             discard the owner link, which is shown only once. -->
-                        <!-- Box above, button below — the same shape as the owner
-                             section. Beside the box, a fixed-height pill has to match
-                             a box that wraps to one or two lines depending on the
-                             board name: stretch it and it renders as a circle, don't
-                             and it's a lone oval carrying a four-letter word. -->
-                        <!-- bg-base now the card is bg-surface: a white box on a
-                             white card is the same tone as what's behind it. -->
-                        <p class="w-full cursor-text break-all rounded-lg border border-sky bg-base px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all">{{ flash.createdUrl }}</p>
-                        <!-- "Copy share link", not "Copy": there is already a "Copy
-                             link" button above it that copies the *owner* link, and
-                             on this screen confusing those two is the one mistake
-                             with no way back. -->
-                        <button type="button" @click="copyShareLink"
-                                class="op-press mt-2 min-h-11 w-full cursor-pointer rounded-full border border-muted/50 bg-base text-[13px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink sm:min-h-9">
-                            <span v-if="!shareCopied">Copy share link</span>
-                            <span v-else>Copied ✓</span>
-                        </button>
+                             discard the owner link, which is shown only once. Copy
+                             sits inside the box rather than as a pill beside or
+                             under it, so it's one quiet row instead of a fourth
+                             outlined button; the URL truncates since Copy is how
+                             it leaves the page. -->
+                        <div class="flex items-stretch overflow-hidden rounded-lg border border-sky bg-base">
+                            <span class="min-w-0 flex-1 cursor-text select-all truncate px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink">{{ flash.createdUrl }}</span>
+                            <button type="button" @click="copyShareLink"
+                                    class="min-h-11 shrink-0 cursor-pointer border-l border-sky px-4 text-[13px] font-semibold text-neon transition hover:bg-sky/30 sm:min-h-9">
+                                <span v-if="!shareCopied">Copy</span>
+                                <span v-else>Copied ✓</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <label class="mt-5 flex items-start gap-2.5 text-[13px] text-ink">
+                    <label class="mt-6 flex cursor-pointer items-start gap-2.5 text-[13px] text-ink">
                         <input type="checkbox" v-model="saved"
                                class="mt-0.5 size-4.5 shrink-0 cursor-pointer accent-neon">
                         <span>I've saved the owner link; I won't see it again.</span>
                     </label>
 
+                    <!-- Disabled is a flat muted fill, not a dashed outline with
+                         instructions in it: the checkbox directly above already
+                         says what unlocks it. A new board has no courses, and files
+                         live inside a course, so the label names the step the next
+                         page actually opens on. -->
                     <button type="button" @click="proceed" :disabled="!saved"
-                            class="op-press mt-4 min-h-11 w-full rounded-full text-[15px] font-semibold
+                            class="op-press mt-3 min-h-11 w-full rounded-full text-[15px] font-semibold transition
                                    enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:shadow-sm
-                                   disabled:cursor-not-allowed disabled:border disabled:border-dashed disabled:border-sky disabled:bg-base disabled:text-muted">
-                        <span v-if="saved">Add files to {{ flash.createdName }}</span>
-                        <span v-else>Tick the box above to continue</span>
+                                   disabled:cursor-not-allowed disabled:bg-sky/50 disabled:text-muted/70">
+                        <template v-if="flash.recovered">Open {{ flash.createdName }}</template>
+                        <template v-else>Add your first course</template>
                     </button>
                 </div>
             </template>
 
-            <!-- Create form -->
             <template v-else>
-                <form @submit.prevent="create" class="op-card p-5 sm:p-6">
-                    <label for="name" class="mb-2 block text-[13px] font-semibold text-ink">Board name</label>
-                    <input id="name" type="text" v-model="createForm.name"
-                           placeholder="Computer Science - Level 100" autofocus
+                <!-- Boards this browser manages: added on create, owner unlock and
+                     recovery, never on a plain visit, so every row is one you own. -->
+                <template v-if="returning">
+                    <ul class="op-card">
+                        <li v-for="ws in props.recent" :key="ws.slug"
+                            class="flex items-center gap-1 border-t border-sky/80 py-1.5 pl-5 pr-1.5 first:border-t-0">
+                            <a :href="'/' + ws.slug" class="group min-w-0 flex-1 py-2">
+                                <span class="block truncate text-[15px] font-semibold text-ink group-hover:text-neon">{{ ws.name }}</span>
+                                <span class="block text-[12px] text-muted">{{ boardSummary(ws) }}</span>
+                            </a>
+                            <!-- In a menu, not a "Remove" on every row: repeated down
+                                 the list it was the loudest word on the page, for the
+                                 action people take least. Labelled in full inside so it
+                                 can't read as "delete the board". -->
+                            <details class="op-menu relative shrink-0">
+                                <summary :aria-label="`More for ${ws.name}`" title="More"
+                                         class="flex size-11 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-9">
+                                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6" /><circle cx="10" cy="10" r="1.6" /><circle cx="16" cy="10" r="1.6" /></svg>
+                                </summary>
+                                <div class="absolute right-0 top-full z-20 mt-1 w-52 rounded-xl bg-surface p-1 shadow-xl ring-1 ring-sky">
+                                    <button type="button"
+                                            @click="$event.target.closest('details')?.removeAttribute('open'); forget(ws)"
+                                            class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-sky/40 sm:min-h-0">
+                                        Remove from this list
+                                    </button>
+                                </div>
+                            </details>
+                        </li>
+                    </ul>
+
+                    <!-- Outlined, not filled: on this page the boards are the point,
+                         and a second board is the occasional case. -->
+                    <button v-if="!creating" type="button" @click="startCreating"
+                            class="op-press mt-3.5 inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-muted/50 text-[15px] font-semibold text-ink transition hover:bg-sky/30">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
+                        New board
+                    </button>
+                </template>
+
+                <!-- Create form -->
+                <form v-if="creating" @submit.prevent="create" class="op-card p-5 sm:p-6" :class="returning ? 'mt-3.5' : ''">
+                    <!-- "Your class", not "Board name": asked for a board name, people
+                         typed a single subject ("IT for Business") and then had
+                         nowhere sensible to put the courses the next page asks for. -->
+                    <label for="name" class="block text-[13px] font-semibold text-ink">Your class</label>
+                    <p class="mb-2 mt-0.5 text-[12px] text-muted">One board for the whole class. You'll add each course inside it.</p>
+                    <input id="name" ref="nameField" type="text" v-model="createForm.name"
+                           placeholder="Computer Science - Level 100" :autofocus="!returning"
                            class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
 
                     <div class="mt-2 text-[12px]">
@@ -266,77 +339,36 @@ function confirmForget() {
                     </p>
                 </form>
 
-                <!-- Recent boards first among the "returning user" paths — one click
-                     beats retyping a name. -->
-                <div v-if="props.recent.length" class="op-card mt-7 px-5 py-4 sm:px-6">
-                    <h2 class="mb-2 text-[12px] font-semibold uppercase tracking-[0.06em] text-muted">Your recent boards</h2>
-                    <!-- No divide-y here. These rows are a single line, so a row rule
-                         lands immediately under the link's own underline: two lines a
-                         few pixels apart meaning different things. The operator board
-                         list keeps its rules because a metadata line sits between. -->
-                    <ul>
-                        <li v-for="ws in props.recent" :key="ws.slug"
-                            class="flex items-center justify-between gap-3">
-                            <!-- Same link treatment as the operator console's board
-                                 list and the course page's filenames: ink text with a
-                                 muted underline. The dashed teal rule here was the
-                                 app's only one. -->
-                            <a :href="'/' + ws.slug"
-                               class="min-w-0 flex-1 truncate py-2 text-[14px] font-medium text-ink underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">
-                                {{ ws.name }}
-                            </a>
-                            <!-- Keeps its text label rather than becoming the round
-                                 icon button used elsewhere: an × or bin here would
-                                 read as "delete the board", which is the one thing
-                                 this control must not be mistaken for. -->
-                            <button type="button" @click="forget(ws)"
-                                    :aria-label="`Remove ${ws.name} from this list`"
-                                    class="op-press inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full px-2.5 text-[12px] text-muted transition hover:bg-danger/10 hover:text-danger sm:min-h-9">
-                                Remove
-                            </button>
-                        </li>
-                    </ul>
-                    <p class="mt-2 text-[11px] text-muted">
-                        Saved on this browser only. Removing clears the shortcut; the board stays.
+                <!-- Find and recover: rare paths, so one line of links rather than
+                     a card with its own field. The field opens in place. -->
+                <div class="mt-7 text-center text-[13px] leading-relaxed text-muted">
+                    <p>
+                        {{ returning ? 'Looking for another board?' : 'Already made one?' }}
+                        <button type="button" @click="startFinding"
+                                class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-neon hover:underline">{{ returning ? 'Find by name' : 'Find it by name' }}</button>
+                    </p>
+                    <p>
+                        <button type="button" @click="recover"
+                                class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-neon hover:underline">Lost your owner link?</button>
                     </p>
                 </div>
 
-                <div class="op-card px-5 py-5 sm:px-6"
-                     :class="props.recent.length ? 'mt-4' : 'mt-7'">
-                    <h2 class="text-[13px] font-semibold text-ink">Already made one? Find it by name:</h2>
-                    <form @submit.prevent="open" class="mt-2.5 flex flex-col gap-2 sm:flex-row">
+                <div v-if="finding" class="mt-4">
+                    <form @submit.prevent="open" class="flex flex-col gap-2 sm:flex-row">
                         <input id="openName" ref="openNameRef" type="text" v-model="openForm.openName"
-                               aria-label="Board name to open"
-                               placeholder="Find a board by name…"
-                               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                        <!-- Secondary, not a second primary. The page has one job —
-                             create a board — and a solid blue "Open" sitting beside a
-                             solid blue "Create board" reads as two equal choices.
-                             bg-base, not bg-surface: this button sits *inside* an
-                             op-card, which is bg-surface, so a surface fill was the
-                             same tone as what's behind it — and bg-base vs bg-surface
-                             is only 1.09:1, so the border, not the fill, marks this
-                             button's extent. /50 (2.80 dark, 2.13 light) sits below
-                             the 3:1 of WCAG 1.4.11 by choice: the label itself runs
-                             5.5–7.9:1 and identifies the control, so the outline is
-                             decoration. /80 passed outright but at ~4x the contrast
-                             of every other bordered control on the page, it read as
-                             the loudest thing on a screen full of quiet chrome. -->
+                               aria-label="Board name"
+                               placeholder="Board name…"
+                               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <button type="submit" :disabled="openForm.processing"
-                                class="op-press min-h-11 w-full shrink-0 cursor-pointer rounded-full border border-muted/50 bg-base px-5 text-[15px] font-semibold text-muted transition hover:border-muted hover:bg-sky/30 hover:text-ink disabled:opacity-60 sm:w-auto">
+                                class="op-press min-h-11 w-full shrink-0 cursor-pointer rounded-full border border-muted/50 px-5 text-[15px] font-semibold text-ink transition hover:bg-sky/30 disabled:opacity-60 sm:w-auto">
                             Open
                         </button>
                     </form>
                     <span v-if="errors.openName" role="alert" class="mt-2 block text-[13px] text-danger">{{ errors.openName[0] }}</span>
-                    <div class="mt-3 border-t border-sky pt-3">
-                        <p class="text-[12px] text-muted">
-                            Lost your owner link?
-                            <button type="button" @click="recover"
-                                    class="cursor-pointer font-semibold text-neon underline decoration-neon/40 underline-offset-4 transition hover:decoration-neon">
-                                Recover it using your board name
-                            </button>
-                        </p>
-                    </div>
+                    <p class="mt-2 text-[12px] text-muted">
+                        Lost the owner link?
+                        <button type="button" @click="recover" class="cursor-pointer font-semibold text-neon hover:underline">Recover it with this name</button>
+                    </p>
                 </div>
             </template>
         </div>
