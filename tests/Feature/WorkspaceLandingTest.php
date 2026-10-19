@@ -156,4 +156,16 @@ class WorkspaceLandingTest extends TestCase
             ->assertOk()
             ->assertCookieMissing('recent_workspaces');
     }
+
+    public function test_a_board_never_takes_the_address_of_a_site_page(): void
+    {
+        // These pages are routed before the board catch-all; a board with
+        // their slug would be unreachable.
+        foreach (['Privacy', 'Terms', 'Start', 'Lecturers', 'Operator'] as $name) {
+            [$ws] = Workspace::provision($name);
+            $this->assertSame(strtolower($name).'-2', $ws->slug);
+        }
+
+        $this->get('/lecturers')->assertOk()->assertSee('For lecturers');
+    }
 }

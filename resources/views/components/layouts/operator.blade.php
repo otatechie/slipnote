@@ -34,18 +34,18 @@
                      in app.js sets aria-pressed on the current one, which drives its fill. --}}
                 <div data-theme-switch role="group" aria-label="Theme" class="inline-flex items-center rounded-full border border-sky/50 bg-surface/80 backdrop-blur-md p-px">
                     <button type="button" data-theme-set="system" aria-pressed="false" title="System theme"
-                            class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
-                        <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+                            class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                        <svg aria-hidden="true" class="size-3.5 sm:size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
                         <span class="sr-only">System</span>
                     </button>
                     <button type="button" data-theme-set="light" aria-pressed="false" title="Light theme"
-                            class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
-                        <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+                            class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                        <svg aria-hidden="true" class="size-3.5 sm:size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
                         <span class="sr-only">Light</span>
                     </button>
                     <button type="button" data-theme-set="dark" aria-pressed="false" title="Dark theme"
-                            class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
-                        <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/></svg>
+                            class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                        <svg aria-hidden="true" class="size-3.5 sm:size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/></svg>
                         <span class="sr-only">Dark</span>
                     </button>
                 </div>

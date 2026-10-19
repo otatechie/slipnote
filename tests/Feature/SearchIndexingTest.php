@@ -24,7 +24,7 @@ class SearchIndexingTest extends TestCase
 
     public function test_the_public_pages_stay_indexable(): void
     {
-        foreach (['/', '/privacy', '/terms'] as $path) {
+        foreach (['/', '/privacy', '/terms', '/lecturers'] as $path) {
             $this->get($path)
                 ->assertOk()
                 ->assertHeaderMissing('X-Robots-Tag');

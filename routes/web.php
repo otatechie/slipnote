@@ -30,6 +30,7 @@ Route::post('/suggestions', [SuggestionController::class, 'store'])->name('sugge
 Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::get('/manifest.webmanifest', [ManifestController::class, 'site'])->name('manifest');
 Route::view('/terms', 'legal.terms')->name('terms');
+Route::view('/lecturers', 'lecturers')->name('lecturers');
 
 // Material download. Anonymous by design — but addressed by the file's
 // random download_token, not a sequential id, so files can't be enumerated

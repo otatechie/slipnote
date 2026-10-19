@@ -161,12 +161,32 @@ class Workspace extends Model
         $base = Str::slug($name) ?: 'workspace';
         $slug = $base;
         $n = 2;
-        while (static::where('slug', $slug)->exists()) {
+        $reserved = static::reservedSlugs();
+        while (in_array($slug, $reserved, true) || static::where('slug', $slug)->exists()) {
             $slug = "{$base}-{$n}";
             $n++;
         }
 
         return $slug;
+    }
+
+    /**
+     * Slugs the site's own pages already answer to (/start, /privacy,
+     * /lecturers, /operator…). Those routes are declared before the
+     * /{workspace} catch-all, so a board named "Privacy" would get a link
+     * that opens the privacy page and could never be reached. Read from the
+     * router, so a new page is covered without remembering to list it.
+     *
+     * @return list<string>
+     */
+    private static function reservedSlugs(): array
+    {
+        return collect(app('router')->getRoutes()->getRoutes())
+            ->map(fn ($route) => explode('/', $route->uri())[0])
+            ->reject(fn ($segment) => $segment === '' || str_starts_with($segment, '{'))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /** Per-workspace session keys so unlocking one never unlocks another. */

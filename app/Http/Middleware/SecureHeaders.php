@@ -10,11 +10,11 @@ use Symfony\Component\HttpFoundation\Response;
 class SecureHeaders
 {
     /**
-     * Routes that opt in to search indexing — the marketing landing and the
-     * legal pages. Mirrors :indexable="true" in the Blade layout and the
+     * Routes that opt in to search indexing — the marketing landing, the
+     * legal pages, and the page for lecturers. Mirrors :indexable="true" in the Blade layout and the
      * Allow list in public/robots.txt; keep the three in sync.
      */
-    private const INDEXABLE_ROUTES = ['welcome', 'privacy', 'terms'];
+    private const INDEXABLE_ROUTES = ['welcome', 'privacy', 'terms', 'lecturers'];
 
     public function handle(Request $request, Closure $next): Response
     {

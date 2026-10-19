@@ -54,11 +54,13 @@
         <footer class="mt-auto border-t border-sky/60 py-6">
             <div class="mx-auto flex max-w-3xl flex-col items-center gap-2.5 px-5 text-center">
                 <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
-                    <a href="{{ route('privacy') }}" class="py-1.5 hover:text-neon">Privacy</a>
+                    <a href="{{ route('lecturers') }}" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">For lecturers</a>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
-                    <a href="{{ route('terms') }}" class="py-1.5 hover:text-neon">Terms</a>
+                    <a href="{{ route('privacy') }}" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">Privacy</a>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
-                    <a href="https://github.com/otatechie/slipnote" class="inline-flex items-center gap-1 py-1.5 hover:text-neon" target="_blank" rel="noopener noreferrer">
+                    <a href="{{ route('terms') }}" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">Terms</a>
+                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    <a href="https://github.com/otatechie/slipnote" class="inline-flex min-h-11 items-center gap-1 hover:text-neon sm:min-h-0 sm:py-1.5" target="_blank" rel="noopener noreferrer">
                         GitHub
                         <svg aria-hidden="true" class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M7 17 17 7M8 7h9v9"/>
@@ -67,7 +69,7 @@
                     </a>
                     @if ($ambassadorForm = config('noteshare.ambassador_form_url'))
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>
-                        <a href="{{ $ambassadorForm }}" class="inline-flex items-center gap-1 py-1.5 hover:text-neon" target="_blank" rel="noopener noreferrer">
+                        <a href="{{ $ambassadorForm }}" class="inline-flex min-h-11 items-center gap-1 hover:text-neon sm:min-h-0 sm:py-1.5" target="_blank" rel="noopener noreferrer">
                             {{-- Verb-led and specific, not "Campus ambassador?": a question
                                  doesn't say whether it asks, invites or explains. Same arrow
                                  as GitHub: both leave the site in a new tab. --}}
@@ -76,23 +78,23 @@
                             <span class="sr-only">(opens in a new tab)</span>
                         </a>
                     @endif
-                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    <span aria-hidden="true" class="hidden text-muted/50 sm:inline">&middot;</span>
                     {{-- All three modes visible, so nothing is hidden behind a cycle. applyTheme()
                          in app.js sets aria-pressed on the current one, which drives its fill. --}}
                     <div data-theme-switch role="group" aria-label="Theme" class="inline-flex items-center rounded-full border border-sky bg-surface p-px">
                         <button type="button" data-theme-set="system" aria-pressed="false" title="System theme"
-                                class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
-                            <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+                                class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                            <svg aria-hidden="true" class="size-3.5 sm:size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
                             <span class="sr-only">System</span>
                         </button>
                         <button type="button" data-theme-set="light" aria-pressed="false" title="Light theme"
-                                class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
-                            <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
+                                class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                            <svg aria-hidden="true" class="size-3.5 sm:size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>
                             <span class="sr-only">Light</span>
                         </button>
                         <button type="button" data-theme-set="dark" aria-pressed="false" title="Dark theme"
-                                class="inline-flex size-5 cursor-pointer items-center justify-center rounded-full text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
-                            <svg aria-hidden="true" class="size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/></svg>
+                                class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
+                            <svg aria-hidden="true" class="size-3.5 sm:size-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A8 8 0 1 1 11.2 3 6 6 0 0 0 21 12.8z"/></svg>
                             <span class="sr-only">Dark</span>
                         </button>
                     </div>

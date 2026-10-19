@@ -96,6 +96,6 @@ return [
 
     // Date shown at the top of the Privacy and Terms pages. Bump when the
     // wording materially changes.
-    'legal_updated' => '2026-10-17',
+    'legal_updated' => '2026-10-19',
 
 ];

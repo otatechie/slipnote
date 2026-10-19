@@ -5,6 +5,7 @@ User-agent: *
 Allow: /$
 Allow: /privacy$
 Allow: /terms$
+Allow: /lecturers$
 Allow: /og.png$
 Allow: /sitemap.xml$
 Disallow: /

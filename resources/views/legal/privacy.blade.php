@@ -1,20 +1,15 @@
 <x-layouts.app title="Privacy" :indexable="true">
 <div class="op mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-8 sm:px-5 sm:pt-10">
     <header class="mb-7">
+        {{-- The mark, not a back arrow: these pages are reached from search and
+             shared links as often as from the site, and the name is what a
+             first-time visitor needs. Same header as /lecturers. --}}
         <a href="{{ route('welcome') }}"
-           class="op-kicker group mb-1 inline-flex items-center gap-1.5 py-1 text-[11px] font-semibold uppercase text-muted transition hover:text-neon">
-            {{-- Same back-link as the board and course pages: muted until hover,
-                 3.5 arrow, and py-1 so a standalone link clears a 24px target. --}}
-            <svg aria-hidden="true"
-                 class="size-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
-                 viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 12H5" />
-                <path d="M12 19l-7-7 7-7" />
-            </svg>
-            <span>SlipNote</span>
+           class="-my-2.5 inline-flex min-h-11 items-center gap-2 text-[15px] font-bold text-ink transition hover:opacity-80">
+            <img src="/logo-mark.png" alt="" class="size-6 shrink-0">
+            SlipNote
         </a>
-        <h1 class="op-title text-[2.15rem] font-bold text-ink">Privacy</h1>
+        <h1 class="op-title mt-3 text-[2.15rem] font-bold text-ink">Privacy</h1>
         <p class="mt-1.5 text-[13px] text-muted">Last updated {{ \Illuminate\Support\Carbon::parse(config('noteshare.legal_updated', '2026-05-19'))->isoFormat('MMMM D, YYYY') }}</p>
     </header>
 
@@ -32,7 +27,7 @@
                 <li>The <strong>files you upload</strong>, their original filenames, and each file's size, kept on our server until someone deletes them.</li>
                 <li>A <strong>display title</strong> for a file if you typed one instead of using the filename (optional, free text).</li>
                 <li>The <strong>time each file was uploaded</strong>, shown publicly on the file's row.</li>
-                <li>The <strong>workspace name</strong> you typed and the slug derived from it.</li>
+                <li>The <strong>board name</strong> you typed and the link derived from it.</li>
                 <li>The <strong>course code and title</strong> the owner created.</li>
                 <li>An <strong>uploader name</strong> if you typed one (optional, free text).</li>
                 <li>A one-time <strong>manage token</strong> for each upload. It is what the "delete your own file" link contains, so it stays with the file until the file is deleted.</li>
@@ -42,6 +37,7 @@
                 <li>Your <strong>IP address as a rate-limit counter</strong> when you create a board, upload a file, report a file, send a suggestion, or try the operator login. These counters live in a short-lived cache and exist to blunt automated abuse, not to identify you.</li>
                 <li>When a board was <strong>last opened</strong>. One timestamp per board, overwritten each visit &mdash; it tells the operator which boards are still in use. It records no visitor details and keeps no history.</li>
                 <li>The board's <strong>owner secret</strong>, and an <strong>upload passphrase</strong> if the owner sets one — both stored only as one-way hashes, so we can't read them back.</li>
+                <li>A <strong>note from the operator</strong> to a board's owner, if one has been left. It is shown only in owner mode on that board, and the operator can remove it.</li>
                 <li>An optional <strong>recovery email</strong> if the owner opts in. It is stored encrypted at rest and used only to send a fresh owner link when requested.</li>
                 <li><strong>Daily visit counts</strong>. When someone opens the site or a board from outside it, a counter goes up by one for that day, that board, the visitor's country, and where the visit came from (for example "google", "direct", or the referring website's address). Only the number is stored: no IP address, no browser details, no cookie, and nothing that tells one visitor from another. The country comes from our network provider's routing, not from looking you up.</li>
                 <li>Standard <strong>server logs</strong> (IP address, request path, timestamp), used for security and debugging, not analytics.</li>
@@ -55,7 +51,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">How long we keep it</h2>
-            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, workspaces, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
+            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, boards, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
         </section>
 
         <section>
@@ -65,7 +61,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Your rights</h2>
-            <p class="text-[14px] text-ink">Depending on where you live (for example under GDPR or CCPA), you may have the right to access, correct, or delete personal information about you, or to object to its processing. Because SlipNote holds so little — no accounts, no profiles — most of this is self-service: delete your own file with its delete link, or ask the workspace owner or site operator. For anything else, contact the operator of the specific site.</p>
+            <p class="text-[14px] text-ink">Depending on where you live (for example under GDPR or CCPA), you may have the right to access, correct, or delete personal information about you, or to object to its processing. Because SlipNote holds so little — no accounts, no profiles — most of this is self-service: delete your own file with its delete link, or ask the board owner or site operator. For anything else, contact the operator of the specific site.</p>
         </section>
 
         <section>
@@ -84,12 +80,12 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Telegram notifications (optional)</h2>
-            <p class="text-[14px] text-ink">If the site operator has configured Telegram, a one-line notice (course, section, filename, link) is posted to the configured channel on every new upload, and each feature suggestion (the message, the page, and any reply address you gave) is posted there too. This is set by the operator, not per workspace.</p>
+            <p class="text-[14px] text-ink">If the site operator has configured Telegram, a one-line notice (course, section, filename, link) is posted to the configured channel on every new upload, and each feature suggestion (the message, the page, and any reply address you gave) is posted there too. This is set by the operator, not per board.</p>
         </section>
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Deleting your data</h2>
-            <p class="text-[14px] text-ink">An uploader can remove their own file via the one-time delete link shown after upload. The workspace owner can delete any file in their workspace and can add, change, or remove the workspace's recovery email. There is currently no UI to delete an entire workspace. If you need this, contact the site operator.</p>
+            <p class="text-[14px] text-ink">An uploader can remove their own file via the one-time delete link shown after upload. The board owner can delete any file on their board and can add, change, or remove the board's recovery email. There is currently no way to delete an entire board yourself. If you need this, contact the site operator.</p>
         </section>
 
         <section>
