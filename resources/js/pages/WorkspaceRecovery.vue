@@ -83,7 +83,7 @@ function requestRecovery() {
                 <input id="email" type="email" v-model="form.email"
                        autocomplete="off"
                        placeholder="the email you set for this board"
-                       class="w-full rounded-lg border border-sky/30 bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                       class="w-full rounded-lg border border-sky/30 bg-base px-3.5 py-3 text-[15px] text-ink placeholder:text-muted shadow-sm">
                 <p v-if="errors.email" role="alert" class="mt-2 text-[12px] text-muted">{{ errors.email[0] }}</p>
                 <button type="submit" :disabled="form.processing"
                         class="mt-4 w-full cursor-pointer rounded-full bg-neon py-3.5 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">

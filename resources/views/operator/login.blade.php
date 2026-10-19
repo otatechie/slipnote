@@ -23,7 +23,7 @@
                  whatever is directly behind it. --}}
             <input id="secret" type="password" name="secret" autocomplete="off" autofocus
                    @error('secret') aria-invalid="true" @enderror
-                   class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                   class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner">
             @error('secret')
                 <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>
             @enderror

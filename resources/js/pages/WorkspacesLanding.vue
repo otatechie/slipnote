@@ -324,7 +324,7 @@ function confirmForget() {
                     <p class="mb-2 mt-0.5 text-[12px] text-muted">One board for the whole class. You'll add each course inside it.</p>
                     <input id="name" ref="nameField" type="text" v-model="createForm.name"
                            placeholder="Computer Science - Level 100" :autofocus="!returning"
-                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm">
 
                     <div class="mt-2 text-[12px]">
                         <span v-if="errors.name" role="alert" class="text-danger">{{ errors.name[0] }}</span>
@@ -364,7 +364,7 @@ function confirmForget() {
                         <input id="openName" ref="openNameRef" type="text" v-model="openForm.openName"
                                aria-label="Board name"
                                placeholder="Board name…"
-                               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm">
                         <button type="submit" :disabled="openForm.processing"
                                 class="op-press min-h-11 w-full shrink-0 cursor-pointer rounded-full border border-muted/50 px-5 text-[15px] font-semibold text-ink transition hover:bg-sky/30 disabled:opacity-60 sm:w-auto">
                             Open

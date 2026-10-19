@@ -74,7 +74,7 @@ function submit() {
                 <textarea id="suggestMessage" ref="messageField" v-model="form.message" rows="4" maxlength="1000"
                           :aria-invalid="!!form.errors.message"
                           placeholder="e.g. Let us pin the most important file in each course"
-                          class="mt-4 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20"></textarea>
+                          class="mt-4 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted"></textarea>
                 <span v-if="form.errors.message" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ [].concat(form.errors.message)[0] }}</span>
 
                 <label for="suggestReply" class="mb-1.5 mt-3.5 block text-[13px] font-semibold text-ink">
@@ -82,7 +82,7 @@ function submit() {
                 </label>
                 <input id="suggestReply" type="text" v-model="form.reply_to" maxlength="120" autocomplete="email"
                        placeholder="Only if you'd like a reply"
-                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
 
                 <!-- Spam trap: hidden from people and screen readers, filled by bots. -->
                 <div aria-hidden="true" class="absolute -left-[9999px] size-px overflow-hidden">

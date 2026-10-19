@@ -542,7 +542,7 @@ function persistOrder() {
                             autocomplete="email" placeholder="you@example.com"
                             :aria-invalid="errors.recoveryEmail ? 'true' : undefined"
                             :aria-describedby="errors.recoveryEmail ? 'recoveryAskError' : undefined"
-                            class="min-h-11 w-full min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:min-h-9">
+                            class="min-h-11 w-full min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 text-[15px] text-ink shadow-inner placeholder:text-muted sm:min-h-9">
                         <button type="submit" :disabled="recoveryForm.processing"
                             class="op-press min-h-11 shrink-0 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60 sm:min-h-9">
                             Save
@@ -656,10 +656,10 @@ function persistOrder() {
                 <div v-if="totalCourses > 6" class="mb-4 flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch" :placeholder="`Search ${totalCourses} courses…`"
                         aria-label="Search courses"
-                        class="op-pill box-border h-11 w-full min-w-0 appearance-none rounded-xl border border-sky bg-surface px-3.5 text-[14px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
+                        class="op-pill box-border h-11 w-full min-w-0 appearance-none rounded-xl border border-sky bg-surface px-3.5 text-[14px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted sm:flex-1">
                     <div class="relative">
                         <select v-model="localSort" aria-label="Sort courses"
-                            class="op-pill box-border h-11 w-full appearance-none rounded-xl border border-sky bg-surface pl-3.5 pr-10 text-[14px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                            class="op-pill box-border h-11 w-full appearance-none rounded-xl border border-sky bg-surface pl-3.5 pr-10 text-[14px] font-medium leading-none text-ink shadow-sm sm:w-auto">
                             <option value="manual">Custom order</option>
                             <option value="active">Most recently active</option>
                             <option value="az">A–Z</option>
@@ -858,7 +858,7 @@ function persistOrder() {
                                 <p class="mb-1.5 text-[12px] text-muted">The short code your class uses.</p>
                                 <input id="code" type="text" v-model="courseForm.code" placeholder="e.g. PHYS 101"
                                     ref="codeField" required :aria-invalid="!!courseForm.errors.code"
-                                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
                                 <span v-if="courseForm.errors.code" role="alert"
                                     class="mt-1.5 block text-[13px] text-danger">{{ courseForm.errors.code }}</span>
                                 <span v-else-if="codeDuplicate" class="mt-1.5 block text-[13px] text-amber-600">This
@@ -874,7 +874,7 @@ function persistOrder() {
                                 <input id="ctitle" type="text" v-model="courseForm.title"
                                     placeholder="e.g. Introductory Physics" required
                                     :aria-invalid="!!courseForm.errors.title"
-                                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
                                 <span v-if="courseForm.errors.title" role="alert"
                                     class="mt-1.5 block text-[13px] text-danger">{{ courseForm.errors.title }}</span>
                             </div>
@@ -964,7 +964,7 @@ function persistOrder() {
                             <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2">
                                 <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
                                     :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New address, or leave empty to remove'"
-                                    class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                    class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
                                 <button type="submit" :disabled="recoveryForm.processing"
                                     class="op-press min-h-11 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60">
                                     {{ needsRecoveryEmail ? 'Save recovery email' : 'Update' }}
@@ -1074,7 +1074,7 @@ function persistOrder() {
                             autocomplete="off" autocapitalize="off" spellcheck="false"
                             :aria-invalid="errors.confirmName ? 'true' : undefined"
                             :aria-describedby="errors.confirmName ? 'deleteError' : undefined"
-                            class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner focus:border-danger focus:outline-none focus:ring-2 focus:ring-danger/20">
+                            class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner">
                         <span v-if="errors.confirmName" id="deleteError" role="alert" class="mt-2 block text-[12px] text-danger">{{ errors.confirmName[0] }}</span>
                         <div class="mt-5 flex items-center justify-end gap-2">
                             <button type="button" @click="confirmingDelete = false"
@@ -1173,7 +1173,7 @@ function persistOrder() {
                                 autocapitalize="off" spellcheck="false" placeholder="Paste your owner link or secret"
                                 aria-describedby="ownerInputNote"
                                 :aria-invalid="!!errors.ownerInput"
-                                class="min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[13px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                class="min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[13px] text-ink shadow-inner placeholder:text-muted">
                             <button type="submit" :disabled="unlockForm.processing"
                                 class="op-press w-full min-h-11 shrink-0 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60 sm:w-auto">
                                 {{ unlockForm.processing ? 'Unlocking…' : 'Unlock' }}

@@ -94,7 +94,7 @@
                 <label for="amb-name" class="mb-1.5 block text-[13px] font-semibold text-ink">Name</label>
                 <input id="amb-name" name="name" value="{{ old('name') }}" required maxlength="80"
                        @error('name') aria-invalid="true" @enderror
-                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm">
                 @error('name')<span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>@enderror
             </div>
             <div>
@@ -102,13 +102,13 @@
                 <input id="amb-slug" name="slug" value="{{ old('slug') }}" required maxlength="40" placeholder="knust-kwame"
                        autocapitalize="none" spellcheck="false"
                        @error('slug') aria-invalid="true" @enderror
-                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 font-mono text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 font-mono text-[15px] text-ink shadow-sm">
                 @error('slug')<span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>@enderror
             </div>
             <div>
                 <label for="amb-campus" class="mb-1.5 block text-[13px] font-semibold text-ink">Campus <span class="font-normal text-muted">(optional)</span></label>
                 <input id="amb-campus" name="campus" value="{{ old('campus') }}" maxlength="80"
-                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                       class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm">
             </div>
             {{-- Side by side from sm up; stacked on phones, where the pair left
                  the Phone label wrapping over two lines beside a cramped select. --}}
@@ -116,12 +116,12 @@
                 <div>
                     <label for="amb-phone" class="mb-1.5 block text-[13px] font-semibold text-ink">Phone <span class="font-normal text-muted">(optional — where the bundle goes)</span></label>
                     <input id="amb-phone" name="phone" value="{{ old('phone') }}" maxlength="30" inputmode="tel"
-                           class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                           class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm">
                 </div>
                 <div>
                     <label for="amb-network" class="mb-1.5 block text-[13px] font-semibold text-ink">Network</label>
                     <select id="amb-network" name="network"
-                            class="h-[46px] w-full rounded-xl border border-sky bg-surface px-3 text-[15px] sm:w-auto text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                            class="h-[46px] w-full rounded-xl border border-sky bg-surface px-3 text-[15px] sm:w-auto text-ink shadow-sm">
                         <option value="">Not set</option>
                         @foreach (\App\Models\Ambassador::NETWORKS as $key => $label)
                             <option value="{{ $key }}" @selected(old('network') === $key)>{{ $label }}</option>
@@ -381,7 +381,7 @@
             <p class="mt-0.5 text-[12px] text-muted">Shown only to them, on their board, until they dismiss it. They reply through the suggestion form; replies land in Suggestions.</p>
             <textarea id="ownerNote" name="note" rows="3" maxlength="500" required
                       placeholder="e.g. Hi from the SlipNote team. Your class uses this a lot. Could we ask you two quick questions?"
-                      class="mt-3 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">{{ old('note', $noteBoard->operator_note) }}</textarea>
+                      class="mt-3 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">{{ old('note', $noteBoard->operator_note) }}</textarea>
             @error('note')
                 <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>
             @enderror
@@ -407,7 +407,7 @@
         <input type="hidden" name="tab" value="boards">
         <input type="search" name="q" value="{{ $boardQuery }}" aria-label="Find a board by name"
                placeholder="Find a board by name…"
-               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm placeholder:text-muted">
         <button type="submit" class="op-press inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[14px] font-semibold text-ink hover:bg-sky/30">Find</button>
     </form>
 

@@ -261,25 +261,15 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     }
 }
 
-/* Keyboard focus. Inputs carry their own focus:ring utilities, but buttons and
-   links had nothing beyond the UA default outline — which all but vanishes on a
-   pill button sitting on a tinted card. The offset puts the ring outside the
-   control, so it stays visible against a fill of any colour, including the
-   accent buttons whose fill is this very token. */
-:focus-visible {
-    outline: 2px solid var(--color-neon);
-    outline-offset: 2px;
-}
-
-/* Form controls already ship a designed focus style (focus:border-neon plus
-   focus:ring-2). They are the only elements that do — no button or link in the
-   app carries focus:ring — so the shared outline above lands on top of that
-   ring as a visible second line. Let their own ring stand alone. */
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-    outline: none;
-}
+/* Keyboard focus: one style for every control (buttons, links, pills,
+   fields, selects, menus, radio options), Bootstrap's soft glow made softer:
+   a 3px halo of the accent at 16%, with a crisp 1px accent line at its
+   inner edge. The halo alone (Bootstrap's 25%) measures well under the
+   3:1 a focus indicator needs on the dark page; the line carries that, the
+   halo the softness. A box-shadow, so it follows the radius and takes no
+   room. At the end of the file (.op-focus-ring below) so it outranks the
+   box-shadows on pills and cards while focused. Text fields count as
+   focus-visible on click too, which is right: the active field is ringed. */
 
 /* ---------------------------------------------------------------------------
    Shared surface vocabulary — started on the operator console, now also used
@@ -434,8 +424,8 @@ textarea:focus-visible {
 
 /* Pills and fields beside the cards (Share board, QR, search, sort,
    Download) in the same language: clear panel, translucent hairline.
-   Unlayered, so it outranks the utilities on the element; hover and focus
-   restated. */
+   Unlayered, so it outranks the utilities on the element; hover restated.
+   Focus is the shared outline (see :focus-visible). */
 .op-pill {
     background-color: var(--card-well);
     border: 1px solid var(--card-frame);
@@ -443,11 +433,6 @@ textarea:focus-visible {
 }
 .op-pill:hover {
     background-color: color-mix(in srgb, var(--card-frame) 50%, transparent);
-}
-.op-pill:focus-visible,
-input.op-pill:focus,
-select.op-pill:focus {
-    border-color: var(--color-neon);
 }
 /* A native select draws its open list on the select's own background. With
    the pill's near-clear fill that list came out unreadable in dark mode, so
@@ -702,4 +687,23 @@ html[data-theme='system'][data-system-theme='dark'] .lp-name-3 { color: #6fd3a8;
    footer drops its top line there too. Other pages keep it. */
 body:has(.lp) footer {
     border-top-color: transparent;
+}
+
+/* Focus ring (see the note at "Keyboard focus" above). Last in the file so
+   it wins over the unlayered .op-pill/.op-card box-shadows. */
+:focus-visible,
+label:has(> input:focus-visible) {
+    outline: none;
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--color-neon) 85%, transparent),
+        0 0 0 3px color-mix(in srgb, var(--color-neon) 16%, transparent);
+}
+/* Filled accent and danger buttons: the accent line vanished into an accent
+   fill, so a 2px gap in the page colour separates ring from button. */
+.bg-neon:focus-visible,
+.btn-danger:focus-visible {
+    box-shadow:
+        0 0 0 2px var(--color-base),
+        0 0 0 3px color-mix(in srgb, var(--color-neon) 85%, transparent),
+        0 0 0 5px color-mix(in srgb, var(--color-neon) 16%, transparent);
 }

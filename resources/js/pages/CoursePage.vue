@@ -550,10 +550,10 @@ watch(() => props.materials, () => { selected.value = [] })
                     <input type="text" inputmode="search" v-model="localSearch"
                            :placeholder="`Search ${resultCount} files by name…`"
                            aria-label="Search files"
-                           class="op-pill box-border w-full min-w-0 flex-1 appearance-none rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[14px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                           class="op-pill box-border w-full min-w-0 flex-1 appearance-none rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[14px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted">
                     <div class="relative w-full sm:w-auto">
                         <select v-model="localSort" aria-label="Sort files"
-                                class="op-pill box-border w-full appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-10 text-[14px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                class="op-pill box-border w-full appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-10 text-[14px] font-medium text-ink shadow-sm">
                             <option value="newest">Newest first</option>
                             <option value="oldest">Oldest first</option>
                             <option value="az">A–Z</option>
@@ -684,7 +684,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                     {{ material.fileTypeLabel }}
                                 </span>
                                 <div class="min-w-0">
-                                    <!-- No underline until hover or focus: in a list the ↗, the row
+                                    <!-- No underline until hover (focus has the shared outline): in a list the ↗, the row
                                          highlight and the position already say "link", and an
                                          underline on every title striped the page.
                                          Title opens the preview (look inside — the library mental model);
@@ -702,14 +702,14 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <a v-if="material.preview_url" :href="material.preview_url"
                                        target="_blank" rel="noopener"
                                        :title="`Preview ${material.displayName} (opens in a new tab)`"
-                                       class="flex items-center gap-1 text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline focus-visible:underline">
+                                       class="flex items-center gap-1 text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline">
                                         <span class="line-clamp-2 wrap-anywhere sm:truncate">{{ material.displayName }}</span>
                                         <svg aria-hidden="true" class="size-3.5 shrink-0 self-start text-muted mt-1" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M8 5H5v10h10v-3M12 4h4v4M16 4l-7 7" />
                                         </svg>
                                     </a>
                                     <a v-else-if="material.download_url" :href="material.download_url"
-                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline focus-visible:underline sm:block sm:truncate">
+                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline sm:block sm:truncate">
                                         {{ material.displayName }}
                                     </a>
                                     <span v-else class="block truncate text-[15px] font-semibold text-ink">
@@ -859,7 +859,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <p class="mb-1.5 text-[12px] text-muted">Ask your course rep if you don't have it.</p>
                                 <input id="passphrase" type="password" v-model="uploadForm.passphrase"
                                        :aria-invalid="!!errors.passphrase"
-                                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
                                 <span v-if="errors.passphrase" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.passphrase[0] }}</span>
                             </div>
 
@@ -925,7 +925,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <legend class="mb-1.5 text-[13px] font-semibold text-ink">Section</legend>
                                 <div class="flex flex-wrap gap-1.5">
                                     <label v-for="(label, key) in sections" :key="key"
-                                           class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-neon sm:min-h-9"
+                                           class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold transition sm:min-h-9"
                                            :class="uploadForm.section === key ? 'bg-neon text-white' : 'bg-base text-muted hover:text-ink'">
                                         <input type="radio" name="usection" :value="key" v-model="uploadForm.section" class="sr-only">
                                         {{ label }}
@@ -942,7 +942,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <input id="utitle" type="text" v-model="uploadForm.title"
                                            placeholder="e.g. Week 7 quiz solutions"
                                            :aria-invalid="!!errors.title"
-                                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
                                     <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
                                 </div>
                             </div>
@@ -1012,7 +1012,7 @@ watch(() => props.materials, () => { selected.value = [] })
                     </label>
                     <textarea id="reportNote" v-model="reportNote" rows="2" maxlength="280"
                               placeholder="Anything the operator should know"
-                              class="mt-1.5 w-full resize-none rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[14px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20"></textarea>
+                              class="mt-1.5 w-full resize-none rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[14px] text-ink shadow-inner placeholder:text-muted"></textarea>
                     <!-- Only once it's close to mattering — typing used to just stop
                          dead at 280 with nothing on screen explaining why. -->
                     <p v-if="reportNote.length > 200" aria-live="polite"
