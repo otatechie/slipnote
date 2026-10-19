@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Material;
 use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -27,18 +29,19 @@ class CoursesController extends Controller
         $sort = $request->input('sort', 'manual');
 
         // Files newer than this browser's last visit to each course. One query:
-        // an OR group per course that has a baseline; courses without one
-        // count zero, so a first visit never says everything is new.
+        // an OR group per course that has a baseline, and one for the rest,
+        // which count the last week (LastSeen::since), as the course page does.
         $seen = LastSeen::read($request);
         $query = Course::withCount([
             'materials',
             'materials as new_count' => function ($q) use ($seen) {
                 $q->where(function ($q) use ($seen) {
-                    $q->whereRaw('1 = 0');
                     foreach ($seen as $courseId => $ts) {
                         $q->orWhere(fn ($q) => $q->where('course_id', $courseId)
                             ->where('created_at', '>', date('Y-m-d H:i:s', $ts)));
                     }
+                    $q->orWhere(fn ($q) => $q->whereNotIn('course_id', array_keys($seen))
+                        ->where('created_at', '>', date('Y-m-d H:i:s', LastSeen::firstLook())));
                 });
             },
         ])->withMax('materials', 'created_at');
@@ -152,6 +155,36 @@ class CoursesController extends Controller
                 'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),
                 'ownerUrl' => route('courses.index', ['workspace' => $workspace->slug]).'?owner='.$secret,
             ]);
+    }
+
+    /**
+     * Delete the board, its courses and every file, at once and for good.
+     * The owner types the board's name to confirm, checked here too, so a
+     * stray request can't do it. Files leave the disk before the rows go.
+     */
+    public function destroy(Request $request)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $typed = Str::lower(trim((string) $request->input('confirmName', '')));
+        if ($typed !== Str::lower(trim($workspace->name))) {
+            return back()->withErrors(['confirmName' => 'Type the board\'s name exactly as it appears to delete it.']);
+        }
+
+        $courseIds = Course::pluck('id');
+        Material::whereIn('course_id', $courseIds)->pluck('stored_path')
+            ->each(fn ($path) => Storage::disk('local')->delete($path));
+        Material::whereIn('course_id', $courseIds)->delete();
+        Course::query()->delete();
+
+        $name = $workspace->name;
+        session()->forget($workspace->ownerSessionKey());
+        $workspace->delete();
+
+        return redirect()->route('start')
+            ->with('boardDeleted', $name)
+            ->withCookie(RecentWorkspaces::remove($request, $workspace->slug));
     }
 
     /** Who can add files: anyone with the link, or only the owner. */

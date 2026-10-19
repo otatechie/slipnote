@@ -18,6 +18,9 @@ class Material extends Model
         'past_papers' => 'Past papers',
     ];
 
+    /** Pinned files per section: a few lead it, or nothing does. */
+    public const MAX_PINNED_PER_SECTION = 3;
+
     protected $fillable = [
         'section',
         'title',
@@ -28,10 +31,13 @@ class Material extends Model
         'download_token',
         'file_size',
         'content_hash',
+        'by_owner',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
+        'by_owner' => 'boolean',
+        'pinned_at' => 'datetime',
     ];
 
     /**

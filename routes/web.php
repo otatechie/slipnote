@@ -84,7 +84,7 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
             'workspace' => $workspace->slug,
             'slug' => $material->course->slug,
         ])
-        ->with('uploaded', 'File removed.');
+        ->with('notice', 'File removed.');
 })->name('material.destroy');
 
 // Operator moderation dashboard. Gated by OPERATOR_SECRET held in session.
@@ -112,6 +112,7 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/recovery-email', [CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
     Route::post('/{workspace}/upload-access', [CoursesController::class, 'setUploadAccess'])->name('courses.upload-access');
     Route::post('/{workspace}/owner-link/reset', [CoursesController::class, 'resetOwnerLink'])->name('courses.owner-link.reset');
+    Route::delete('/{workspace}', [CoursesController::class, 'destroy'])->name('courses.destroy');
 
     Route::get('/{workspace}/c/{slug}', [CourseController::class, 'show'])->name('course.show');
     Route::get('/{workspace}/c/{slug}/download/{section}', [CourseController::class, 'downloadSection'])->name('course.download-section');
@@ -120,6 +121,7 @@ Route::middleware('workspace')->group(function () {
     Route::delete('/{workspace}/c/{slug}/materials', [CourseController::class, 'bulkDelete'])->name('course.bulk-delete');
 
     Route::post('/{workspace}/c/{slug}/report/{material}', [CourseController::class, 'report'])->name('material.report');
+    Route::post('/{workspace}/c/{slug}/pin/{material}', [CourseController::class, 'pin'])->name('material.pin');
 
     Route::get('/{workspace}/recover', [WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
     Route::post('/{workspace}/recover', [WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');

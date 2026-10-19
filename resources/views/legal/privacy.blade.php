@@ -29,7 +29,8 @@
                 <li>The <strong>time each file was uploaded</strong>, shown publicly on the file's row.</li>
                 <li>The <strong>board name</strong> you typed and the link derived from it.</li>
                 <li>The <strong>course code and title</strong> the owner created.</li>
-                <li>An <strong>uploader name</strong> if you typed one (optional, free text).</li>
+                <li>An <strong>uploader name</strong>, only on files uploaded while SlipNote still asked for one (it no longer does).</li>
+                <li>Whether a file was <strong>uploaded by the board's owner</strong> (not shown on the board), and whether the owner <strong>pinned</strong> it.</li>
                 <li>A one-time <strong>manage token</strong> for each upload. It is what the "delete your own file" link contains, so it stays with the file until the file is deleted.</li>
                 <li>A <strong>content fingerprint</strong> (SHA-256 hash) of each file, used to skip duplicate uploads and to stop files the operator removed from being re-uploaded. Fingerprints of operator-removed files are kept after the file itself is gone; a fingerprint can't be turned back into the file.</li>
                 <li>If you <strong>report a file</strong>: the report reason and your IP address, used only to review the report.</li>
@@ -51,7 +52,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">How long we keep it</h2>
-            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, boards, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
+            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, boards, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files or the whole board, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
         </section>
 
         <section>
@@ -85,7 +86,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Deleting your data</h2>
-            <p class="text-[14px] text-ink">An uploader can remove their own file via the one-time delete link shown after upload. The board owner can delete any file on their board and can add, change, or remove the board's recovery email. There is currently no way to delete an entire board yourself. If you need this, contact the site operator.</p>
+            <p class="text-[14px] text-ink">An uploader can remove their own file via the one-time delete link shown after upload. The board owner can delete any file on their board, and can add, change, or remove the board's recovery email. The owner can also delete the whole board from Board settings: the board, its courses and every file on it are deleted at once and can't be restored.</p>
         </section>
 
         <section>

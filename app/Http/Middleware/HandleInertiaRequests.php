@@ -33,6 +33,11 @@ class HandleInertiaRequests extends Middleware
                 'ownerUrl' => $session->get('ownerUrl'),
                 'recovered' => $session->get('recovered'),
                 'ownerReset' => $session->get('ownerReset'),
+                'boardDeleted' => $session->get('boardDeleted'),
+                // Pin, unpin, removals: shown briefly at the foot of the screen.
+                'notice' => $session->get('notice'),
+                'addedName' => $session->get('addedName'),
+                'addedCount' => $session->get('addedCount'),
             ],
             'errors' => fn () => $session->get('errors')
                 ? $session->get('errors')->getBag('default')->getMessages()

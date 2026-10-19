@@ -1,6 +1,6 @@
 <x-layouts.app
     title="Never ask “who has the notes?” again"
-    description="The free, no-login board where your class keeps its notes, slides and past papers. One link, no accounts, no setup."
+    description="The free, no-login board where your class keeps its notes and slides, sorted by course. One link, no accounts, no setup."
     :indexable="true">
 
     <x-slot:head>
@@ -9,14 +9,14 @@
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="SlipNote">
         <meta property="og:title" content="SlipNote: Never ask “who has the notes?” again">
-        <meta property="og:description" content="One link for your whole class's notes, slides and past papers. Free, no accounts, no setup.">
+        <meta property="og:description" content="One link for your whole class's notes and slides, sorted by course. Free, no accounts, no setup.">
         <meta property="og:url" content="{{ url('/') }}">
         <meta property="og:image" content="{{ url('/og.png') }}">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="SlipNote: Never ask “who has the notes?” again">
-        <meta name="twitter:description" content="One link for your whole class's notes, slides and past papers. Free, no accounts, no setup.">
+        <meta name="twitter:description" content="One link for your whole class's notes and slides, sorted by course. Free, no accounts, no setup.">
         <meta name="twitter:image" content="{{ url('/og.png') }}">
 
         <script type="application/ld+json">
@@ -32,7 +32,7 @@
                 "price": "0",
                 "priceCurrency": "USD"
             },
-            "description": "The free, no-login board where your class keeps its notes, slides and past papers."
+            "description": "The free, no-login board where your class keeps its notes and slides, sorted by course."
         }
         </script>
     </x-slot:head>
@@ -76,7 +76,7 @@
                 <div class="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
                     <div>
                         <h1 class="text-[30px] font-bold leading-[1.15] tracking-[-0.02em] text-ink sm:text-balance sm:text-[46px]">
-                            Share your class’s notes, slides and past papers with one link.
+                            Share your class’s notes and slides with one link.
                         </h1>
                         <p class="mt-5 max-w-xl text-[17px] leading-7 text-muted sm:text-[18px] sm:leading-8">
                             A free board for your class, sorted by course. No account needed.
@@ -266,9 +266,9 @@
                 ];
                 // [task, [[state, note], ...]] with state yes | no | part.
                 $rows = [
-                    ['Find last year’s past paper without scrolling', [['no', null], ['yes', null], ['part', 'If kept tidy']]],
+                    ['Find week 3’s slides without scrolling', [['no', null], ['yes', null], ['part', 'If kept tidy']]],
                     ['Get files shared before you joined', [['no', null], ['yes', null], ['yes', null]]],
-                    ['Download all past papers for a course at once', [['no', null], ['yes', null], ['yes', null]]],
+                    ['Download a course’s notes in one go', [['no', null], ['yes', null], ['yes', null]]],
                     ['See what’s new since you last looked', [['part', 'Messages only'], ['yes', null], ['no', null]]],
                     ['Let classmates add files without an account', [['yes', null], ['yes', null], ['part', 'Needs a Google account']]],
                     ['Keep files organised without anyone tidying', [['no', null], ['yes', null], ['no', null]]],

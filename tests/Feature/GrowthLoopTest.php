@@ -76,14 +76,21 @@ class GrowthLoopTest extends TestCase
 
     // --- New since last visit ---
 
-    public function test_a_first_visit_marks_nothing_as_new_but_sets_the_baseline(): void
+    public function test_a_first_visit_marks_only_the_last_week_as_new_and_sets_the_baseline(): void
     {
-        $this->addFile('a.pdf');
+        // Another device, or a first look: no baseline here, so "New" means
+        // this week rather than nothing (or everything).
+        $this->addFile('fresh.pdf', ageSeconds: 3600);
+        $this->addFile('stale.pdf', ageSeconds: 8 * 86400);
 
         $this->get(route('course.show', $this->wsParams(['slug' => 'cs-101'])))
             ->assertOk()
             ->assertCookie('slipnote_seen')
-            ->assertInertia(fn ($page) => $page->where('materials.0.is_new', false));
+            ->assertInertia(fn ($page) => $page
+                ->where('materials.0.original_filename', 'fresh.pdf')
+                ->where('materials.0.is_new', true)
+                ->where('materials.1.original_filename', 'stale.pdf')
+                ->where('materials.1.is_new', false));
     }
 
     public function test_a_return_visit_marks_only_what_landed_since(): void
@@ -107,24 +114,31 @@ class GrowthLoopTest extends TestCase
         $other = Course::create(['code' => 'CS 102', 'title' => 'Data Structures', 'slug' => 'cs-102']);
         $this->addFile('a.pdf', ageSeconds: 60);
         $this->addFile('b.pdf', ageSeconds: 60);
+        $this->addFile('old.pdf', ageSeconds: 7200);
         $other->materials()->create([
             'section' => 'notes', 'original_filename' => 'c.pdf', 'stored_path' => 'materials/c.pdf',
             'download_token' => 'dl-c', 'file_size' => 10,
         ]);
+        $stale = $other->materials()->create([
+            'section' => 'notes', 'original_filename' => 'd.pdf', 'stored_path' => 'materials/d.pdf',
+            'download_token' => 'dl-d', 'file_size' => 10,
+        ]);
+        $stale->forceFill(['created_at' => now()->subDays(8)])->saveQuietly();
 
-        // Baseline for CS 101 only; CS 102 has never been opened here.
+        // Baseline for CS 101 only; CS 102 has never been opened here, so it
+        // counts the last week: c.pdf, not d.pdf.
         $seen = json_encode([$this->course->id => now()->subHour()->getTimestamp()]);
 
         $this->withCookie('slipnote_seen', $seen)
             ->get(route('courses.index', $this->wsParams()))
             ->assertInertia(fn ($page) => $page
                 ->where('courses.0.code', 'CS 101')->where('courses.0.new_count', 2)
-                ->where('courses.1.code', 'CS 102')->where('courses.1.new_count', 0));
+                ->where('courses.1.code', 'CS 102')->where('courses.1.new_count', 1));
     }
 
     public function test_a_malformed_last_seen_cookie_is_ignored(): void
     {
-        $this->addFile('a.pdf');
+        $this->addFile('a.pdf', ageSeconds: 8 * 86400);
 
         $this->withCookie('slipnote_seen', '{"not":"a map", "1": "yesterday"}')
             ->get(route('course.show', $this->wsParams(['slug' => 'cs-101'])))

@@ -272,6 +272,10 @@ function confirmForget() {
             </template>
 
             <template v-else>
+                <p v-if="flash.boardDeleted" role="status"
+                   class="op-toast mb-5 text-center text-sm font-medium text-ink">
+                    "{{ flash.boardDeleted }}" is deleted, with every course and file on it.
+                </p>
                 <!-- Boards this browser manages: added on create, owner unlock and
                      recovery, never on a plain visit, so every row is one you own. -->
                 <template v-if="returning">

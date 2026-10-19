@@ -11,8 +11,10 @@ use Symfony\Component\HttpFoundation\Cookie;
  * server-side, nothing that identifies anyone. A map of course id => unix
  * timestamp, capped so it never grows past a few hundred bytes.
  *
- * A course with no entry has no baseline and shows nothing as new — the
- * first visit is never "everything is new".
+ * A course with no entry falls back to the last FIRST_LOOK_DAYS: per browser
+ * means a phone has no baseline for courses opened on a laptop, and showing
+ * nothing as new there hid this week's slides from the device most students
+ * use. A week, not everything, so a first visit is never "everything is new".
  */
 class LastSeen
 {
@@ -21,6 +23,8 @@ class LastSeen
     private const MAX_ITEMS = 50;
 
     private const TTL_MINUTES = 60 * 24 * 365;
+
+    public const FIRST_LOOK_DAYS = 7;
 
     /** @return array<int, int> course id => unix timestamp */
     public static function read(Request $request): array
@@ -49,6 +53,17 @@ class LastSeen
     public static function for(Request $request, int $courseId): ?int
     {
         return self::read($request)[$courseId] ?? null;
+    }
+
+    /** Files after this count as new: the last visit, else the last week. */
+    public static function since(Request $request, int $courseId): int
+    {
+        return self::for($request, $courseId) ?? self::firstLook();
+    }
+
+    public static function firstLook(): int
+    {
+        return now()->subDays(self::FIRST_LOOK_DAYS)->getTimestamp();
     }
 
     /** Record that this course was just viewed. */

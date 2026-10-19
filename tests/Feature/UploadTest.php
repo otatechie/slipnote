@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,6 @@ class UploadTest extends TestCase
 
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
-            'uploaderName' => 'Alex',
             'files' => [$file],
         ])->assertRedirect();
 
@@ -51,7 +51,7 @@ class UploadTest extends TestCase
         $this->assertNotNull($material);
         $this->assertSame('notes', $material->section);
         $this->assertSame('lecture.pdf', $material->original_filename);
-        $this->assertSame('Alex', $material->uploader_name);
+        $this->assertFalse($material->by_owner);
         Storage::disk('local')->assertExists($material->stored_path);
     }
 
@@ -92,6 +92,23 @@ class UploadTest extends TestCase
         ]);
 
         $this->assertNull($response->getSession()->get('manageUrl'));
+    }
+
+    public function test_the_receipt_says_what_was_added_for_tell_the_class(): void
+    {
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'title' => 'Week 3 — Respiratory care',
+            'files' => [UploadedFile::fake()->createWithContent('w3.pdf', 'three')],
+        ])->assertSessionHas('addedName', 'Week 3 — Respiratory care')->assertSessionHas('addedCount', 1);
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [
+                UploadedFile::fake()->createWithContent('a.pdf', 'alpha'),
+                UploadedFile::fake()->createWithContent('b.pdf', 'bravo'),
+            ],
+        ])->assertSessionMissing('addedName')->assertSessionHas('addedCount', 2);
     }
 
     public function test_a_file_downloads_via_its_unguessable_token(): void
@@ -198,7 +215,6 @@ class UploadTest extends TestCase
     {
         $this->post($this->uploadUrl(), [
             'section' => 'slides',
-            'uploaderName' => 'Sam',
             'files' => [
                 UploadedFile::fake()->createWithContent('wk1.pdf', 'week one'),
                 UploadedFile::fake()->createWithContent('wk2.pdf', 'week two'),
@@ -208,9 +224,9 @@ class UploadTest extends TestCase
 
         $this->assertSame(3, Material::count());
         $this->assertSame(['wk1.pdf', 'wk2.pdf', 'wk3.pdf'], Material::pluck('original_filename')->sort()->values()->all());
-        // Each gets its own manage token and the shared section/uploader.
+        // Each gets its own manage token and the shared section.
         $this->assertSame(3, Material::whereNotNull('manage_token')->count());
-        $this->assertSame(3, Material::where('section', 'slides')->where('uploader_name', 'Sam')->count());
+        $this->assertSame(3, Material::where('section', 'slides')->count());
     }
 
     public function test_a_title_is_ignored_when_several_files_are_uploaded(): void
@@ -464,7 +480,7 @@ class UploadTest extends TestCase
         }
     }
 
-    public function test_it_strips_html_from_the_uploader_name(): void
+    public function test_a_name_sent_by_an_old_tab_is_ignored(): void
     {
         $file = UploadedFile::fake()->create('notes.pdf', 50, 'application/pdf');
 
@@ -472,9 +488,9 @@ class UploadTest extends TestCase
             'section' => 'notes',
             'uploaderName' => '<script>x</script>Bob',
             'files' => [$file],
-        ])->assertRedirect();
+        ])->assertRedirect()->assertSessionHasNoErrors();
 
-        $this->assertSame('xBob', Material::first()->uploader_name);
+        $this->assertNull(Material::first()->uploader_name);
     }
 
     public function test_upload_generates_a_manage_token(): void
@@ -819,7 +835,7 @@ class UploadTest extends TestCase
 
     public function test_owning_one_board_does_not_let_you_lock_another(): void
     {
-        [$other] = \App\Models\Workspace::provision('Someone Else');
+        [$other] = Workspace::provision('Someone Else');
 
         // Owner of this test board, posting to the other board's switch.
         $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])

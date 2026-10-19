@@ -99,6 +99,29 @@ function replyToNote() {
     openSuggest(`Reply about "${props.workspace.name}": `)
 }
 
+// The recovery email, asked for once the board holds files: that's when losing
+// the owner link starts to cost something. Not on day one, when there's nothing
+// to lose and the owner is busy making courses. "Not now" hides it on this
+// browser for 30 days, then it comes back: a board without one can strand.
+const RECOVERY_LATER_KEY = 'slipnote_recovery_later_' + props.workspace.slug
+const RECOVERY_LATER_MS = 30 * 24 * 60 * 60 * 1000
+const recoveryLater = ref(0)
+try { recoveryLater.value = Number(window.localStorage.getItem(RECOVERY_LATER_KEY)) || 0 } catch { }
+const recoveryAskSaved = ref(false)
+const showRecoveryAsk = computed(() => recoveryAskSaved.value || (
+    props.isOwner && props.recoveryAvailable && props.needsRecoveryEmail
+    && props.totalFiles > 0 && Date.now() - recoveryLater.value > RECOVERY_LATER_MS))
+function recoveryNotNow() {
+    recoveryLater.value = Date.now()
+    try { window.localStorage.setItem(RECOVERY_LATER_KEY, String(recoveryLater.value)) } catch { }
+}
+function saveRecoveryFromAsk() {
+    recoveryForm.post('/' + props.workspace.slug + '/recovery-email', {
+        preserveScroll: true,
+        onSuccess: () => { recoveryForm.reset(); recoveryAskSaved.value = true },
+    })
+}
+
 // Who can add files. Saved on tap: two choices, nothing to confirm.
 const uploadAccessSaving = ref(false)
 // Busy, not disabled, while saving: a button that turns disabled drops keyboard
@@ -275,6 +298,7 @@ watch(unlockOpen, (v) => {
 // the two disclosures can be backed out of like the sheet and the QR overlay —
 // they were the only things here a keyboard couldn't dismiss.
 function onEscape() {
+    if (confirmingDelete.value) { confirmingDelete.value = false; return }
     if (confirmingReset.value) { confirmingReset.value = false; return }
     if (confirmingExit.value) { confirmingExit.value = false; return }
     if (qrOpen.value) { qrOpen.value = false; return }
@@ -303,6 +327,18 @@ function resetOwnerLink() {
     router.post('/' + props.workspace.slug + '/owner-link/reset', {}, {
         onFinish: () => { resetting.value = false },
     })
+}
+
+// Delete the board. Typed name to confirm, as the server also checks: the
+// one action here that can't be undone and takes every classmate's files.
+const confirmingDelete = ref(false)
+const deleteForm = useForm({ confirmName: '' })
+const deleteNameMatches = computed(() =>
+    deleteForm.confirmName.trim().toLowerCase() === props.workspace.name.trim().toLowerCase())
+watch(confirmingDelete, (open) => { if (!open) { deleteForm.reset(); deleteForm.clearErrors() } })
+function deleteBoard() {
+    if (!deleteNameMatches.value) return
+    deleteForm.delete('/' + props.workspace.slug)
 }
 
 function lockBoard() {
@@ -409,8 +445,8 @@ function persistOrder() {
 <template>
 
     <Head :title="workspace.name + ' · Courses'" />
-    <AppLayout>
-        <div class="op mx-auto w-full max-w-3xl flex-1 px-5 sm:pb-10" :class="isOwner && totalCourses > 0 ? 'pb-28' : 'pb-10'" @keydown.escape.window="onEscape">
+    <AppLayout :fab-space="isOwner && totalCourses > 0">
+        <div class="op mx-auto w-full max-w-3xl flex-1 px-5 pb-10" @keydown.escape.window="onEscape">
 
             <!-- Where you are, and as whom. Scrolls away; only the title row
                  below pins, and only from sm up. Owner status sits here as a
@@ -477,6 +513,43 @@ function persistOrder() {
                     class="-mr-1.5 -mt-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-8">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
                 </button>
+            </aside>
+
+            <!-- The recovery email, asked for in place once there are files to
+                 lose: one field, not a trip to Board settings, where it also lives. -->
+            <aside v-if="showRecoveryAsk" aria-labelledby="recoveryAskTitle"
+                class="op-card mb-4 px-4 py-3.5">
+                <p v-if="recoveryAskSaved" role="status"
+                    class="teal-accent flex items-center gap-1.5 text-[14px] font-semibold text-teal">
+                    <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
+                    Saved. Lose your owner link and we'll email you a new one.
+                </p>
+                <template v-else>
+                    <div class="flex items-start gap-3">
+                        <div class="min-w-0 flex-1">
+                            <h2 id="recoveryAskTitle" class="text-[14px] font-semibold text-ink">Don't lose this board</h2>
+                            <p class="mt-1 text-[13px] text-muted">
+                                It has {{ totalFiles }} {{ totalFiles === 1 ? 'file' : 'files' }} now. Add an email and we'll send you a new owner link if you lose this one. It's used for nothing else.
+                            </p>
+                        </div>
+                        <button type="button" @click="recoveryNotNow" aria-label="Not now" title="Not now"
+                            class="-mr-1.5 -mt-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-8">
+                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                        </button>
+                    </div>
+                    <form @submit.prevent="saveRecoveryFromAsk" class="mt-3 flex gap-2">
+                        <input type="email" required v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
+                            autocomplete="email" placeholder="you@example.com"
+                            :aria-invalid="errors.recoveryEmail ? 'true' : undefined"
+                            :aria-describedby="errors.recoveryEmail ? 'recoveryAskError' : undefined"
+                            class="min-h-11 w-full min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:min-h-9">
+                        <button type="submit" :disabled="recoveryForm.processing"
+                            class="op-press min-h-11 shrink-0 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60 sm:min-h-9">
+                            Save
+                        </button>
+                    </form>
+                    <span v-if="errors.recoveryEmail" id="recoveryAskError" role="alert" class="mt-2 block text-[12px] text-danger">{{ errors.recoveryEmail[0] }}</span>
+                </template>
             </aside>
 
             <!-- Says what a board holds, and where adding actually happens. The old
@@ -705,11 +778,20 @@ function persistOrder() {
                 </p>
 
                 <!-- With the site bar gone this is how a classmate learns they can
-                     make their own. After the list, so it never competes with it. -->
-                <p v-if="!isOwner" class="mt-6 text-[12px] text-muted">
-                    Run a class of your own?
-                    <a href="/start" class="inline-flex min-h-11 items-center font-semibold text-neon hover:underline">Make a board</a>
-                </p>
+                     make their own. After the list, so it never competes with it.
+                     And the lecturer who was forwarded this board, likely wanting
+                     to know what happens to their slides, gets the answer here
+                     rather than in the footer. -->
+                <div v-if="!isOwner" class="mt-6 flex flex-wrap gap-x-5 text-[12px] text-muted">
+                    <p>
+                        Run a class of your own?
+                        <a href="/start" class="inline-flex min-h-11 items-center font-semibold text-neon hover:underline">Make a board</a>
+                    </p>
+                    <p>
+                        Lecturer?
+                        <a href="/lecturers" class="inline-flex min-h-11 items-center font-semibold text-neon hover:underline">How we handle your material</a>
+                    </p>
+                </div>
 
                 <!-- Below the list, never above it: the board is for finding notes,
                      and this is a favour asked of the people who already do. -->
@@ -734,7 +816,8 @@ function persistOrder() {
 
             <!-- Phones: "New course" floats in the thumb zone, the same labelled
                  button the course page uses for "Add file". The page reserves
-                 pb-28 below the list so it never covers the last row. -->
+                 room under the footer (AppLayout fab-space) so it never covers
+                 the last row or a footer link. -->
             <button v-if="isOwner && totalCourses > 0 && !sheet" type="button" @click="openCreate"
                 class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
                 <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
@@ -799,18 +882,6 @@ function persistOrder() {
                             </button>
                         </form>
                     </div>
-                </div>
-
-                <!-- Only on an empty board: nothing competes, and this is when an
-                     owner is most likely to lose the link they were just shown.
-                     Everywhere else the recovery email lives in Board settings. -->
-                <div v-if="recoveryAvailable && needsRecoveryEmail && totalCourses === 0" class="op-card mt-8 px-5 py-4">
-                    <p class="text-[13px] font-semibold text-ink">No recovery email set</p>
-                    <p class="mt-0.5 text-[12px] text-muted">Add one so we can send your owner link back if you lose it.</p>
-                    <button type="button" @click="settingsOpen = true"
-                        class="op-press mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/30 sm:min-h-9">
-                        Add a recovery email
-                    </button>
                 </div>
 
                 <!-- Board settings sheet. Same panel as New course. -->
@@ -915,6 +986,19 @@ function persistOrder() {
                             </button>
                         </section>
 
+                        <!-- Real deletion, for a lecturer who must be able to end what
+                             they start. Confirmed by typing the board's name. -->
+                        <section class="mt-7 border-t border-sky pt-6">
+                            <h3 class="text-[14px] font-semibold text-ink">Delete board</h3>
+                            <p class="mt-1 text-[12px] text-muted">
+                                Removes the board, its courses and every file, for everyone. This can't be undone.
+                            </p>
+                            <button type="button" @click="confirmingDelete = true"
+                                class="op-press mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-danger/40 px-4 text-[13px] font-semibold text-danger transition hover:bg-danger/10 sm:min-h-9">
+                                Delete board
+                            </button>
+                        </section>
+
                         <!-- Last, and quiet: rare, and it only affects this browser.
                              The confirm explains what you'll need to get back in. -->
                         <section class="mt-7 border-t border-sky pt-5 sm:mt-auto">
@@ -971,6 +1055,37 @@ function persistOrder() {
             <!-- Reset owner link confirm. Says who loses access (everyone on the
                  old link, including the owner's other devices) and that the new
                  link is shown once. -->
+            <div v-if="confirmingDelete" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-labelledby="deleteTitle" aria-describedby="deleteDesc">
+                <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingDelete = false"></div>
+                <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                    <div aria-hidden="true" class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                    <h2 id="deleteTitle" class="text-[15px] font-semibold text-ink">Delete "{{ workspace.name }}"?</h2>
+                    <p id="deleteDesc" class="mt-2 text-[13px] leading-relaxed text-muted">
+                        Every course and {{ totalFiles === 1 ? 'the 1 file' : `all ${totalFiles} files` }} on it go for good, for everyone with the link. This can't be undone.
+                    </p>
+                    <form @submit.prevent="deleteBoard" class="mt-4">
+                        <label for="deleteConfirmName" class="mb-1.5 block text-[13px] font-semibold text-ink">
+                            Type <span class="select-all font-bold">{{ workspace.name }}</span> to confirm
+                        </label>
+                        <input id="deleteConfirmName" v-model="deleteForm.confirmName" type="text" data-autofocus
+                            autocomplete="off" autocapitalize="off" spellcheck="false"
+                            :aria-invalid="errors.confirmName ? 'true' : undefined"
+                            :aria-describedby="errors.confirmName ? 'deleteError' : undefined"
+                            class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner focus:border-danger focus:outline-none focus:ring-2 focus:ring-danger/20">
+                        <span v-if="errors.confirmName" id="deleteError" role="alert" class="mt-2 block text-[12px] text-danger">{{ errors.confirmName[0] }}</span>
+                        <div class="mt-5 flex items-center justify-end gap-2">
+                            <button type="button" @click="confirmingDelete = false"
+                                    class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
+                            <button type="submit" :disabled="!deleteNameMatches || deleteForm.processing"
+                                    class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                Delete board
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div v-if="confirmingReset" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
                  role="dialog" aria-modal="true" aria-labelledby="resetTitle" aria-describedby="resetDesc">
                 <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingReset = false"></div>

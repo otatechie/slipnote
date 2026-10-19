@@ -58,7 +58,7 @@
     <section class="mt-8">
         <h2 class="text-[17px] font-semibold text-ink">Or run a board for your course</h2>
         <p class="mt-1.5 text-[15px] leading-relaxed text-muted">
-            Your files in one place instead of a group chat. No account. You keep the owner link, delete anything on the board, and choose whether students can add files or only you.
+            Your files in one place instead of a group chat. No account. You keep the owner link, choose whether students can add files or only you, and pin the files that matter to the top of their section. Delete any file, or the whole board, whenever you want.
         </p>
         <a href="{{ route('start') }}"
            class="op-press mt-4 inline-flex min-h-11 items-center rounded-full bg-neon px-5 text-[15px] font-semibold text-white">

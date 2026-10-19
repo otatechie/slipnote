@@ -1,6 +1,11 @@
 <script setup>
 import SuggestDialog from './SuggestDialog.vue'
 import { openSuggest } from './suggest'
+
+// A page with a floating button on phones (Add file, New course) reserves room
+// under the footer, so at the bottom of the scroll the button sits in empty
+// space instead of over the footer's links.
+defineProps({ fabSpace: { type: Boolean, default: false } })
 </script>
 
 <template>
@@ -9,10 +14,13 @@ import { openSuggest } from './suggest'
         <!-- Two rows, not four. Every line here was its own centred row, stacking
              into ~200px of chrome under pages whose whole job is one short form.
              The tagline is decoration, so it rides along with the copyright. -->
-        <footer class="mt-auto border-t border-sky/60 py-6">
+        <footer class="mt-auto border-t border-sky/60 py-6" :class="fabSpace ? 'pb-24 sm:pb-6' : ''">
             <div class="mx-auto flex max-w-3xl flex-col items-center gap-2.5 px-5 text-center">
                 <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
                 <nav aria-label="Footer" class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+                    <!-- Same order as the Blade footer. -->
+                    <a href="/lecturers" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">For lecturers</a>
+                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <a href="/privacy" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">Privacy</a>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <a href="/terms" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">Terms</a>
@@ -25,7 +33,9 @@ import { openSuggest } from './suggest'
                         </svg>
                         <span class="sr-only">(opens in a new tab)</span>
                     </a>
-                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    <!-- Phones wrap here, and a dot left at the end of a line reads
+                         as a stray mark; the line break separates them instead. -->
+                    <span aria-hidden="true" class="hidden text-muted/50 sm:inline">&middot;</span>
                     <button type="button" @click="openSuggest()" class="inline-flex min-h-11 cursor-pointer items-center hover:text-neon sm:min-h-0 sm:py-1.5">Suggest a feature</button>
                     <template v-if="$page.props.ambassadorFormUrl">
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>

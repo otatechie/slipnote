@@ -33,10 +33,10 @@ class CourseController extends Controller
         // (see app.blade.php). Still no counts or filenames.
         view()->share('ogCourse', $course);
 
-        // What landed since this browser last opened this course. Read before
-        // the cookie is bumped below, so today's visit is measured against the
-        // previous one.
-        $seenAt = LastSeen::for($request, $course->id);
+        // What landed since this browser last opened this course (or in the
+        // last week, if it never has). Read before the cookie is bumped below,
+        // so today's visit is measured against the previous one.
+        $newSince = LastSeen::since($request, $course->id);
         Cookie::queue(LastSeen::mark($request, $course->id));
         if ($this->isOwner() && ($recent = RecentWorkspaces::touch($request, $workspace))) {
             Cookie::queue($recent);
@@ -56,6 +56,9 @@ class CourseController extends Controller
                 });
             }
         }
+        // Pinned files lead their section whatever the sort; the list groups
+        // by section client-side, keeping this order within each.
+        $query->orderByRaw('pinned_at IS NULL')->orderByDesc('pinned_at');
         match ($sort) {
             'oldest' => $query->oldest(),
             'az' => $query->orderByRaw('COALESCE(title, original_filename) collate nocase asc'),
@@ -63,6 +66,12 @@ class CourseController extends Controller
         };
 
         $sectionCounts = $course->materials()
+            ->selectRaw('section, count(*) as total')
+            ->groupBy('section')
+            ->pluck('total', 'section');
+        // From the whole course, not the filtered list, so the pin menu knows
+        // a section is full even while a search hides some of its pins.
+        $pinnedCounts = $course->materials()->whereNotNull('pinned_at')
             ->selectRaw('section, count(*) as total')
             ->groupBy('section')
             ->pluck('total', 'section');
@@ -77,13 +86,15 @@ class CourseController extends Controller
             // "Lucid_by_WeOrg"), leaving nothing on screen to tell them apart.
             // Size also answers "is this worth it on mobile data?" before the tap.
             'file_size' => $m->file_size,
+            // Names given before the field was dropped still show.
             'uploader_name' => $m->uploader_name,
+            'pinned' => $m->pinned_at !== null,
             // "just now" reads better than "0 seconds ago" for fresh uploads.
             // Short units ("28m ago") keep the meta line from truncating on phones.
             'created_at_human' => $m->created_at->diffInSeconds() < 45
                 ? 'just now'
                 : $m->created_at->diffForHumans(short: true),
-            'is_new' => $seenAt !== null && $m->created_at->getTimestamp() > $seenAt,
+            'is_new' => $m->created_at->getTimestamp() > $newSince,
             'download_url' => $m->downloadUrl(),
             'preview_url' => $m->previewUrl(),
             // Owner delete goes through the session; the literal 'owner' is
@@ -108,6 +119,8 @@ class CourseController extends Controller
             'passphraseNeeded' => filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true,
             'sections' => Material::SECTIONS,
             'sectionCounts' => $sectionCounts,
+            'pinnedCounts' => $pinnedCounts,
+            'maxPinned' => Material::MAX_PINNED_PER_SECTION,
             'materials' => $materials,
             'resultCount' => $course->materials()->count(),
             'search' => $search,
@@ -206,7 +219,39 @@ class CourseController extends Controller
 
         $count = $materials->count();
 
-        return back()->with('uploaded', $count === 1 ? '1 file removed.' : "{$count} files removed.");
+        return back()->with('notice', $count === 1 ? '1 file removed.' : "{$count} files removed.");
+    }
+
+    /**
+     * Pin a file to the top of its section, or unpin it. Owner only, and the
+     * file is resolved through the scoped course, so it must be on this board.
+     */
+    public function pin(Request $request, string $workspaceSlug, string $slug, int $material)
+    {
+        $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+        $material = $course->materials()->whereKey($material)->firstOrFail();
+
+        $pin = $request->boolean('pinned');
+
+        // A few, or pinning means nothing: pin everything and the top of the
+        // section is just the list again. The menu says so before it gets
+        // here; this catches a stale tab.
+        if ($pin && $material->pinned_at === null) {
+            $pinnedHere = $course->materials()->where('section', $material->section)->whereNotNull('pinned_at')->count();
+            if ($pinnedHere >= Material::MAX_PINNED_PER_SECTION) {
+                return back()->withErrors(['pin' => 'Up to '.Material::MAX_PINNED_PER_SECTION.' pinned files per section. Unpin one first.']);
+            }
+        }
+
+        $material->forceFill(['pinned_at' => $pin ? ($material->pinned_at ?? now()) : null])->save();
+
+        // A passing notice, not the upload receipt: the change is already in
+        // the list, and the receipt sits at the top of the page, out of view
+        // from a file pinned further down.
+        return back()->with('notice', $pin ? 'Pinned to the top of '.Material::SECTIONS[$material->section] : 'Unpinned');
     }
 
     public function exitOwner(Request $request)
@@ -268,7 +313,6 @@ class CourseController extends Controller
         $data = $request->validate([
             'section' => 'required|in:'.implode(',', array_keys(Material::SECTIONS)),
             'title' => 'nullable|string|max:120',
-            'uploaderName' => 'nullable|string|max:60',
             'passphrase' => 'nullable|string',
             'files' => 'required|array|min:1|max:20',
             // mimes checks the extension; mimetypes checks the real content
@@ -283,7 +327,6 @@ class CourseController extends Controller
             'files.*.mimetypes' => 'Unsupported file type. Use PDF, Word, PowerPoint, or an image (PNG/JPG).',
             'files.*.max' => 'That file is too large — each file can be up to 25 MB.',
             'title.max' => 'That title is too long — keep it under 120 characters.',
-            'uploaderName.max' => 'That name is too long — keep it under 60 characters.',
         ]);
 
         // Per-IP upload throttle: blunts automated abuse / mass dumping while
@@ -323,7 +366,13 @@ class CourseController extends Controller
         // A shared title only makes sense for a single file; with several
         // files each keeps its own filename.
         $title = count($files) === 1 && isset($data['title']) ? strip_tags($data['title']) : null;
-        $uploaderName = isset($data['uploaderName']) ? strip_tags($data['uploaderName']) : null;
+        // No uploader name: the optional field was left blank on nearly every
+        // file, so rows said "Anonymous" and nothing more. Whether the file
+        // came from whoever runs the board is recorded instead. Not shown on
+        // the row ("Owner" meant nothing to a classmate, and on a locked board
+        // it was on every file; pinning says "this one matters" better), but
+        // kept for the Telegram ping and for filtering later.
+        $byOwner = $this->isOwner();
 
         // Soft per-workspace cap: track headroom across this batch so a single
         // request never overshoots. The host-disk check above is the hard
@@ -377,7 +426,7 @@ class CourseController extends Controller
                 'title' => $title,
                 'original_filename' => $this->sanitizeFilename($file->getClientOriginalName()),
                 'stored_path' => $file->store('materials', 'local'),
-                'uploader_name' => $uploaderName,
+                'by_owner' => $byOwner,
                 'manage_token' => Str::random(40),
                 'download_token' => Str::random(40),
                 'file_size' => $size,
@@ -421,6 +470,9 @@ class CourseController extends Controller
         return back()->with([
             'uploaded' => $message,
             'manageUrl' => $count === 1 ? $created[0]->manageUrl() : null,
+            // For "Tell the class": the message names what's new.
+            'addedName' => $count === 1 ? $created[0]->displayName() : null,
+            'addedCount' => $count,
         ]);
     }
 

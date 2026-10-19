@@ -2,6 +2,7 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import FlashNotice from '@/components/FlashNotice.vue'
 
 const props = defineProps({
     workspace: Object,
@@ -15,6 +16,8 @@ const props = defineProps({
     passphraseNeeded: Boolean,
     sections: Object,   // { notes: 'Notes', slides: 'Slides', ... }
     sectionCounts: Object,
+    pinnedCounts: Object,  // { notes: 2, ... } across the course, search or not
+    maxPinned: Number,
     materials: Array,
     resultCount: Number,
     search: String,
@@ -23,20 +26,42 @@ const props = defineProps({
 
 const page = usePage()
 const flash = computed(() => page.props.flash)
+
+// The upload receipt stays until closed: it holds Undo (this moment only) and
+// Tell the class, and controls must not time out. A new upload reopens it.
+// Closing it hands focus to the course heading rather than dropping it on the
+// page body.
+const receiptClosed = ref(false)
+const uploadReceipt = ref(null)
+const courseHeading = ref(null)
+watch(() => page.props.flash, () => { receiptClosed.value = false })
+function closeReceipt() {
+    receiptClosed.value = true
+    nextTick(() => courseHeading.value?.focus())
+}
 const errors = computed(() => page.props.errors)
 
-// Share, offered at the one moment it is earned: a file just landed. The
-// board link (never a course link, never the owner one) goes to the group.
-const boardUrl = computed(() => window.location.origin + '/' + props.workspace.slug)
+// Share, offered at the one moment it is earned: a file just landed. Never
+// the owner link. "Tell the class it's here": the link goes to this course
+// (which leads back to the whole board, and unfurls as the course), where the new
+// file is on top and marked New, not to the board, which left classmates to
+// find the course and then the file. The message says what's new, so it's
+// worth a tap in a busy group.
+const courseUrl = computed(() => window.location.origin + '/' + props.workspace.slug + '/c/' + props.course.slug)
 const shareCopied = ref(false)
-function shareBoard() {
-    window.copyText(boardUrl.value).then(() => {
+function shareCourse() {
+    window.copyText(courseUrl.value).then(() => {
         shareCopied.value = true
         setTimeout(() => { shareCopied.value = false }, 2000)
     }).catch(() => { })
 }
 const whatsAppUrl = computed(() => 'https://wa.me/?text=' + encodeURIComponent(
-    `${props.course.code} files are on the class board — no account needed: ${boardUrl.value}`
+    (flash.value.addedName
+        ? `New in ${props.course.code}: ${flash.value.addedName}`
+        : flash.value.addedCount > 1
+            ? `${flash.value.addedCount} new files in ${props.course.code}`
+            : `New in ${props.course.code}`)
+    + `\n\nOpen it here, no account needed:\n${courseUrl.value}`
 ))
 
 // Search / sort — server-side via router
@@ -108,7 +133,6 @@ const uploadOpen = ref(false)
 const uploadForm = useForm({
     section: 'notes',
     title: '',
-    uploaderName: '',
     passphrase: '',
     files: [],
 })
@@ -158,6 +182,13 @@ function upload() {
         onSuccess: () => {
             uploadForm.reset()
             uploadOpen.value = false
+            // The form sits at the foot of the page and the receipt at the
+            // top, with Undo (this moment only) and Tell the class: bring it
+            // into view rather than leave the uploader at the bottom.
+            nextTick(() => {
+                const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                uploadReceipt.value?.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' })
+            })
         },
     })
 }
@@ -210,6 +241,19 @@ function submitReport() {
 // The single-file path still submits the native form (same URL, CSRF and
 // _method spoofing as before); the dialog only gates it.
 const deleteTarget = ref(null)
+
+// Pinned files lead their section whatever the sort (ordered server-side),
+// up to maxPinned per section; the server holds the same line.
+function sectionPinsFull(section) {
+    return (props.pinnedCounts?.[section] ?? 0) >= props.maxPinned
+}
+function togglePin(material) {
+    router.post(
+        '/' + props.workspace.slug + '/c/' + props.course.slug + '/pin/' + material.id,
+        { pinned: !material.pinned },
+        { preserveScroll: true },
+    )
+}
 
 function askDeleteFile(e) {
     e.preventDefault()
@@ -347,8 +391,9 @@ watch(() => props.materials, () => { selected.value = [] })
 
 <template>
     <Head :title="course.code + ' · ' + workspace.name" />
-    <AppLayout>
-        <div class="op mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-28 sm:pb-10">
+    <AppLayout :fab-space="canUpload && !storageFull && resultCount > 0">
+        <!-- pb-6 + the last section's mb-4: 40px to the footer, as on the board page. -->
+        <div class="op mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-6">
 
             <!-- Deliberately NOT .op-top (sticky) like the board page: the filter
                  bar below already claims the sticky slot at top-0, and the bulk bar
@@ -367,7 +412,7 @@ watch(() => props.materials, () => { selected.value = [] })
                         </svg>
                         <span class="truncate">{{ workspace.name }}</span>
                     </Link>
-                    <h1 class="op-title truncate text-[1.85rem] font-bold text-ink sm:text-[2.15rem]">{{ course.code }}</h1>
+                    <h1 ref="courseHeading" tabindex="-1" class="op-title truncate text-[1.85rem] font-bold text-ink outline-none sm:text-[2.15rem]">{{ course.code }}</h1>
                 </div>
                 <!-- Desktop only — on mobile the FAB below covers this from the thumb
                      zone. Hidden when the board is full (can't upload) and on an empty
@@ -425,34 +470,62 @@ watch(() => props.materials, () => { selected.value = [] })
             <!-- Upload receipt. manageUrl is only set for a single-file upload
                  (one token, one file) — the uploader's only way to delete
                  their own upload later, since there's no login to recover it. -->
-            <div v-if="flash.uploaded"
-                 class="teal-accent mb-5 rounded-xl border border-sky bg-sky/40 px-4 py-3 text-sm font-medium text-teal">
-                {{ flash.uploaded }}
-                <template v-if="flash.manageUrl">
-                    <form ref="undoForm" :action="flash.manageUrl" method="POST" class="inline">
-                        <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="button" @click="confirmingUndo = true"
-                                class="op-press ml-1 inline-flex min-h-11 cursor-pointer items-center font-semibold underline hover:no-underline sm:min-h-0">Undo upload</button>
-                    </form>
-                    <span class="mt-1 block text-xs font-semibold text-danger">Only works right now — refresh or leave, and it's gone.</span>
-                </template>
+            <!-- What happened, in plain text with a check (not blue: blue is
+                 for links here, and "File added." beside "Undo" read as two).
+                 Then the next step, sharing, at full strength: it's what makes
+                 the board worth opening. Undo is the rare case, so it's a quiet
+                 line, and its time limit is a fact, not a red warning. -->
+            <div v-if="flash.uploaded && !receiptClosed" ref="uploadReceipt"
+                 class="op-card relative mb-5 scroll-mt-4 py-3.5 pl-4 pr-12 text-sm">
+                <button type="button" @click="closeReceipt" aria-label="Close"
+                        class="absolute right-0.5 top-0.5 flex size-11 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/60 hover:text-ink">
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                </button>
+                <div class="flex items-start gap-2.5">
+                    <span aria-hidden="true" class="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-neon/15 text-neon">
+                        <svg class="size-3" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5l3.5 3.5 7.5-8"/></svg>
+                    </span>
+                    <!-- Undo keeps a 44px target on phones (-my-3 so it doesn't push
+                         the line down). -->
+                    <div class="min-w-0">
+                        <p class="text-[14px] font-semibold text-ink">{{ flash.uploaded }}</p>
+                        <form v-if="flash.manageUrl" ref="undoForm" :action="flash.manageUrl" method="POST"
+                              class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
+                            <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <button type="button" @click="confirmingUndo = true"
+                                    class="-my-3 inline-flex min-h-11 cursor-pointer items-center font-semibold text-ink underline decoration-muted/50 underline-offset-2 hover:decoration-ink sm:my-0 sm:min-h-0">Undo upload</button>
+                            <span>· only until you leave</span>
+                        </form>
+                    </div>
+                </div>
                 <!-- The share moment. This is the first time the board is worth
                      opening, so this is where the link gets pasted into the
-                     class group — pre-written, no composing. -->
-                <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-sky/60 pt-3">
-                    <span class="text-[13px] font-semibold text-ink">Tell the class it's here:</span>
-                    <button type="button" @click="shareBoard"
-                        class="op-press inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-muted/50 bg-surface px-3.5 text-[13px] font-semibold text-muted">
-                        <span v-if="!shareCopied">Copy board link</span>
-                        <span v-else>Copied ✓</span>
-                    </button>
-                    <a :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
-                        class="op-press inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full border border-muted/50 bg-surface px-3.5 text-[13px] font-semibold text-muted">
-                        <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Zm37.6-49.3-14.3-8.2a8,8,0,0,0-8.7.5l-8,6a2,2,0,0,1-2.2.2,52.3,52.3,0,0,1-21.6-21.6,2,2,0,0,1,.2-2.2l6-8a8,8,0,0,0,.5-8.7L109.3,90.4A8,8,0,0,0,102.4,86a26.2,26.2,0,0,0-24.7,20.2,60.1,60.1,0,0,0,72.1,72.1A26.2,26.2,0,0,0,170,153.6,8,8,0,0,0,165.6,146.7Z"/></svg>
-                        <span>WhatsApp</span>
-                    </a>
+                     class group, pre-written, no composing. WhatsApp first:
+                     it's where the class is. This banner is uploads only; pins
+                     and removals are a FlashNotice. -->
+                <div class="-mr-8 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-sky/60 pt-3">
+                    <span class="text-[13px] font-semibold text-ink">Tell the class it's here</span>
+                    <div class="flex flex-wrap gap-2">
+                        <a :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
+                            class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky bg-base px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/40 sm:h-9 sm:px-3.5">
+                            <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Zm37.6-49.3-14.3-8.2a8,8,0,0,0-8.7.5l-8,6a2,2,0,0,1-2.2.2,52.3,52.3,0,0,1-21.6-21.6,2,2,0,0,1,.2-2.2l6-8a8,8,0,0,0,.5-8.7L109.3,90.4A8,8,0,0,0,102.4,86a26.2,26.2,0,0,0-24.7,20.2,60.1,60.1,0,0,0,72.1,72.1A26.2,26.2,0,0,0,170,153.6,8,8,0,0,0,165.6,146.7Z"/></svg>
+                            <span>WhatsApp</span>
+                            <span class="sr-only">(opens WhatsApp)</span>
+                        </a>
+                        <button type="button" @click="shareCourse"
+                            class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky bg-base px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/40 sm:h-9 sm:px-3.5">
+                            <span v-if="!shareCopied">Copy link</span>
+                            <span v-else>Copied ✓</span>
+                        </button>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Pin refused (a stale tab: the menu already says when a section is full). -->
+            <div v-if="errors.pin" role="alert"
+                 class="mb-5 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-medium text-danger">
+                {{ errors.pin[0] }}
             </div>
 
             <!-- Report receipt -->
@@ -558,8 +631,12 @@ watch(() => props.materials, () => { selected.value = [] })
                 <template v-if="materialsBySection[key]?.length > 0">
                     <!-- op-card + op-row: hairline-separated rows in one surface,
                          same as the board page. Drops the old shadow-md and
-                         ring-black/3, which was invisible on a dark background. -->
-                    <section :id="'sec-' + key" class="op-card mb-4 scroll-mt-20 overflow-hidden">
+                         ring-black/3, which was invisible on a dark background. Not
+                         overflow-hidden: it cut off a row menu that runs past the
+                         card's foot (the last row's, two-line "Pin to top" when the
+                         section is full). The last row rounds its own corners so a
+                         selected row's tint still fits the card. -->
+                    <section :id="'sec-' + key" class="op-card mb-4 scroll-mt-20">
                         <div class="flex items-center justify-between gap-3 border-b border-sky/60 px-4 py-3 sm:px-5">
                             <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                                 {{ label }}
@@ -573,7 +650,7 @@ watch(() => props.materials, () => { selected.value = [] })
                             </a>
                         </div>
                         <div v-for="material in materialsBySection[key]" :key="material.id"
-                             class="op-row flex items-center justify-between gap-2 sm:gap-3"
+                             class="op-row flex items-center justify-between gap-2 last:rounded-b-[var(--op-radius)] sm:gap-3"
                              :class="isSelected(material.id) ? 'bg-teal/5' : ''">
                             <div class="flex min-w-0 items-start gap-2.5 sm:gap-3">
                                 <!-- Bulk select checkbox (owner only). The label carries
@@ -596,7 +673,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                      filename; the extension is usually in the name anyway.
                                      Fixed width, centred: sized to its text, "PPTX" pushed
                                      its title right of every "PDF" title in the list. -->
-                                <span class="mt-0.5 hidden w-11 shrink-0 rounded bg-sky/50 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-muted sm:inline-block"
+                                <span class="mt-[3px] hidden w-9 shrink-0 rounded-[5px] bg-sky/40 py-px text-center text-[9px] font-semibold uppercase leading-4 tracking-wide text-muted sm:inline-block"
                                       :title="material.fileTypeLabel + ' file'">
                                     {{ material.fileTypeLabel }}
                                 </span>
@@ -605,6 +682,14 @@ watch(() => props.materials, () => { selected.value = [] })
                                          the ↗ icon signals it opens in a new tab so it isn't a silent
                                          trapdoor. Non-previewable types (docx/ppt) have no preview, so the
                                          title downloads and shows no icon. The pill stays the download action. -->
+                                    <!-- Pinned: an amber pin before the name, nothing else. The
+                                         file is already first in its section; the pin says that
+                                         was on purpose. Amber because a pushpin is, and because
+                                         nothing else here is (blue means New). amber-600 is 3.2:1
+                                         on white; app.css lifts it on dark. -->
+                                    <div class="flex min-w-0 items-start gap-1.5">
+                                    <svg v-if="material.pinned" role="img" aria-label="Pinned" class="mt-[3px] size-4 shrink-0 text-amber-600" viewBox="0 0 20 20" fill="currentColor"><title>Pinned to the top</title><path d="M12.6 2.3a1 1 0 0 1 1.4 0l3.7 3.7a1 1 0 0 1 0 1.4l-1.2 1.2a1 1 0 0 1-1.1.2l-2.6 2.6.4 3.2a1 1 0 0 1-.3.8l-.9.9a1 1 0 0 1-1.4 0L7.4 13.1l-3.7 3.7a.75.75 0 0 1-1.1-1.1l3.7-3.7-3.2-3.2a1 1 0 0 1 0-1.4l.9-.9a1 1 0 0 1 .8-.3l3.2.4 2.6-2.6a1 1 0 0 1 .2-1.1z"/></svg>
+                                    <div class="min-w-0 flex-1">
                                     <a v-if="material.preview_url" :href="material.preview_url"
                                        target="_blank" rel="noopener"
                                        :title="`Preview ${material.displayName} (opens in a new tab)`"
@@ -621,10 +706,15 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <span v-else class="block truncate text-[15px] font-semibold text-ink">
                                         {{ material.displayName }}
                                     </span>
-                                    <div class="mt-0.5 truncate text-[12px] text-muted">
-                                        <!-- Since this browser last opened the course — the reason to
-                                             check weekly instead of once a semester. -->
-                                        <span v-if="material.is_new" class="mr-1 rounded-full bg-neon/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.06em] text-neon">New</span>{{ material.uploader_name || 'Anonymous' }} · {{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template>
+                                    </div>
+                                    </div>
+                                    <!-- New first, kept whole; only the time and size shorten
+                                         when a phone row runs out of room. New is since
+                                         this browser last opened the course, or this week.
+                                         No "Anonymous" for files without a name: it said nothing. -->
+                                    <div class="mt-0.5 flex min-w-0 items-center gap-1 text-[12px] text-muted">
+                                        <span v-if="material.is_new" class="shrink-0 rounded-full bg-neon/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.06em] text-neon">New</span>
+                                        <span class="min-w-0 truncate"><template v-if="material.uploader_name">{{ material.uploader_name }} · </template>{{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template></span>
                                     </div>
                                 </div>
                             </div>
@@ -637,7 +727,20 @@ watch(() => props.materials, () => { selected.value = [] })
                                              class="flex size-10 shrink-0 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink marker:hidden sm:size-9">
                                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
                                     </summary>
-                                    <div class="absolute right-full top-1/2 z-20 mr-1 w-44 -translate-y-1/2 rounded-xl bg-surface p-1 text-left shadow-xl ring-1 ring-sky">
+                                    <div class="absolute right-full top-1/2 z-20 mr-1 w-48 -translate-y-1/2 rounded-xl bg-surface p-1 text-left shadow-xl ring-1 ring-sky">
+                                        <!-- Full section: the item stays, says why, and does
+                                             nothing, rather than vanishing or failing after the tap. -->
+                                        <button v-if="!material.pinned && sectionPinsFull(material.section)" type="button"
+                                                aria-disabled="true" :aria-describedby="`pinfull-${material.id}`"
+                                                class="block min-h-11 w-full cursor-not-allowed rounded-lg px-3 py-2 text-left sm:min-h-0">
+                                            <span class="block text-[13px] font-semibold text-muted">Pin to top</span>
+                                            <span :id="`pinfull-${material.id}`" class="block text-[11px] text-muted">{{ maxPinned }} already pinned in {{ sections[material.section] }}. Unpin one first.</span>
+                                        </button>
+                                        <button v-else type="button"
+                                                @click="$event.target.closest('details')?.removeAttribute('open'); togglePin(material)"
+                                                class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-sky/40 sm:min-h-0">
+                                            {{ material.pinned ? 'Unpin' : 'Pin to top' }}
+                                        </button>
                                         <form :action="material.delete_url" method="POST"
                                               :data-name="material.displayName"
                                               @submit="askDeleteFile">
@@ -696,7 +799,9 @@ watch(() => props.materials, () => { selected.value = [] })
             <!-- Upload section -->
             <!-- Not rendered at all when the owner keeps uploads to themselves:
                  no form, no floating Add file. The server refuses them anyway. -->
-            <section v-if="canUpload" id="add-file" class="mt-7 scroll-mt-6">
+            <!-- Closed, this holds only the fixed Add file button, so it takes no
+                 room: its margin left a 28px gap above the footer. -->
+            <section v-if="canUpload" id="add-file" class="scroll-mt-6" :class="uploadOpen || storageFull ? 'mt-7' : ''">
                 <!-- Board full -->
                 <div v-if="storageFull" class="rounded-2xl border border-danger/30 bg-danger/5 px-6 py-5 text-center">
                     <p class="text-[14px] font-semibold text-danger">This board is full</p>
@@ -711,7 +816,8 @@ watch(() => props.materials, () => { selected.value = [] })
                          standard mobile counterpart to the desktop header action. -->
                     <!-- Labelled, not a bare "+": desktop says "Add file", and an
                          unlabelled icon makes people guess. The page reserves room
-                         beneath the list (pb-28) so it never covers a row. -->
+                         beneath the footer (AppLayout fab-space) so it never covers
+                         a row or a footer link. -->
                     <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
                             class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
@@ -818,25 +924,17 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </div>
                             </fieldset>
 
-                            <!-- Both optional, so both are quiet: one row, labels doing the
-                                 work of the helper lines that used to sit under each.
-                                 The file's own name field only exists for a single upload. -->
-                            <div class="flex flex-col gap-3.5 sm:flex-row sm:gap-3">
-                                <div v-if="uploadForm.files.length <= 1" class="min-w-0 flex-1">
+                            <!-- Optional, so quiet: the label does the work of a helper line.
+                                 Only for a single upload. No "Your name": it was left blank
+                                 on nearly every file, and rows just said "Anonymous". -->
+                            <div v-if="uploadForm.files.length <= 1">
+                                <div class="min-w-0">
                                     <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">File name <span class="font-normal text-muted">(optional)</span></label>
                                     <input id="utitle" type="text" v-model="uploadForm.title"
                                            placeholder="e.g. Week 7 quiz solutions"
                                            :aria-invalid="!!errors.title"
                                            class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                                     <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <label for="uploaderName" class="mb-1.5 block text-[13px] font-semibold text-ink">Your name <span class="font-normal text-muted">(optional)</span></label>
-                                    <input id="uploaderName" type="text" v-model="uploadForm.uploaderName"
-                                           placeholder="e.g. Ama"
-                                           :aria-invalid="!!errors.uploaderName"
-                                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                                    <span v-if="errors.uploaderName" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.uploaderName[0] }}</span>
                                 </div>
                             </div>
 
@@ -928,6 +1026,12 @@ watch(() => props.materials, () => { selected.value = [] })
                     <p v-if="reportNeedsNote" class="mt-2 text-[12px] text-muted">
                         Add a note so the operator knows what to look at.
                     </p>
+                    <!-- The lecturer reporting their own slides: what happens next,
+                         and how to get a lot removed at once. -->
+                    <p v-if="reportReason.startsWith('Copyright')" class="mt-3 text-[12px] text-muted">
+                        Your own material?
+                        <a href="/lecturers" target="_blank" rel="noopener" class="font-semibold text-neon hover:underline">What we do for lecturers<span class="sr-only"> (opens in a new tab)</span></a>
+                    </p>
                     <p class="mt-3 text-[11px] text-muted">Goes to the site operator for review. Files aren't removed automatically.</p>
                 </div>
             </div>
@@ -983,5 +1087,6 @@ watch(() => props.materials, () => { selected.value = [] })
                 </div>
             </div>
         </div>
+        <FlashNotice :below-sticky-bar="resultCount > 6" />
     </AppLayout>
 </template>

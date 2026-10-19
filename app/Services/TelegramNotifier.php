@@ -188,8 +188,12 @@ class TelegramNotifier
         // Secondary line: the filename (when a title pushed it out of the
         // headline) and who uploaded it — useful but not the read decision.
         $detail = filled($material->title) ? "<i>{$file}</i>" : '';
-        if (filled($material->uploader_name)) {
-            $by = 'uploaded by '.$this->esc($material->uploader_name);
+        $by = match (true) {
+            (bool) $material->by_owner => 'uploaded by the board owner',
+            filled($material->uploader_name) => 'uploaded by '.$this->esc($material->uploader_name),
+            default => '',
+        };
+        if ($by !== '') {
             $detail = $detail === '' ? $by : "{$detail} — {$by}";
         }
 
