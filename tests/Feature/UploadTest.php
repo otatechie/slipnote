@@ -762,4 +762,87 @@ class UploadTest extends TestCase
             'slug' => $this->course->slug, 'section' => 'bogus',
         ])))->assertNotFound();
     }
+
+    // --- Who can add files ---
+
+    public function test_the_owner_can_keep_uploads_to_themselves(): void
+    {
+        $this->withSession([$this->workspace->ownerSessionKey() => true])
+            ->post('/'.$this->workspace->slug.'/upload-access', ['ownerOnly' => true])
+            ->assertRedirect();
+
+        $this->assertTrue($this->workspace->fresh()->uploads_owner_only);
+    }
+
+    public function test_only_the_owner_can_change_who_adds_files(): void
+    {
+        $this->post('/'.$this->workspace->slug.'/upload-access', ['ownerOnly' => true])->assertForbidden();
+        $this->assertFalse($this->workspace->fresh()->uploads_owner_only);
+    }
+
+    public function test_a_locked_board_refuses_a_classmates_upload_and_hides_the_form(): void
+    {
+        $this->workspace->forceFill(['uploads_owner_only' => true])->save();
+        $course = $this->workspace->courses()->firstOrFail();
+        $url = '/'.$this->workspace->slug.'/c/'.$course->slug;
+
+        $this->get($url)->assertInertia(fn ($page) => $page->where('canUpload', false));
+
+        $this->from($url)
+            ->post($url.'/upload', [
+                'section' => 'notes',
+                'files' => [UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')],
+            ])
+            ->assertSessionHasErrors('files');
+
+        $this->assertSame(0, $course->materials()->count());
+    }
+
+    public function test_the_owner_can_still_upload_to_a_locked_board(): void
+    {
+        $this->workspace->forceFill(['uploads_owner_only' => true])->save();
+        $course = $this->workspace->courses()->firstOrFail();
+        $url = '/'.$this->workspace->slug.'/c/'.$course->slug;
+
+        $this->withSession([$this->workspace->ownerSessionKey() => true])
+            ->get($url)->assertInertia(fn ($page) => $page->where('canUpload', true));
+
+        $this->withSession([$this->workspace->ownerSessionKey() => true])
+            ->post($url.'/upload', [
+                'section' => 'notes',
+                'files' => [UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(1, $course->materials()->count());
+    }
+
+    public function test_owning_one_board_does_not_let_you_lock_another(): void
+    {
+        [$other] = \App\Models\Workspace::provision('Someone Else');
+
+        // Owner of this test board, posting to the other board's switch.
+        $this->withSession([$this->workspace->ownerSessionKey() => true])
+            ->post('/'.$other->slug.'/upload-access', ['ownerOnly' => true])
+            ->assertForbidden();
+
+        $this->assertFalse($other->fresh()->uploads_owner_only);
+    }
+
+    public function test_locking_uploads_never_blocks_reading_or_downloading(): void
+    {
+        $course = $this->workspace->courses()->firstOrFail();
+        Storage::disk('local')->put('materials/kept.pdf', '%PDF-1.4 test');
+        $material = $course->materials()->create([
+            'section' => 'notes', 'original_filename' => 'kept.pdf', 'stored_path' => 'materials/kept.pdf',
+            'download_token' => 'dl-kept', 'file_size' => 13,
+        ]);
+        $this->workspace->forceFill(['uploads_owner_only' => true])->save();
+
+        $this->get('/'.$this->workspace->slug.'/c/'.$course->slug)
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->has('materials', 1)->where('canUpload', false));
+
+        $this->get($material->downloadUrl())->assertOk();
+    }
 }

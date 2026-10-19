@@ -118,7 +118,14 @@ class OperatorController extends Controller
 
         // Most recent boards, with how much they hold and when they were last
         // touched — a board with files but no recent access is a dead one.
+        // Find any board by name or slug: the newest ten won't hold the
+        // established board whose owner the operator wants to reach.
+        $boardQuery = trim((string) $request->query('q', ''));
+
         $recent = Workspace::query()
+            ->when($boardQuery !== '', fn ($q) => $q->where(fn ($w) => $w
+                ->where('name', 'like', "%{$boardQuery}%")
+                ->orWhere('slug', 'like', '%'.Str::slug($boardQuery).'%')))
             ->withCount([
                 'courses',
                 'materials',
@@ -140,6 +147,11 @@ class OperatorController extends Controller
             'reportedTotal' => $reportedTotal,
             'stats' => $stats,
             'recent' => $recent,
+            'boardQuery' => $boardQuery,
+            // The board whose note is being written, from ?note={id}.
+            'noteBoard' => $this->tab($request) === 'boards' && $request->query('note')
+                ? Workspace::find((int) $request->query('note'))
+                : null,
             'tab' => $this->tab($request),
             'undo' => $undo,
             'ambassadors' => $ambassadors = Ambassador::query()->orderBy('name')->get(),
@@ -447,6 +459,27 @@ class OperatorController extends Controller
         $material->reports()->delete();
 
         return $this->dashboardRedirect($request)->with('done', 'Reports dismissed.');
+    }
+
+    /**
+     * Leave (or clear, with an empty note) a message for one board's owner.
+     * It shows only in owner mode on that board, and they reply through the
+     * suggestion form, so the operator never needs the owner's contact.
+     */
+    public function saveNote(Request $request, Workspace $board)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $data = $request->validate(['note' => 'nullable|string|max:500']);
+        $note = trim(strip_tags((string) ($data['note'] ?? '')));
+
+        $board->forceFill([
+            'operator_note' => $note !== '' ? $note : null,
+            'operator_note_at' => $note !== '' ? now() : null,
+        ])->save();
+
+        return $this->dashboardRedirect($request, 'boards')
+            ->with('done', $note !== '' ? "Note left for the owner of “{$board->name}”." : 'Note removed.');
     }
 
     /** Delete a suggestion: read and dealt with, or its sender asked for it gone. */

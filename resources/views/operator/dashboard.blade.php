@@ -371,6 +371,46 @@
     @endif
 
     @if ($tab === 'boards')
+    {{-- Note to one board's owner: shown only in owner mode on that board,
+         answered through the suggestion form. The way to reach a heavy user
+         without accounts or touching the recovery email. --}}
+    @if ($noteBoard)
+        <form method="POST" action="{{ route('operator.boards.note', $noteBoard->id) }}" class="op-card mb-5 px-5 py-4">
+            @csrf
+            <label for="ownerNote" class="block text-[14px] font-semibold text-ink">Note to the owner of “{{ $noteBoard->name }}”</label>
+            <p class="mt-0.5 text-[12px] text-muted">Shown only to them, on their board, until they dismiss it. They reply through the suggestion form; replies land in Suggestions.</p>
+            <textarea id="ownerNote" name="note" rows="3" maxlength="500" required
+                      placeholder="e.g. Hi from the SlipNote team. Your class uses this a lot. Could we ask you two quick questions?"
+                      class="mt-3 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">{{ old('note', $noteBoard->operator_note) }}</textarea>
+            @error('note')
+                <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>
+            @enderror
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+                <button type="submit" class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white sm:min-h-9">
+                    {{ $noteBoard->operator_note ? 'Update note' : 'Leave note' }}
+                </button>
+                <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery])) }}"
+                   class="inline-flex min-h-11 items-center rounded-full px-4 text-[14px] font-semibold text-muted hover:text-ink sm:min-h-9">Cancel</a>
+            </div>
+        </form>
+        @if ($noteBoard->operator_note)
+            <form method="POST" action="{{ route('operator.boards.note', $noteBoard->id) }}" class="-mt-3 mb-5 px-5">
+                @csrf
+                <input type="hidden" name="note" value="">
+                <button type="submit" class="inline-flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-danger hover:underline sm:min-h-0">Remove note</button>
+                <span class="text-[12px] text-muted">· left {{ $noteBoard->operator_note_at?->diffForHumans() }}</span>
+            </form>
+        @endif
+    @endif
+
+    <form method="GET" action="{{ route('operator.dashboard') }}" class="mb-4 flex gap-2">
+        <input type="hidden" name="tab" value="boards">
+        <input type="search" name="q" value="{{ $boardQuery }}" aria-label="Find a board by name"
+               placeholder="Find a board by name…"
+               class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+        <button type="submit" class="op-press inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[14px] font-semibold text-ink hover:bg-sky/30">Find</button>
+    </form>
+
     <div class="op-card overflow-hidden">
         @forelse ($recent as $ws)
             {{-- A board with no files is an unused shell — fade it so the boards
@@ -420,10 +460,15 @@
                             opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
                         </p>
                     @endif
+                    {{-- relative z-10: above the row's stretched board link. --}}
+                    <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'note' => $ws->id])) }}"
+                       class="relative z-10 inline-flex min-h-11 items-center text-[12px] font-semibold text-neon hover:underline sm:min-h-0">
+                        {{ $ws->operator_note ? 'Note left · edit' : 'Note to owner' }}
+                    </a>
                 </div>
             </div>
         @empty
-            <p class="px-4 py-8 text-center text-[14px] text-muted">No boards yet.</p>
+            <p class="px-4 py-8 text-center text-[14px] text-muted">{{ $boardQuery !== '' ? 'No board matches “'.$boardQuery.'”.' : 'No boards yet.' }}</p>
         @endforelse
     </div>
     {{-- The list is capped and sorted by creation, and empty rows are faded —
@@ -431,7 +476,11 @@
          number here: boards created and never filled are the drop-off. --}}
     @if ($recent->isNotEmpty())
         <p class="mt-3 text-[13px] text-muted">
-            The {{ $recent->count() }} newest of {{ number_format($stats['workspaces']) }}.
+            @if ($boardQuery !== '')
+                {{ $recent->count() }} {{ Str::plural('board', $recent->count()) }} matching “{{ $boardQuery }}”.
+            @else
+                The {{ $recent->count() }} newest of {{ number_format($stats['workspaces']) }}.
+            @endif
             @if ($stats['empty_boards'] > 0)
                 <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
             @endif

@@ -26,6 +26,8 @@ class Workspace extends Model
         // Encrypted at rest: a leaked DB/backup must not expose emails.
         'recovery_email' => 'encrypted',
         'last_accessed_at' => 'datetime',
+        'operator_note_at' => 'datetime',
+        'uploads_owner_only' => 'boolean',
     ];
 
     public function courses(): HasMany

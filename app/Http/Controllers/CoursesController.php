@@ -79,6 +79,11 @@ class CoursesController extends Controller
             // the share nudge keys off this, not the course count.
             'totalFiles' => $workspace->materials()->count(),
             'isOwner' => $isOwner,
+            'uploadsOwnerOnly' => (bool) $workspace->uploads_owner_only,
+            // Owner-only: a message from the operator, and when it was left.
+            'operatorNote' => $isOwner && filled($workspace->operator_note)
+                ? ['text' => $workspace->operator_note, 'at' => $workspace->operator_note_at?->toIso8601String()]
+                : null,
             'recoveryAvailable' => ! in_array(config('mail.default'), ['log', 'array', null], true),
             'needsRecoveryEmail' => blank($workspace->recovery_email),
             'currentRecoveryEmail' => $isOwner ? $workspace->recovery_email : null,
@@ -119,6 +124,20 @@ class CoursesController extends Controller
         RateLimiter::hit($key, 600);
 
         return back()->withErrors(['ownerInput' => "That owner secret or link isn't right for this board — check you copied the whole thing."]);
+    }
+
+    /** Who can add files: anyone with the link, or only the owner. */
+    public function setUploadAccess(Request $request)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $data = $request->validate(['ownerOnly' => 'required|boolean']);
+        $workspace->forceFill(['uploads_owner_only' => (bool) $data['ownerOnly']])->save();
+
+        // No toast: the setting sits at the foot of the page and the toast at
+        // the top, so the selected choice is the confirmation.
+        return back();
     }
 
     public function saveRecoveryEmail(Request $request)

@@ -99,6 +99,9 @@ class CourseController extends Controller
             'course' => ['id' => $course->id, 'code' => $course->code, 'title' => $course->title, 'slug' => $course->slug],
             'isOwner' => $this->isOwner(),
             'storageFull' => $workspace->storageFull(),
+            // False when the owner has locked uploads to themselves and this
+            // visitor isn't the owner: no Add file anywhere on the page.
+            'canUpload' => ! $workspace->uploads_owner_only || $this->isOwner(),
             'storageUsed' => $storageUsed = $workspace->storageBytes(),
             'storageCap' => $storageCap = (int) config('noteshare.workspace_storage_bytes'),
             'storagePct' => $storageCap > 0 ? min(100, (int) round($storageUsed / $storageCap * 100)) : 0,
@@ -255,6 +258,12 @@ class CourseController extends Controller
     {
         $workspace = $this->workspace();
         $course = Course::where('slug', $slug)->firstOrFail();
+
+        // The owner locked uploads to themselves. The page hides Add file, so
+        // this is a stale tab or a hand-made request; say why, don't 403.
+        if ($workspace->uploads_owner_only && ! $this->isOwner()) {
+            return back()->withErrors(['files' => 'Only the board\'s owner can add files here.']);
+        }
 
         $data = $request->validate([
             'section' => 'required|in:'.implode(',', array_keys(Material::SECTIONS)),

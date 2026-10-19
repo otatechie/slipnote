@@ -95,6 +95,7 @@ Route::post('/operator/material/{material}/remove', [OperatorController::class, 
 Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');
 Route::post('/operator/suggestions/{suggestion}/delete', [OperatorController::class, 'deleteSuggestion'])->name('operator.suggestions.delete');
+Route::post('/operator/boards/{board}/note', [OperatorController::class, 'saveNote'])->name('operator.boards.note');
 Route::post('/operator/ambassadors', [OperatorController::class, 'storeAmbassador'])->name('operator.ambassadors.store');
 Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::class, 'retireAmbassador'])->name('operator.ambassadors.retire');
 
@@ -109,6 +110,7 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/unlock', [CoursesController::class, 'unlock'])->name('courses.unlock');
     Route::post('/{workspace}/lock', [CourseController::class, 'exitOwner'])->name('courses.lock');
     Route::post('/{workspace}/recovery-email', [CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
+    Route::post('/{workspace}/upload-access', [CoursesController::class, 'setUploadAccess'])->name('courses.upload-access');
 
     Route::get('/{workspace}/c/{slug}', [CourseController::class, 'show'])->name('course.show');
     Route::get('/{workspace}/c/{slug}/download/{section}', [CourseController::class, 'downloadSection'])->name('course.download-section');

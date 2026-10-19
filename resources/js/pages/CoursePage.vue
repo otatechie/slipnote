@@ -8,6 +8,7 @@ const props = defineProps({
     course: Object,
     isOwner: Boolean,
     storageFull: Boolean,
+    canUpload: Boolean,
     storageUsed: Number,
     storageCap: Number,
     storagePct: Number,
@@ -122,12 +123,12 @@ watch(uploadOpen, (v) => {
 })
 
 // Open if hash or has errors
-if (window.location.hash === '#add-file' || (errors.value && Object.keys(errors.value).length > 0)) {
+if (props.canUpload && (window.location.hash === '#add-file' || (errors.value && Object.keys(errors.value).length > 0))) {
     uploadOpen.value = true
 }
 
 window.addEventListener('hashchange', () => {
-    if (window.location.hash === '#add-file') uploadOpen.value = true
+    if (props.canUpload && window.location.hash === '#add-file') uploadOpen.value = true
 })
 
 function onFileChange(e) {
@@ -371,7 +372,7 @@ watch(() => props.materials, () => { selected.value = [] })
                 <!-- Desktop only — on mobile the FAB below covers this from the thumb
                      zone. Hidden when the board is full (can't upload) and on an empty
                      course, where the empty-state card's CTA is the sole invitation. -->
-                <button v-if="!storageFull && resultCount > 0" type="button" @click="uploadOpen = true"
+                <button v-if="canUpload && !storageFull && resultCount > 0" type="button" @click="uploadOpen = true"
                         class="op-press hidden h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex sm:h-8">
                     <span class="text-base leading-none">+</span> Add file
                 </button>
@@ -382,7 +383,6 @@ watch(() => props.materials, () => { selected.value = [] })
             <!-- Owner mode — quiet inline note, not a full banner -->
             <div v-if="isOwner" class="mb-5">
                 <p class="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
-                    <span class="inline-block size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
                     Owner
                     <template v-if="resultCount > 1 && !selecting">
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>
@@ -505,11 +505,16 @@ watch(() => props.materials, () => { selected.value = [] })
             <div v-if="resultCount === 0 && !isFiltered"
                  class="op-card px-6 py-14 text-center">
                 <p class="text-[16px] font-semibold tracking-tight text-ink">No files yet</p>
-                <p class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">
+                <p v-if="canUpload" class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">
                     Be the first to add notes, slides, or past papers for
                     <span class="font-semibold text-ink">{{ course.code }}</span>.
                 </p>
-                <button type="button" @click="uploadOpen = true"
+                <!-- Uploads locked to the owner: say who adds files, so an empty
+                     course reads as "not yet", not as broken. -->
+                <p v-else class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">
+                    Files for <span class="font-semibold text-ink">{{ course.code }}</span> are added by the board's owner. Check back soon.
+                </p>
+                <button v-if="canUpload" type="button" @click="uploadOpen = true"
                         class="op-press mt-5 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
                     <span class="text-lg leading-none">+</span> Add the first file
                 </button>
@@ -689,7 +694,9 @@ watch(() => props.materials, () => { selected.value = [] })
             </template>
 
             <!-- Upload section -->
-            <section id="add-file" class="mt-7 scroll-mt-6">
+            <!-- Not rendered at all when the owner keeps uploads to themselves:
+                 no form, no floating Add file. The server refuses them anyway. -->
+            <section v-if="canUpload" id="add-file" class="mt-7 scroll-mt-6">
                 <!-- Board full -->
                 <div v-if="storageFull" class="rounded-2xl border border-danger/30 bg-danger/5 px-6 py-5 text-center">
                     <p class="text-[14px] font-semibold text-danger">This board is full</p>

@@ -10,6 +10,8 @@ const props = defineProps({
     totalCourses: Number,
     totalFiles: Number,
     isOwner: Boolean,
+    operatorNote: Object,
+    uploadsOwnerOnly: Boolean,
     recoveryAvailable: Boolean,
     needsRecoveryEmail: Boolean,
     currentRecoveryEmail: String,
@@ -81,6 +83,32 @@ try { feedbackDismissed.value = window.localStorage.getItem(FEEDBACK_KEY) === '1
 // class does with it. A classmate looking for notes has nothing to tell us, and
 // "Suggest a feature" in the footer is there for anyone who does.
 const showFeedback = computed(() => props.isOwner && props.totalFiles >= 5 && !feedbackDismissed.value)
+// A note from the operator to this board's owner. Dismissed per browser,
+// keyed by when it was left, so a new note shows even after an old one was
+// closed. Storage can throw in private windows; then it simply shows again.
+const NOTE_KEY = 'slipnote_note_seen_' + props.workspace.slug
+const noteSeen = ref('')
+try { noteSeen.value = window.localStorage.getItem(NOTE_KEY) ?? '' } catch { }
+const showNote = computed(() => !!props.operatorNote && noteSeen.value !== props.operatorNote.at)
+function dismissNote() {
+    noteSeen.value = props.operatorNote.at
+    try { window.localStorage.setItem(NOTE_KEY, props.operatorNote.at) } catch { }
+}
+function replyToNote() {
+    openSuggest(`Reply about "${props.workspace.name}": `)
+}
+
+// Who can add files. Saved on tap: two choices, nothing to confirm.
+const uploadAccessSaving = ref(false)
+function setUploadAccess(ownerOnly) {
+    if (ownerOnly === props.uploadsOwnerOnly) return
+    uploadAccessSaving.value = true
+    router.post('/' + props.workspace.slug + '/upload-access', { ownerOnly }, {
+        preserveScroll: true,
+        onFinish: () => { uploadAccessSaving.value = false },
+    })
+}
+
 function tellUs() {
     openSuggest(`We use SlipNote for "${props.workspace.name}". `)
 }
@@ -184,9 +212,11 @@ function submitCourse() {
 // Recovery email form. The nudge collapses to one row once courses exist
 // (so it can't out-weigh the course list); it starts open on an empty board
 // and whenever there's feedback to show (save confirmation / error).
-const recoveryOpen = ref(
-    props.totalCourses === 0
-    || !!page.props.flash?.recoverySaved
+// Board settings sheet: who can add files, and the recovery email. Opens
+// itself when there's feedback for the recovery form (save confirmation or
+// an error), so the owner sees the result of what they just did.
+const settingsOpen = ref(
+    !!page.props.flash?.recoverySaved
     || !!page.props.errors?.recoveryEmail,
 )
 const recoveryForm = useForm({ recoveryEmail: '' })
@@ -216,7 +246,7 @@ function onEscape() {
     if (qrOpen.value) { qrOpen.value = false; return }
     if (sheet.value) { sheet.value = false; return }
     if (unlockOpen.value) { unlockOpen.value = false; return }
-    if (recoveryOpen.value) { recoveryOpen.value = false }
+    if (settingsOpen.value) { settingsOpen.value = false }
 }
 function unlockOwner() {
     unlockForm.post('/' + props.workspace.slug + '/unlock', {
@@ -340,7 +370,7 @@ function persistOrder() {
             <!-- Where you are, and as whom. Scrolls away; only the title row
                  below pins, and only from sm up. Owner status sits here as a
                  state of the session rather than a pill in the share row. -->
-            <div class="flex h-11 items-center justify-between gap-3 pt-1.5 sm:pt-3">
+            <div class="flex min-h-11 items-center justify-between gap-3 pt-4 sm:pt-6">
                 <!-- Owners only: /start lists the boards this browser manages.
                      A classmate who opened a shared link has none, so they get
                      the wordmark, which is their way to the rest of SlipNote. -->
@@ -360,17 +390,17 @@ function persistOrder() {
                     <img src="/logo-mark.png" alt="" class="size-4">
                     SlipNote
                 </a>
-                <!-- "Exit", not "Lock": beside a board, "Lock" reads as "make this
-                     board locked", the misread that costs you your own access. -->
-                <span v-if="isOwner" class="inline-flex items-center gap-1 text-[12px] font-medium text-muted">
-                    <span class="mr-1 size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
+                <!-- "Owner" opens the Board settings sheet: everything owner-only in
+                     one place, one tap away. Exit lives at the foot of that sheet,
+                     out of a stray thumb's way. "Exit", not "Lock": beside a board,
+                     "Lock" reads as "make this board locked", the misread that
+                     costs you your own access. -->
+                <button v-if="isOwner" type="button" @click="settingsOpen = true"
+                    aria-haspopup="dialog" aria-label="Owner: board settings"
+                    class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky/50 bg-surface px-3 text-[12px] font-semibold text-ink transition hover:bg-sky/30 sm:h-8">
                     Owner
-                    <span aria-hidden="true" class="mx-0.5 text-muted/50">&middot;</span>
-                    <button type="button" @click="confirmingExit = true" aria-label="Exit owner mode on this device"
-                        class="inline-flex h-11 min-w-11 cursor-pointer items-center justify-center px-1 font-semibold text-ink transition hover:text-neon">
-                        Exit
-                    </button>
-                </span>
+                    <svg aria-hidden="true" class="size-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+                </button>
             </div>
 
             <!-- Pinned from sm up with "New course" beside it. On a phone a
@@ -386,6 +416,24 @@ function persistOrder() {
                 </button>
             </header>
 
+            <!-- The operator's note, for the owner only: first thing under the
+                 title, because it's addressed to them and rarely sent. -->
+            <aside v-if="showNote" aria-label="A note from the SlipNote team"
+                class="op-card mb-4 flex items-start gap-3 px-4 py-3.5">
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">From the SlipNote team</p>
+                    <p class="mt-1 whitespace-pre-line text-[14px] text-ink">{{ operatorNote.text }}</p>
+                    <button type="button" @click="replyToNote"
+                        class="op-press mt-2.5 inline-flex h-11 cursor-pointer items-center rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:h-8">
+                        Reply
+                    </button>
+                </div>
+                <button type="button" @click="dismissNote" aria-label="Dismiss note"
+                    class="-mr-1.5 -mt-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-8">
+                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
+                </button>
+            </aside>
+
             <!-- Says what a board holds, and where adding actually happens. The old
                  line invited you to "add what you have" on a page with nothing to add
                  it to — uploads live one level down, inside a course. It also stated
@@ -397,6 +445,7 @@ function persistOrder() {
                  a board a classmate opens once. -->
             <p class="mb-5 text-[13px] text-muted">
                 <template v-if="isOwner && totalCourses > 0 && totalFiles === 0">Open a course to add the first file — a board that opens empty rarely gets opened twice.</template>
+                <template v-else-if="totalCourses > 0 && uploadsOwnerOnly && !isOwner">Notes, slides and past papers for this class. Open a course to read or download them.</template>
                 <template v-else-if="totalCourses > 0">Notes, slides and past papers from your classmates. Open a course to read or add files.</template>
                 <template v-else>Your board's courses live here — add one to get started.</template>
             </p>
@@ -707,90 +756,116 @@ function persistOrder() {
                     </div>
                 </div>
 
-                <!-- Recovery email nudge. Prominent only on an empty board where
-                     nothing competes; once courses exist it collapses to a one-row
-                     disclosure (same idiom as "Manage this board") so it doesn't
-                     out-weigh the course list. -->
-                <div v-if="recoveryAvailable" class="op-card mt-8 overflow-hidden">
-                    <button v-if="totalCourses > 0" type="button" @click="recoveryOpen = !recoveryOpen"
-                        class="flex w-full cursor-pointer items-center justify-between gap-3 px-5 py-3 text-left transition hover:bg-sky/30"
-                        :aria-expanded="recoveryOpen" aria-controls="recoveryPanel">
-                        <span class="flex flex-col">
-                            <span class="text-[13px] font-semibold text-ink">
-                                {{ needsRecoveryEmail ? 'No recovery email set' : 'Recovery email is set' }}
-                            </span>
-                            <!-- Stays visible when open. Hiding it only for the panel
-                                 to restate the same thing at greater length left a
-                                 gap between the heading and its own explanation. -->
-                            <span class="text-[12px] text-muted">
-                                {{ needsRecoveryEmail
-                                    ? 'Add one so we can send your owner link back if you lose it.'
-                                    : 'Lose your owner link and we\'ll email a fresh one.' }}
-                            </span>
-                        </span>
-                        <svg aria-hidden="true" class="size-4 shrink-0 text-muted transition-transform"
-                             :class="recoveryOpen ? 'rotate-180' : ''"
-                             viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
+                <!-- Only on an empty board: nothing competes, and this is when an
+                     owner is most likely to lose the link they were just shown.
+                     Everywhere else the recovery email lives in Board settings. -->
+                <div v-if="recoveryAvailable && needsRecoveryEmail && totalCourses === 0" class="op-card mt-8 px-5 py-4">
+                    <p class="text-[13px] font-semibold text-ink">No recovery email set</p>
+                    <p class="mt-0.5 text-[12px] text-muted">Add one so we can send your owner link back if you lose it.</p>
+                    <button type="button" @click="settingsOpen = true"
+                        class="op-press mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/30 sm:min-h-9">
+                        Add a recovery email
                     </button>
-                    <div v-if="recoveryOpen" id="recoveryPanel" class="px-5 pb-4" :class="totalCourses === 0 ? 'pt-4' : 'pt-1'">
-                        <p v-if="flash.recoverySaved" role="status"
-                           class="teal-accent mb-3 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
-                            <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
-                            {{ flash.recoverySaved }}
-                        </p>
-                        <!-- Only when there is no disclosure button above it — that
-                             one renders only once the board has courses. With the
-                             button present, this was a second, longer copy of the
-                             summary line it already shows. -->
-                        <template v-if="needsRecoveryEmail && totalCourses === 0">
-                            <p class="text-[13px] font-semibold text-ink">No recovery email set</p>
-                            <p class="mt-1 text-[12px] text-muted">
-                                Add a recovery email so we can send your owner link back if you lose it.
+                </div>
+
+                <!-- Board settings sheet. Same panel as New course. -->
+                <div v-if="settingsOpen" class="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Board settings">
+                    <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="settingsOpen = false"></div>
+                    <div class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-y-auto bg-surface px-5 py-6 shadow-xl sm:px-6">
+                        <div class="mb-5 flex items-start justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Board settings</h2>
+                            <button type="button" @click="settingsOpen = false" aria-label="Close"
+                                class="op-press -mr-1.5 -mt-1.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
+                                <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none"
+                                    stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                                    <path d="M5 5l10 10M15 5L5 15" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Who can add files, phrased positively so the label alone says
+                             it, and as "anyone with the link" rather than "classmates":
+                             that's who it really is, and a lecturer's students aren't
+                             their classmates: on (the default) suits a class rep's board; off is what
+                             lets a lecturer run a board for their course. The label
+                             never changes with the state. Saved on tap. Stored as
+                             uploads_owner_only, so the switch shows its inverse. -->
+                        <section>
+                            <div class="flex items-center justify-between gap-4">
+                                <p id="uploadAccessLabel" class="text-[14px] font-semibold text-ink">Anyone with the link can add files</p>
+                                <button type="button" role="switch" :aria-checked="!uploadsOwnerOnly" aria-labelledby="uploadAccessLabel"
+                                    :disabled="uploadAccessSaving" @click="setUploadAccess(!uploadsOwnerOnly)"
+                                    class="relative inline-flex h-11 w-14 shrink-0 cursor-pointer items-center justify-center disabled:opacity-60">
+                                    <!-- Off track at /70: at /40 it measured ~2.3:1 against
+                                         the card, under the 3:1 a control needs to be seen. -->
+                                    <span aria-hidden="true" class="h-7 w-12 rounded-full transition-colors duration-200"
+                                        :class="!uploadsOwnerOnly ? 'bg-neon' : 'bg-muted/70'"></span>
+                                    <span aria-hidden="true" class="absolute left-2 top-1/2 size-5 -translate-y-1/2 rounded-full bg-white shadow transition-transform duration-200"
+                                        :class="!uploadsOwnerOnly ? 'translate-x-5' : 'translate-x-0'"></span>
+                                </button>
+                            </div>
+                        </section>
+
+                        <section v-if="recoveryAvailable" class="mt-7 border-t border-sky pt-6">
+                            <p class="text-[14px] font-semibold text-ink">
+                                {{ needsRecoveryEmail ? 'Recovery email' : 'Recovery email is set' }}
                             </p>
-                        </template>
-                        <template v-else>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <p v-if="totalCourses === 0" class="text-[13px] font-semibold text-ink">Recovery email is set</p>
+                            <p v-if="flash.recoverySaved" role="status"
+                               class="teal-accent mt-2 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
+                                <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
+                                {{ flash.recoverySaved }}
+                            </p>
+                            <template v-if="needsRecoveryEmail">
+                                <p class="mt-1 text-[12px] text-muted">
+                                    Lose your owner link and we'll email a fresh one. Only used for that, never shared.
+                                </p>
+                            </template>
+                            <template v-else>
                                 <span v-if="currentRecoveryEmail"
-                                    class="inline-flex rounded-full border border-sky bg-base px-2.5 py-0.5 text-[11px] font-medium text-muted">
+                                    class="mt-2 inline-flex rounded-full border border-sky bg-base px-2.5 py-0.5 text-[11px] font-medium text-muted">
                                     {{ currentRecoveryEmail }}
                                 </span>
-                            </div>
-                            <p class="mt-1 text-[12px] text-muted">
-                                Lose your owner link and we'll email a fresh one. Anyone with that inbox can control this
-                                board.
-                            </p>
-                            <Link :href="recoveryUrl()"
-                                class="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-neon transition hover:underline">
-                                Recover owner link
-                                <svg aria-hidden="true" class="size-3 shrink-0" viewBox="0 0 20 20" fill="none"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M8 6l4 4-4 4" />
+                                <p class="mt-1 text-[12px] text-muted">
+                                    Lose your owner link and we'll email a fresh one. Anyone with that inbox can control this board.
+                                </p>
+                                <Link :href="recoveryUrl()"
+                                    class="mt-2 inline-flex min-h-11 items-center gap-1 text-[12px] font-semibold text-neon transition hover:underline sm:min-h-0">
+                                    Recover owner link
+                                    <svg aria-hidden="true" class="size-3 shrink-0" viewBox="0 0 20 20" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M8 6l4 4-4 4" />
+                                    </svg>
+                                </Link>
+                            </template>
+                            <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2">
+                                <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
+                                    :placeholder="needsRecoveryEmail ? 'you@example.com' : 'New address, or leave empty to remove'"
+                                    class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                <button type="submit" :disabled="recoveryForm.processing"
+                                    class="op-press min-h-11 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60">
+                                    {{ needsRecoveryEmail ? 'Save recovery email' : 'Update' }}
+                                </button>
+                            </form>
+                            <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{ errors.recoveryEmail[0] }}</span>
+                            <!-- Standing text, not a placeholder: the way to remove the
+                                 address must not vanish on the first keystroke. -->
+                            <p v-if="!needsRecoveryEmail" class="mt-2 text-[11px] text-muted">Saving an empty field removes the current recovery email.</p>
+                        </section>
+
+                        <!-- Last, and quiet: rare, and it only affects this browser.
+                             The confirm explains what you'll need to get back in. -->
+                        <section class="mt-auto border-t border-sky pt-5">
+                            <button type="button" @click="confirmingExit = true"
+                                class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-[13px] font-semibold text-muted transition hover:text-ink">
+                                <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
+                                    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M8 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
+                                    <path d="M12.5 13 16 10l-3.5-3" />
+                                    <path d="M16 10H8.5" />
                                 </svg>
-                            </Link>
-                        </template>
-                        <form @submit.prevent="saveRecoveryEmail" class="mt-3 flex flex-col gap-2 sm:flex-row">
-                            <input type="email" v-model="recoveryForm.recoveryEmail" aria-label="Recovery email"
-                                class="w-full min-w-0 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[13px] text-ink shadow-inner focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
-                            <button type="submit" :disabled="recoveryForm.processing"
-                                class="op-press w-full min-h-11 shrink-0 cursor-pointer rounded-full bg-neon px-5 text-[13px] font-semibold text-white disabled:opacity-60 sm:w-auto">
-                                Save
+                                Exit owner mode on this device
                             </button>
-                        </form>
-                        <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{
-                            errors.recoveryEmail[0]
-                            }}</span>
-                        <p v-if="needsRecoveryEmail" class="mt-2 text-[11px] text-muted">Only used to recover this board
-                            — never shared.</p>
-                        <!-- Visible, not a placeholder. "leave blank to remove" lived
-                             in the placeholder, so the only instructions for deleting
-                             your recovery email vanished the moment you typed — and
-                             were never there at all for anyone who didn't read it
-                             first. A destructive path needs standing text. -->
-                        <p v-else class="mt-2 text-[11px] text-muted">Saving an empty field removes the current recovery
-                            email.</p>
+                        </section>
                     </div>
                 </div>
             </template>

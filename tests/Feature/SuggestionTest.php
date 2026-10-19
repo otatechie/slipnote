@@ -95,4 +95,50 @@ class SuggestionTest extends TestCase
         $this->post(route('operator.suggestions.delete', $s->id))->assertForbidden();
         $this->assertSame(1, Suggestion::count());
     }
+
+    public function test_the_operator_leaves_a_note_only_the_owner_sees(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        [$ws] = \App\Models\Workspace::provision('Heavy Users');
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->post(route('operator.boards.note', $ws->id), ['note' => 'Could we ask you two questions?'])
+            ->assertRedirect(route('operator.dashboard', ['tab' => 'boards']));
+
+        // The owner sees it ...
+        $this->withSession([$ws->ownerSessionKey() => true])
+            ->get('/heavy-users')
+            ->assertInertia(fn ($page) => $page->where('operatorNote.text', 'Could we ask you two questions?'));
+
+        // ... a classmate does not.
+        $this->flushSession();
+        $this->get('/heavy-users')->assertInertia(fn ($page) => $page->where('operatorNote', null));
+    }
+
+    public function test_an_empty_note_removes_it_and_only_the_operator_can_set_one(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        [$ws] = \App\Models\Workspace::provision('Heavy Users');
+        $ws->forceFill(['operator_note' => 'Hi', 'operator_note_at' => now()])->save();
+
+        $this->post(route('operator.boards.note', $ws->id), ['note' => 'Hijacked'])->assertForbidden();
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->post(route('operator.boards.note', $ws->id), ['note' => '']);
+
+        $this->assertNull($ws->fresh()->operator_note);
+    }
+
+    public function test_the_boards_tab_finds_a_board_by_name(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        \App\Models\Workspace::provision('Heavy Users');
+        \App\Models\Workspace::provision('Somebody Else');
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'boards', 'q' => 'heavy']))
+            ->assertOk()
+            ->assertSee('Heavy Users')
+            ->assertDontSee('Somebody Else');
+    }
 }
