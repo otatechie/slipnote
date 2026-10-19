@@ -124,4 +124,36 @@ class WorkspaceLandingTest extends TestCase
                 ->where('recent.0.courses', 1)
                 ->where('recent.0.files', 1));
     }
+
+    public function test_opening_a_board_as_owner_moves_it_to_the_top_of_start(): void
+    {
+        [$a] = Workspace::provision('Board A');
+        [$b] = Workspace::provision('Board B');
+        $cookie = json_encode([
+            ['slug' => 'board-a', 'name' => 'Board A'],
+            ['slug' => 'board-b', 'name' => 'Board B'],
+        ]);
+
+        // Owner of B opens B: B moves first.
+        $this->withCookie('recent_workspaces', $cookie)
+            ->withSession([$b->ownerSessionKey() => true])
+            ->get('/board-b')
+            ->assertOk()
+            ->assertCookie('recent_workspaces', json_encode([
+                ['slug' => 'board-b', 'name' => 'Board B'],
+                ['slug' => 'board-a', 'name' => 'Board A'],
+            ]));
+    }
+
+    public function test_a_visitor_opening_a_board_does_not_reorder_start(): void
+    {
+        Workspace::provision('Board A');
+        Workspace::provision('Board B');
+        $cookie = json_encode([['slug' => 'board-a', 'name' => 'Board A']]);
+
+        $this->withCookie('recent_workspaces', $cookie)
+            ->get('/board-b')
+            ->assertOk()
+            ->assertCookieMissing('recent_workspaces');
+    }
 }

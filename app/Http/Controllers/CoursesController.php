@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -57,6 +58,9 @@ class CoursesController extends Controller
         $used = $workspace->storageBytes();
         $cap = (int) config('noteshare.workspace_storage_bytes');
         $isOwner = $this->isOwner();
+        if ($isOwner && ($recent = RecentWorkspaces::touch($request, $workspace))) {
+            Cookie::queue($recent);
+        }
 
         return Inertia::render('CoursesPage', [
             'workspace' => ['name' => $workspace->name, 'slug' => $workspace->slug],

@@ -38,6 +38,9 @@ class CourseController extends Controller
         // previous one.
         $seenAt = LastSeen::for($request, $course->id);
         Cookie::queue(LastSeen::mark($request, $course->id));
+        if ($this->isOwner() && ($recent = RecentWorkspaces::touch($request, $workspace))) {
+            Cookie::queue($recent);
+        }
 
         $search = trim($request->input('search', ''));
         $sort = $request->input('sort', 'newest');

@@ -52,6 +52,18 @@ class RecentWorkspaces
         return self::makeCookie(json_encode($list));
     }
 
+    /**
+     * Move a board its owner just opened to the top, so /start lists boards
+     * by when they were last used rather than when access was last granted.
+     * Null when it's already first: no cookie to write on most page views.
+     */
+    public static function touch(Request $request, Workspace $workspace): ?Cookie
+    {
+        $first = self::read($request)[0]['slug'] ?? null;
+
+        return $first === $workspace->slug ? null : self::add($request, $workspace);
+    }
+
     public static function remove(Request $request, string $slug): Cookie
     {
         $list = array_values(array_filter(self::read($request), fn ($item) => $item['slug'] !== $slug));
