@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import { openSuggest } from '@/components/suggest'
 
 const props = defineProps({
     workspace: Object,
@@ -17,7 +18,6 @@ const props = defineProps({
     storagePct: Number,
     search: String,
     sort: String,
-    feedback: Object,
 })
 
 const page = usePage()
@@ -53,10 +53,18 @@ const shareCopied = ref(false)
 // The link goes into the class WhatsApp group. Pre-written so the rep does
 // not have to compose the pitch; the "no account" line is what gets a
 // classmate to tap.
-const whatsAppUrl = computed(() => 'https://wa.me/?text=' + encodeURIComponent(
-    `${props.workspace.name} — notes, slides and past papers for the class. No account needed: ${workspaceUrl.value}`
-))
+const shareText = computed(() =>
+    `${props.workspace.name} — notes, slides and past papers for the class. No account needed:`)
+// On a phone, the system share sheet: WhatsApp is in it, alongside whatever
+// else the class uses, so it replaces a separate WhatsApp button. Desktop
+// share sheets are patchy (and rarely hold WhatsApp), so there it copies.
 function share() {
+    const touch = window.matchMedia?.('(pointer: coarse)').matches
+    if (touch && navigator.share) {
+        navigator.share({ title: props.workspace.name, text: shareText.value, url: workspaceUrl.value })
+            .catch(() => { })
+        return
+    }
     window.copyText(workspaceUrl.value).then(() => {
         shareCopied.value = true
         setTimeout(() => { shareCopied.value = false }, 2000)
@@ -69,7 +77,13 @@ function share() {
 const FEEDBACK_KEY = 'slipnote_feedback_dismissed'
 const feedbackDismissed = ref(false)
 try { feedbackDismissed.value = window.localStorage.getItem(FEEDBACK_KEY) === '1' } catch { }
-const showFeedback = computed(() => !!props.feedback && props.totalFiles > 0 && !feedbackDismissed.value)
+// Owners only, and once the board has real use (5+ files): they know what the
+// class does with it. A classmate looking for notes has nothing to tell us, and
+// "Suggest a feature" in the footer is there for anyone who does.
+const showFeedback = computed(() => props.isOwner && props.totalFiles >= 5 && !feedbackDismissed.value)
+function tellUs() {
+    openSuggest(`We use SlipNote for "${props.workspace.name}". `)
+}
 function dismissFeedback() {
     feedbackDismissed.value = true
     try { window.localStorage.setItem(FEEDBACK_KEY, '1') } catch { }
@@ -139,6 +153,13 @@ function openCreate() {
     courseForm.clearErrors()
     sheet.value = true
 }
+
+// An owner on an empty board has exactly one thing to do, so the sheet opens
+// on arrival. Course creation redirects into the new course, so this is
+// receipt → course → upload with no list page in between.
+onMounted(() => {
+    if (props.isOwner && props.totalCourses === 0) openCreate()
+})
 
 function openEdit(course) {
     editing.value = course
@@ -221,7 +242,6 @@ const mbUsed = computed(() => {
 })
 const mbCap = computed(() => Math.round(props.storageCap / 1048576))
 const storageTone = computed(() => {
-    if (props.storagePct >= 90) return 'text-danger'
     if (props.storagePct >= 75) return 'text-neon'
     return 'text-muted'
 })
@@ -255,8 +275,12 @@ function recoveryUrl() {
     return '/' + props.workspace.slug + '/recover'
 }
 
-// Drag-to-reorder (owner only, manual sort only when not searching/filtering)
-const draggable = computed(() => props.isOwner && !localSearch.value && localSort.value === 'manual')
+// Drag-to-reorder (owner only, manual sort only when not searching/filtering).
+// Behind a "Reorder" toggle: always-on arrows put a control column on every
+// row for something done once a semester, and needed a hint line to explain.
+const canReorder = computed(() => props.isOwner && !localSearch.value && localSort.value === 'manual' && props.courses.length > 1)
+const reordering = ref(false)
+const draggable = computed(() => canReorder.value && reordering.value)
 const dragList = ref([...props.courses])
 watch(() => props.courses, (v) => { dragList.value = [...v] })
 
@@ -311,27 +335,53 @@ function persistOrder() {
 
     <Head :title="workspace.name + ' · Courses'" />
     <AppLayout>
-        <div class="op mx-auto w-full max-w-3xl flex-1 px-5 pb-10" @keydown.escape.window="onEscape">
+        <div class="op mx-auto w-full max-w-3xl flex-1 px-5 sm:pb-10" :class="isOwner && totalCourses > 0 ? 'pb-28' : 'pb-10'" @keydown.escape.window="onEscape">
 
-            <!-- Sticky identity bar: which board you're in, plus the one action an
-                 owner reaches for again and again. Everything else scrolls away. -->
-            <header class="op-top mb-4 flex items-center justify-between gap-4">
-                <div class="min-w-0">
-                    <a href="/start"
-                        class="op-kicker group mb-1 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon">
-                        <svg aria-hidden="true"
-                            class="size-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 12H5" />
-                            <path d="M12 19l-7-7 7-7" />
-                        </svg>
-                        All boards
-                    </a>
-                    <h1 class="op-title truncate text-[1.85rem] font-bold text-ink sm:text-[2.15rem]">{{ workspace.name }}</h1>
-                </div>
+            <!-- Where you are, and as whom. Scrolls away; only the title row
+                 below pins, and only from sm up. Owner status sits here as a
+                 state of the session rather than a pill in the share row. -->
+            <div class="flex h-11 items-center justify-between gap-3 pt-1.5 sm:pt-3">
+                <!-- Owners only: /start lists the boards this browser manages.
+                     A classmate who opened a shared link has none, so they get
+                     the wordmark, which is their way to the rest of SlipNote. -->
+                <a v-if="isOwner" href="/start"
+                    class="op-kicker group inline-flex h-11 items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon">
+                    <svg aria-hidden="true"
+                        class="size-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5" />
+                        <path d="M12 19l-7-7 7-7" />
+                    </svg>
+                    All boards
+                </a>
+                <a v-else href="/"
+                    class="inline-flex h-11 items-center gap-1.5 text-[13px] font-bold text-muted transition hover:text-ink">
+                    <img src="/logo-mark.png" alt="" class="size-4">
+                    SlipNote
+                </a>
+                <!-- "Exit", not "Lock": beside a board, "Lock" reads as "make this
+                     board locked", the misread that costs you your own access. -->
+                <span v-if="isOwner" class="inline-flex items-center gap-1 text-[12px] font-medium text-muted">
+                    <span class="mr-1 size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
+                    Owner
+                    <span aria-hidden="true" class="mx-0.5 text-muted/50">&middot;</span>
+                    <button type="button" @click="confirmingExit = true" aria-label="Exit owner mode on this device"
+                        class="inline-flex h-11 min-w-11 cursor-pointer items-center justify-center px-1 font-semibold text-ink transition hover:text-neon">
+                        Exit
+                    </button>
+                </span>
+            </div>
+
+            <!-- Pinned from sm up with "New course" beside it. On a phone a
+                 two-line title pinned under the thumb costs a sixth of the
+                 screen, and "New course" is the floating button instead. -->
+            <header class="mb-2.5 flex items-center justify-between gap-4 pt-1 sm:sticky sm:top-0 sm:z-10 sm:bg-base/70 sm:py-3 sm:backdrop-blur-xl">
+                <!-- Two lines on a phone, one from sm up: most board names lost
+                     the word that tells you which board you're in at one line. -->
+                <h1 class="op-title line-clamp-2 min-w-0 wrap-break-word text-[1.85rem] font-bold text-ink sm:line-clamp-1 sm:text-[2.15rem]">{{ workspace.name }}</h1>
                 <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
-                    class="op-press inline-flex h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:h-8">
+                    class="op-press hidden h-8 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex">
                     <span class="text-base leading-none">+</span> New course
                 </button>
             </header>
@@ -341,69 +391,40 @@ function persistOrder() {
                  it to — uploads live one level down, inside a course. It also stated
                  the product model only in the empty state, which a visitor to a
                  populated board never sees. -->
+            <!-- An owner with courses but no files gets the activation nudge here,
+                 in place of the description, rather than as a second grey line
+                 under the share buttons: a board shared before it has a file is
+                 a board a classmate opens once. -->
             <p class="mb-5 text-[13px] text-muted">
-                <template v-if="totalCourses > 0">Notes, slides and past papers from your classmates. Open a course to read or add files.</template>
+                <template v-if="isOwner && totalCourses > 0 && totalFiles === 0">Open a course to add the first file — a board that opens empty rarely gets opened twice.</template>
+                <template v-else-if="totalCourses > 0">Notes, slides and past papers from your classmates. Open a course to read or add files.</template>
                 <template v-else>Your board's courses live here — add one to get started.</template>
             </p>
 
-            <!-- Share and QR are occasional; owner mode is a state, not an action.
-                 None of them earn a place in the pinned bar. -->
-            <div v-if="totalCourses > 0 || isOwner" class="flex flex-wrap items-center gap-2" :class="isOwner && totalCourses > 0 && totalFiles === 0 ? 'mb-2' : 'mb-7'">
-                <!-- Share leads nowhere on an empty board, so it appears once there's a course to find. -->
-                <button v-if="totalCourses > 0" type="button" @click="share"
-                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
+            <!-- Share and QR are occasional, so they scroll away. Share leads
+                 nowhere on an empty board: it appears once there's a course. -->
+            <div v-if="totalCourses > 0" class="mb-7 flex items-center gap-2">
+                <button type="button" @click="share"
+                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted transition hover:text-ink sm:h-8 sm:flex-none">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M8 11a3 3 0 0 0 4.5.4l2.6-2.6a3 3 0 1 0-4.2-4.2l-1 1" />
-                        <path d="M12 9a3 3 0 0 0-4.5-.4L4.9 11.2a3 3 0 1 0 4.2 4.2l1-1" />
+                        <path d="M10 3v10" />
+                        <path d="M6.5 6.5 10 3l3.5 3.5" />
+                        <path d="M5 10v5.5A1.5 1.5 0 0 0 6.5 17h7a1.5 1.5 0 0 0 1.5-1.5V10" />
                     </svg>
                     <span v-if="!shareCopied">Share board</span>
                     <span v-else>Link copied ✓</span>
                 </button>
-                <a v-if="totalCourses > 0" :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
-                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
-                    <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Zm37.6-49.3-14.3-8.2a8,8,0,0,0-8.7.5l-8,6a2,2,0,0,1-2.2.2,52.3,52.3,0,0,1-21.6-21.6,2,2,0,0,1,.2-2.2l6-8a8,8,0,0,0,.5-8.7L109.3,90.4A8,8,0,0,0,102.4,86a26.2,26.2,0,0,0-24.7,20.2,60.1,60.1,0,0,0,72.1,72.1A26.2,26.2,0,0,0,170,153.6,8,8,0,0,0,165.6,146.7Z"/></svg>
-                    <span>WhatsApp</span>
-                </a>
                 <!-- QR for the "get the notes here" moment in a lecture hall. -->
-                <button v-if="totalCourses > 0" type="button" @click="toggleQr"
-                    :aria-expanded="qrOpen" aria-label="Show QR code for this board"
-                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted sm:h-8 sm:flex-none">
+                <button type="button" @click="toggleQr"
+                    :aria-expanded="qrOpen" aria-label="Show QR code for this board" title="QR code"
+                    class="op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-muted transition hover:text-ink sm:size-8">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
                     </svg>
-                    <span>QR code</span>
                 </button>
-                <!-- Owner-mode status (quiet — it's a state, not an action) + the
-                     button that ends it, grouped so "Lock" has context. -->
-                <!-- Status is borderless; only the button is a pill. Both used to be
-                     rounded-full with the same border, so a non-interactive status
-                     wrapper looked like a control and put two concentric borders 4px
-                     apart around the thing that actually was one. -->
-                <span v-if="isOwner"
-                    class="inline-flex items-center gap-2 text-[12px] font-medium text-muted sm:ml-auto">
-                    <span class="flex items-center gap-1.5">
-                        <span class="size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
-                        Owner mode
-                    </span>
-                    <!-- "Exit", not "Lock". Beside the words "Owner mode" this reads
-                         as "exit owner mode"; "Lock" beside a board reads as "make
-                         this board locked", which is the opposite of what it does and
-                         the misread that costs you your own access. The padlock icon
-                         reinforced that wrong reading, so it's an exit arrow now. The
-                         meaning can't live in a title tooltip — touch never sees it. -->
-                    <button type="button" @click="confirmingExit = true" aria-label="Exit owner mode on this device"
-                        class="op-press inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-full border border-sky/50 bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink sm:min-h-0">
-                        <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                            stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M8 4H5.5A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8" />
-                            <path d="M12.5 13 16 10l-3.5-3" />
-                            <path d="M16 10H8.5" />
-                        </svg>
-                        Exit
-                    </button>
-                </span>
             </div>
+            <div v-else class="mb-7"></div>
 
             <!-- Flash: course updated (edit redirects here) -->
             <div v-if="flash.created" class="op-toast mb-5 text-sm font-medium text-ink">
@@ -411,13 +432,6 @@ function persistOrder() {
             </div>
 
             <!-- Empty state -->
-            <!-- Activation, not decoration: a board shared before it has a file is
-                 a board a classmate opens once. Owners only, and only in the
-                 gap between "has a course" and "has a file". -->
-            <p v-if="isOwner && totalCourses > 0 && totalFiles === 0" class="mb-7 text-[13px] text-muted">
-                Add a file before you share — a board that opens empty rarely gets opened twice.
-            </p>
-
             <template v-if="totalCourses === 0">
                 <div class="op-card mt-8 px-6 py-16 text-center sm:mt-12">
                     <p class="text-[16px] font-semibold tracking-tight text-ink">No courses yet</p>
@@ -443,9 +457,34 @@ function persistOrder() {
             </template>
 
             <template v-else>
+                <!-- Near full: said above the list, in words, because uploads are
+                     about to start failing. The meter at the foot of the page is
+                     too quiet for that, and was centred under a left-aligned page. -->
+                <div v-if="storagePct >= 90" role="status"
+                    class="mb-6 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-ink">
+                    <p class="font-semibold">This board is almost full</p>
+                    <p class="mt-0.5 text-muted">
+                        {{ mbUsed }} of {{ mbCap }} MB used.
+                        <template v-if="isOwner">Delete old files inside a course to make room for new ones.</template>
+                        <template v-else>New uploads may not fit. The board's owner can free up space.</template>
+                    </p>
+                </div>
+
                 <!-- Search + sort -->
-                <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Courses</h2>
-                <div v-if="totalCourses > 3" class="mb-4 flex flex-col gap-2 sm:flex-row">
+                <div class="mb-2 flex min-h-11 items-center justify-between gap-3 sm:min-h-8">
+                    <h2 class="flex items-baseline gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                        Courses <span class="text-muted/70 tabular-nums">{{ totalCourses }}</span>
+                    </h2>
+                    <button v-if="canReorder" type="button" @click="reordering = !reordering"
+                        :aria-pressed="reordering"
+                        class="inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 text-[12px] font-semibold transition sm:min-h-8"
+                        :class="reordering ? 'bg-neon text-white' : 'text-muted hover:bg-sky/40 hover:text-ink'">
+                        {{ reordering ? 'Done' : 'Reorder' }}
+                    </button>
+                </div>
+                <!-- From 7 courses, about a screen on a phone: below that the list
+                     is its own search. Same threshold as files on the course page. -->
+                <div v-if="totalCourses > 6" class="mb-4 flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch" :placeholder="`Search ${totalCourses} courses…`"
                         aria-label="Search courses"
                         class="box-border h-11 w-full min-w-0 appearance-none rounded-xl border border-sky bg-surface px-3.5 text-[14px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
@@ -513,7 +552,7 @@ function persistOrder() {
                         <Link :href="courseUrl(course.slug)" class="min-w-0 flex-1" @click.stop>
                             <div class="flex items-center gap-2">
                                 <p
-                                    class="teal-accent flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight text-teal">
+                                    class="flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight text-ink">
                                     <span class="truncate">{{ course.code }}</span>
                                     <svg aria-hidden="true"
                                         class="size-3.5 shrink-0 text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-neon"
@@ -533,21 +572,25 @@ function persistOrder() {
                                     :title="`${course.new_count} added since you last opened this course`">
                                     {{ course.new_count }} new
                                 </span>
-                                <span v-if="course.materials_count > 0"
-                                    class="file-count-chip shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-teal">
-                                    {{ plural(course.materials_count, 'file') }}
-                                </span>
-                                <span v-else
-                                    class="shrink-0 rounded-full border border-dashed border-muted/40 px-2 py-0.5 text-[11px] font-semibold text-muted">
+                                <span v-if="course.materials_count === 0 && !isOwner"
+                                    class="shrink-0 text-[12px] text-muted">
                                     No files yet
                                 </span>
                             </div>
                             <p class="mt-0.5 text-[13px] text-muted">{{ course.title }}</p>
-                            <p v-if="course.materials_max_created_at" class="mt-1 flex items-center gap-1 text-[12px] text-muted">
-                                <svg aria-hidden="true" class="size-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
-                                </svg>
-                                Updated {{ timeAgo(course.materials_max_created_at) }}
+                            <!-- The owner's next step, on the thing they tap. A span,
+                                 not a link: the whole row already is one, and this
+                                 sends it to the course with the upload form open. -->
+                            <span v-if="isOwner && course.materials_count === 0"
+                                @click.stop.prevent="router.visit(courseUrl(course.slug) + '#add-file')"
+                                class="mt-2 inline-flex h-11 items-center gap-1.5 rounded-full bg-neon/15 pl-3 pr-3.5 text-[13px] font-semibold text-neon sm:h-8">
+                                <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
+                                Add the first file
+                            </span>
+                            <!-- Count and freshness as one quiet line, not a blue chip:
+                                 blue on this page means something you can tap. -->
+                            <p v-if="course.materials_count > 0" class="mt-1 text-[12px] tabular-nums text-muted">
+                                {{ plural(course.materials_count, 'file') }}<template v-if="course.materials_max_created_at"> · updated {{ timeAgo(course.materials_max_created_at) }}</template>
                             </p>
                         </Link>
 
@@ -563,9 +606,15 @@ function persistOrder() {
                     </div>
                 </div>
 
-                <!-- Reorder hint — only meaningful with 2+ courses to reorder -->
-                <p v-if="draggable && courses.length > 1" class="mt-3 text-[13px] text-muted">
+                <p v-if="draggable" class="mt-3 text-[13px] text-muted">
                     Use the arrows (or drag) to reorder — saved automatically.
+                </p>
+
+                <!-- With the site bar gone this is how a classmate learns they can
+                     make their own. After the list, so it never competes with it. -->
+                <p v-if="!isOwner" class="mt-6 text-[12px] text-muted">
+                    Run a class of your own?
+                    <a href="/start" class="inline-flex min-h-11 items-center font-semibold text-neon hover:underline">Make a board</a>
                 </p>
 
                 <!-- Below the list, never above it: the board is for finding notes,
@@ -575,19 +624,12 @@ function persistOrder() {
                     <div class="min-w-0 flex-1">
                         <p class="text-[14px] font-semibold tracking-tight text-ink">Using SlipNote a lot? Tell us how 👋</p>
                         <p class="mt-0.5 text-[13px] text-muted">One line helps: what your class uses it for, and what's missing.</p>
-                        <div class="mt-2.5 flex flex-wrap gap-2">
-                            <a v-if="feedback.whatsapp" :href="feedback.whatsapp" target="_blank" rel="noopener noreferrer"
-                                class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-ink sm:h-8">
-                                <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Z"/></svg>
-                                WhatsApp us
-                                <span class="sr-only">(opens in a new tab)</span>
-                            </a>
-                            <a v-if="feedback.email" :href="feedback.email"
-                                class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-ink sm:h-8">
-                                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
-                                Email us
-                            </a>
-                        </div>
+                        <!-- Opens the same form as the footer's "Suggest a feature",
+                             with the sentence started so there's less to type. -->
+                        <button type="button" @click="tellUs"
+                            class="op-press mt-2.5 inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/30 sm:h-8">
+                            Tell us
+                        </button>
                     </div>
                     <button type="button" @click="dismissFeedback" aria-label="Dismiss feedback prompt"
                         class="-mr-1.5 -mt-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-8">
@@ -595,6 +637,15 @@ function persistOrder() {
                     </button>
                 </aside>
             </template>
+
+            <!-- Phones: "New course" floats in the thumb zone, the same labelled
+                 button the course page uses for "Add file". The page reserves
+                 pb-28 below the list so it never covers the last row. -->
+            <button v-if="isOwner && totalCourses > 0 && !sheet" type="button" @click="openCreate"
+                class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
+                <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
+                New course
+            </button>
 
             <!-- Owner: create-course slide-in panel -->
             <template v-if="isOwner">
@@ -617,7 +668,7 @@ function persistOrder() {
                             </button>
                         </div>
                         <p v-if="!editing" class="mb-5 text-[13px] leading-relaxed text-muted">
-                            Add a class — like PHYS 101 or CS 250 — so its materials have a home.
+                            Add a course — like PHYS 101 or CS 250. You'll go straight to it to upload files.
                         </p>
                         <div v-else class="mb-5"></div>
                         <form @submit.prevent="submitCourse" class="flex flex-col gap-3.5">
@@ -860,15 +911,17 @@ function persistOrder() {
                  Anyone else only once it's close enough to bite — uploads are open
                  to any visitor, and a near-full board is why theirs would fail.
                  Below that, "0.2 of 500 MB" is chrome that looks like a signal. -->
-            <div v-if="storageUsed > 0 && (isOwner || storagePct >= 75)"
-                class="mt-8 flex items-center justify-center gap-2">
+            <!-- From 90% the notice above the list carries the numbers, so this
+                 steps aside rather than say the same thing twice. -->
+            <div v-if="storageUsed > 0 && storagePct < 90 && (isOwner || storagePct >= 75)"
+                class="mt-8 flex items-center gap-2">
                 <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">
                     <div class="h-full rounded-full transition-all"
-                         :class="storagePct >= 90 ? 'bg-danger' : storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
+                         :class="storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
                          :style="{ width: storagePct + '%' }"></div>
                 </div>
                 <p class="text-[11px]" :class="storageTone">
-                    {{ mbUsed }} of {{ mbCap }} MB used<template v-if="storagePct >= 90"> · delete old files to free space</template>
+                    {{ mbUsed }} of {{ mbCap }} MB used
                 </p>
             </div>
         </div>

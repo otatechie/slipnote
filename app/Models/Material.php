@@ -15,7 +15,7 @@ class Material extends Model
     public const SECTIONS = [
         'notes' => 'Notes',
         'slides' => 'Slides',
-        'past_papers' => 'Past Papers',
+        'past_papers' => 'Past papers',
     ];
 
     protected $fillable = [

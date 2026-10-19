@@ -41,7 +41,6 @@ class CourseController extends Controller
 
         $search = trim($request->input('search', ''));
         $sort = $request->input('sort', 'newest');
-        $activeSection = $request->input('section', '');
 
         $query = $course->materials();
         if ($search) {
@@ -53,9 +52,6 @@ class CourseController extends Controller
                     $q->where('title', 'like', "%{$term}%")->orWhere('original_filename', 'like', "%{$term}%");
                 });
             }
-        }
-        if ($activeSection !== '' && isset(Material::SECTIONS[$activeSection])) {
-            $query->where('section', $activeSection);
         }
         match ($sort) {
             'oldest' => $query->oldest(),
@@ -110,7 +106,6 @@ class CourseController extends Controller
             'resultCount' => $course->materials()->count(),
             'search' => $search,
             'sort' => $sort,
-            'activeSection' => $activeSection,
         ]);
     }
 

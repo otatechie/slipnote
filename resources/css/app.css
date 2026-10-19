@@ -195,26 +195,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-neon:not(.bg-neon):not
         color: #7aa5ff;
     }
 }
-/* Active section filter pill. Light: solid teal(=blue) + white label (fine as
-   authored). Dark: the teal token becomes near-white, so an active pill with a
-   white label would vanish — refill with the bright blue accent, keeping the
-   white label (blue takes white at AA; the old orange needed a dark label). */
-html[data-theme='dark'] .section-pill.bg-teal,
-html[data-theme='system'][data-system-theme='dark'] .section-pill.bg-teal {
-    background-color: #3b6ef5;
-    color: #ffffff;
-}
-
-/* Course file-count chip. In light mode it's a teal-tinted pill. In dark mode
-   teal becomes near-white, so the chip goes pure grey and the page loses all
-   accent. Retint it to the orange accent in dark only. Scoped to
-   .file-count-chip so headings/banners that also use teal stay put. */
-html[data-theme='dark'] .file-count-chip,
-html[data-theme='system'][data-system-theme='dark'] .file-count-chip {
-    background-color: color-mix(in srgb, var(--color-neon) 15%, transparent);
-    color: var(--color-neon);
-}
-
 /* Teal used as an *accent* (link text, success text) rather than as a heading.
    In dark mode --color-teal is near-white because it doubles as the heading
    colour, so these would render identical to body text and lose their meaning —
@@ -237,11 +217,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     html[data-theme='system'] .text-amber-600 {
         color: #fcc56b;
     }
-    :root:not([data-theme]) .file-count-chip,
-    html[data-theme='system'] .file-count-chip {
-        background-color: color-mix(in srgb, var(--color-neon) 15%, transparent);
-        color: var(--color-neon);
-    }
     :root:not([data-theme]) .teal-accent,
     html[data-theme='system'] .teal-accent {
         color: var(--color-neon);
@@ -249,11 +224,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     :root:not([data-theme]) .bg-neon.text-white:not(:disabled),
     html[data-theme='system'] .bg-neon.text-white:not(:disabled) {
         color: #1a1c20;
-    }
-    :root:not([data-theme]) .section-pill.bg-teal,
-    html[data-theme='system'] .section-pill.bg-teal {
-        background-color: #3b6ef5;
-        color: #ffffff;
     }
 }
 
@@ -307,17 +277,6 @@ textarea:focus-visible {
     transform: scale(0.97);
 }
 
-.op-top {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    padding: 0.85rem 0;
-    background: color-mix(in srgb, var(--color-base) 72%, transparent);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid var(--color-sky);
-}
-
 .op-kicker {
     letter-spacing: 0.1em;
 }
@@ -325,6 +284,13 @@ textarea:focus-visible {
 .op-title {
     letter-spacing: -0.032em;
     line-height: 1.05;
+}
+
+/* A clipped title (truncate or line-clamp) hides its overflow, and at 1.05
+   the tails of g, y and p hang below the line box and get cut off. Clipped
+   titles get just enough line height to keep them. */
+.op-title:is(.truncate, .line-clamp-2) {
+    line-height: 1.22;
 }
 
 .op-metrics {
@@ -336,8 +302,9 @@ textarea:focus-visible {
     border-radius: var(--op-radius);
     background: var(--op-hairline);
 }
+/* Tighter on phones, where five tiles stack three rows deep. */
 .op-metric {
-    padding: 0.95rem 1.05rem;
+    padding: 0.7rem 0.85rem;
     background: color-mix(in srgb, var(--color-surface) 92%, transparent);
 }
 /* Five tiles in two columns leaves the last cell empty, and an empty cell shows
@@ -351,7 +318,7 @@ textarea:focus-visible {
 .op-seg {
     display: flex;
     width: 100%;
-    padding: 3px;
+    padding: 4px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-sky) 70%, var(--color-base));
     box-shadow: 0 1px 0 color-mix(in srgb, black 6%, transparent) inset;
@@ -371,10 +338,13 @@ textarea:focus-visible {
     justify-content: center;
     gap: 0.4rem;
     border-radius: 999px;
-    /* Tighter on phones: four cells share ~330px. Never wrap -- a label
+    /* Tighter on phones: five cells share ~350px. Never wrap -- a label
        breaking to two lines inside a pill leaves its count badge floating
        between them. Below sm the labels are also shortened in the markup. */
-    padding: 0.8rem 0.55rem;
+    /* Height set, not grown from padding: the selected pill sits inset
+       evenly inside the track instead of filling it edge to edge. */
+    min-height: 2.5rem;
+    padding: 0 0.35rem;
     font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
@@ -384,9 +354,22 @@ textarea:focus-visible {
         background-color 180ms ease;
 }
 
+/* Five tabs at 13px need ~300px: fine from 360 up. Below that (320px
+   phones) a step smaller, so the last tab isn't left half off the edge of
+   a strip that gives no sign it scrolls. */
+@media (max-width: 359px) {
+    .op-seg a {
+        padding: 0 0.25rem;
+        font-size: 12px;
+    }
+}
+
 @media (min-width: 640px) {
     .op-metrics {
         grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .op-metric {
+        padding: 0.95rem 1.05rem;
     }
     .op-metric:last-child {
         grid-column: auto;
@@ -397,7 +380,8 @@ textarea:focus-visible {
     }
     .op-seg a {
         flex: none;
-        padding: 0.35rem 0.85rem;
+        min-height: 2rem;
+        padding: 0 0.85rem;
     }
 }
 .op-seg a[aria-current='page'] {
@@ -406,10 +390,12 @@ textarea:focus-visible {
     box-shadow: 0 1px 2px color-mix(in srgb, black 12%, transparent);
 }
 
+/* Cards lift with a soft shadow instead of an outline, matching the landing
+   page. In dark mode the shadow is invisible and the surface step carries it. */
 .op-card {
-    border: 1px solid var(--op-hairline);
     border-radius: var(--op-radius);
     background: var(--color-surface);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px -16px rgba(16, 24, 40, 0.2);
 }
 
 .op-row {
@@ -548,7 +534,6 @@ textarea:focus-visible {
 }
 
 @media (prefers-reduced-transparency: reduce) {
-    .op-top,
     .op-toast,
     .op-metrics {
         background: var(--color-surface);

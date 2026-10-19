@@ -18,7 +18,6 @@ const props = defineProps({
     resultCount: Number,
     search: String,
     sort: String,
-    activeSection: String,
 })
 
 const page = usePage()
@@ -39,32 +38,26 @@ const whatsAppUrl = computed(() => 'https://wa.me/?text=' + encodeURIComponent(
     `${props.course.code} files are on the class board — no account needed: ${boardUrl.value}`
 ))
 
-// Search / sort / section filter — server-side via router
+// Search / sort — server-side via router
 const localSearch = ref(props.search)
 const localSort = ref(props.sort)
-const localSection = ref(props.activeSection)
 
 let searchTimer = null
 watch(localSearch, (val) => {
     clearTimeout(searchTimer)
     searchTimer = setTimeout(() => visitFilter(), 250)
 })
-watch([localSort, localSection], () => visitFilter())
+watch(localSort, () => visitFilter())
 
 function visitFilter() {
     router.visit(window.location.pathname, {
         data: {
             search: localSearch.value,
             sort: localSort.value,
-            section: localSection.value,
         },
         preserveState: true,
         replace: true,
     })
-}
-
-function toggleSection(key) {
-    localSection.value = localSection.value === key ? '' : key
 }
 
 // Grouped materials by section
@@ -81,7 +74,7 @@ function sectionZipUrl(key) {
     return '/' + props.workspace.slug + '/c/' + props.course.slug + '/download/' + key
 }
 
-const isFiltered = computed(() => localSearch.value.trim() !== '' || localSection.value !== '')
+const isFiltered = computed(() => localSearch.value.trim() !== '')
 
 // Hard per-file limit, mirrors the server's `max:25600` (KB) upload rule.
 const MAX_FILE_BYTES = 25 * 1024 * 1024
@@ -102,7 +95,6 @@ const mbUsed = computed(() => {
 })
 const mbCap = computed(() => Math.round(props.storageCap / 1048576))
 const storageTone = computed(() => {
-    if (props.storagePct >= 90) return 'text-danger'
     if (props.storagePct >= 75) return 'text-neon'
     return 'text-muted'
 })
@@ -293,8 +285,15 @@ watch(anyModalOpen, (open) => {
     }
 })
 
-// Bulk delete (owner only)
+// Bulk delete (owner only). Checkboxes appear only in select mode: shown on
+// every row they were a second delete control beside each row's bin icon.
+const selecting = ref(false)
 const selected = ref([])
+
+function stopSelecting() {
+    selected.value = []
+    selecting.value = false
+}
 const selectedCount = computed(() => selected.value.length)
 const allSelected = computed(() => selectedCount.value > 0 && selectedCount.value === props.materials.length)
 
@@ -329,7 +328,7 @@ function askBulkDelete() {
             bulkForm.transform(() => ({ ids: selected.value }))
                 .delete('/' + props.workspace.slug + '/c/' + props.course.slug + '/materials', {
                     preserveScroll: true,
-                    onSuccess: () => { selected.value = [] },
+                    onSuccess: () => stopSelecting(),
                 })
         },
     }
@@ -348,16 +347,16 @@ watch(() => props.materials, () => { selected.value = [] })
 <template>
     <Head :title="course.code + ' · ' + workspace.name" />
     <AppLayout>
-        <div class="op mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-10">
+        <div class="op mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-28 sm:pb-10">
 
             <!-- Deliberately NOT .op-top (sticky) like the board page: the filter
                  bar below already claims the sticky slot at top-0, and the bulk bar
                  offsets from its height. On a file list, search that stays reachable
                  beats a title that does — so this keeps the look, not the pinning. -->
-            <header class="mb-4 flex items-center justify-between gap-4 border-b border-sky/60 pt-8 pb-3">
+            <header class="mb-4 flex items-center justify-between gap-4 pt-6 pb-3 sm:pt-8">
                 <div class="min-w-0">
                     <Link :href="courseListUrl()"
-                          class="op-kicker group mb-1 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon">
+                          class="op-kicker group -mt-2 mb-0 inline-flex min-h-11 items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon sm:mt-0 sm:mb-1 sm:min-h-0">
                         <svg aria-hidden="true"
                              class="size-3.5 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
                              viewBox="0 0 24 24" fill="none"
@@ -384,19 +383,37 @@ watch(() => props.materials, () => { selected.value = [] })
             <div v-if="isOwner" class="mb-5">
                 <p class="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
                     <span class="inline-block size-1.5 rounded-full bg-neon" aria-hidden="true"></span>
-                    Owner mode — you can remove any file.
+                    Owner
+                    <template v-if="resultCount > 1 && !selecting">
+                        <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                        <button type="button" @click="selecting = true"
+                                class="-my-3 inline-flex min-h-11 cursor-pointer items-center px-1 font-semibold text-ink transition hover:text-neon sm:my-0 sm:min-h-0">Select files</button>
+                    </template>
                 </p>
-                <!-- Storage meter — makes the soft per-board cap legible before uploads bounce. -->
-                <div v-if="storageUsed > 0" class="mt-1.5 flex items-center gap-2">
+                <!-- Storage meter — makes the soft per-board cap legible before
+                     uploads bounce. From 90% the notice below says it in words. -->
+                <div v-if="storageUsed > 0 && storagePct < 90" class="mt-1.5 flex items-center gap-2">
                     <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">
                         <div class="h-full rounded-full transition-all"
-                             :class="storagePct >= 90 ? 'bg-danger' : storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
+                             :class="storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
                              :style="{ width: storagePct + '%' }"></div>
                     </div>
                     <p class="text-[11px]" :class="storageTone">
-                        {{ mbUsed }} of {{ mbCap }} MB used<template v-if="storagePct >= 90"> · delete old files to free space</template>
+                        {{ mbUsed }} of {{ mbCap }} MB used
                     </p>
                 </div>
+            </div>
+
+            <!-- Near full: the same notice as the board page. Everyone sees it,
+                 since anyone can upload and theirs is the upload that won't fit. -->
+            <div v-if="storagePct >= 90" role="status"
+                class="mb-5 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-ink">
+                <p class="font-semibold">This board is almost full</p>
+                <p class="mt-0.5 text-muted">
+                    {{ mbUsed }} of {{ mbCap }} MB used.
+                    <template v-if="isOwner">Delete files you no longer need to make room for new ones.</template>
+                    <template v-else>New uploads may not fit. The board's owner can free up space.</template>
+                </p>
             </div>
 
             <!-- Course created — confirmation only; the empty-state card owns the next-step CTA. -->
@@ -448,14 +465,14 @@ watch(() => props.materials, () => { selected.value = [] })
             <!-- Static on phones: stacked search+sort+pills would pin ~170px of
                  chrome over a small viewport, and the bulk bar's offset assumes
                  the desktop height. Sticky from sm up. -->
-            <div v-if="resultCount > 0" class="z-30 -mx-5 mb-5 space-y-3 bg-base/95 px-5 py-3 backdrop-blur sm:sticky sm:top-0">
-                <!-- Searching 2 files you can already see is chrome that outweighs
-                     the list it filters. Same threshold the board page uses for
-                     courses. The section pills stay — they say what kinds of file
-                     a course holds, which is useful at any count. -->
-                <div v-if="resultCount > 3" class="flex flex-col gap-2 sm:flex-row">
+            <!-- Search and sort, from 7 files: about a screen's worth on a phone.
+                 Below that the list is its own search. No section pills: the
+                 files are already grouped under section headings, each with its
+                 count on "Download all", so the pills repeated them above the list. -->
+            <div v-if="resultCount > 6" class="z-30 -mx-5 mb-5 bg-base/95 px-5 py-3 backdrop-blur sm:sticky sm:top-0">
+                <div class="flex flex-col gap-2 sm:flex-row">
                     <input type="text" inputmode="search" v-model="localSearch"
-                           :placeholder="`Search ${resultCount} ${resultCount === 1 ? 'file' : 'files'} by name…`"
+                           :placeholder="`Search ${resultCount} files by name…`"
                            aria-label="Search files"
                            class="box-border w-full min-w-0 flex-1 appearance-none rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[14px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     <div class="relative w-full sm:w-auto">
@@ -470,42 +487,12 @@ watch(() => props.materials, () => { selected.value = [] })
                         </svg>
                     </div>
                 </div>
-
-                <!-- Section filter pills -->
-                <nav aria-label="Filter by section" class="flex flex-wrap gap-1.5">
-                    <template v-for="(label, key) in sections" :key="key">
-                        <button type="button" @click="toggleSection(key)"
-                                :disabled="!sectionCounts[key] && localSection !== key"
-                                :aria-pressed="localSection === key ? 'true' : 'false'"
-                                class="section-pill op-press inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1 text-[13px] font-semibold transition sm:min-h-0 sm:px-3"
-                                :class="localSection === key
-                                    ? 'bg-teal text-white'
-                                    : (sectionCounts[key] ? 'bg-sky text-teal hover:brightness-95' : 'cursor-not-allowed bg-surface text-muted')">
-                            {{ label }}
-                            <span class="rounded-full px-1.5 text-xs tabular-nums"
-                                  :class="localSection === key
-                                      ? 'bg-white/25 text-white'
-                                      : (sectionCounts[key] ? 'bg-base text-teal' : 'bg-sky/40 text-muted')">
-                                {{ sectionCounts[key] ?? 0 }}
-                            </span>
-                        </button>
-                    </template>
-                    <button v-if="localSection !== ''" type="button" @click="localSection = ''"
-                            class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-3 py-1 text-[13px] font-semibold text-muted underline-offset-2 transition hover:text-teal hover:underline sm:min-h-0">
-                        Clear filter
-                    </button>
-                </nav>
             </div>
 
             <!-- Empty filtered state -->
             <p v-if="isFiltered && materials.length === 0"
                class="op-card px-6 py-8 text-center text-[14px] text-muted">
-                <template v-if="localSearch.trim() !== ''">
-                    No files match "<span class="font-semibold text-ink">{{ localSearch }}</span>"<template v-if="localSection !== ''"> in <span class="font-semibold text-ink">{{ sections[localSection] }}</span></template>.
-                </template>
-                <template v-else>
-                    No files in <span class="font-semibold text-ink">{{ sections[localSection] }}</span> yet.
-                </template>
+                No files match "<span class="font-semibold text-ink">{{ localSearch }}</span>".
             </p>
 
             <!-- Whole-course empty state: one friendly card instead of four
@@ -531,8 +518,9 @@ watch(() => props.materials, () => { selected.value = [] })
             <!-- Bulk action bar (owner, selection active) -->
             <!-- top-2 on phones (filter bar is static there); below the sticky
                  filter bar's desktop height from sm up. -->
-            <div v-if="isOwner && selectedCount > 0"
-                 class="sticky top-2 z-20 mb-4 flex flex-col gap-2 rounded-xl border border-sky bg-surface px-4 py-2.5 shadow-sm sm:top-29 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div v-if="isOwner && selecting"
+                 :class="resultCount > 6 ? 'sm:top-18' : 'sm:top-2'"
+                 class="sticky top-2 z-20 mb-4 flex flex-col gap-2 rounded-xl border border-sky bg-surface px-4 py-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <!-- The count is inside the label, so select-all has a full-width
                      target instead of a 16px box. -->
                 <label class="flex min-h-11 cursor-pointer items-center gap-3 sm:min-h-0">
@@ -546,13 +534,14 @@ watch(() => props.materials, () => { selected.value = [] })
                     </span>
                 </label>
                 <div class="flex items-center gap-4">
-                    <button type="button" @click="selected = []"
+                    <button type="button" @click="stopSelecting"
                             class="op-press inline-flex min-h-11 cursor-pointer items-center text-[13px] font-medium text-muted hover:text-ink sm:min-h-0">
                         Cancel
                     </button>
-                    <button type="button" @click="askBulkDelete" :disabled="bulkForm.processing"
+                    <button type="button" @click="askBulkDelete" :disabled="bulkForm.processing || selectedCount === 0"
                             class="btn-danger op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold disabled:opacity-60 sm:min-h-0 sm:py-1.5">
-                        Delete {{ selectedCount === 1 ? '1 file' : selectedCount + ' files' }}
+                        <template v-if="selectedCount === 0">Delete</template>
+                        <template v-else>Delete {{ selectedCount === 1 ? '1 file' : selectedCount + ' files' }}</template>
                     </button>
                 </div>
             </div>
@@ -571,7 +560,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 {{ label }}
                             </h2>
                             <a v-if="sectionCounts[key] > 1" :href="sectionZipUrl(key)"
-                               class="op-press inline-flex min-h-11 shrink-0 items-center gap-1 text-[12px] font-semibold text-neon hover:underline sm:min-h-0">
+                               class="op-press inline-flex min-h-11 shrink-0 items-center gap-1 text-[12px] font-semibold text-muted transition hover:text-ink sm:min-h-0">
                                 <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
                                 </svg>
@@ -589,7 +578,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <!-- h-11 w-9: the tap area stays 44px tall, but 44px
                                      wide around a 16px box was 28px of pure padding
                                      taken straight off the filename. -->
-                                <label v-if="isOwner"
+                                <label v-if="isOwner && selecting"
                                        class="-my-2 flex h-11 w-9 shrink-0 cursor-pointer items-center justify-center sm:my-0 sm:mt-1 sm:size-4">
                                     <input type="checkbox"
                                            :checked="isSelected(material.id)"
@@ -599,8 +588,10 @@ watch(() => props.materials, () => { selected.value = [] })
                                            class="size-4 shrink-0 cursor-pointer accent-teal">
                                 </label>
                                 <!-- Type badge hidden on phones — the row width goes to the
-                                     filename; the extension is usually in the name anyway. -->
-                                <span class="mt-0.5 hidden shrink-0 rounded bg-sky/50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted sm:inline"
+                                     filename; the extension is usually in the name anyway.
+                                     Fixed width, centred: sized to its text, "PPTX" pushed
+                                     its title right of every "PDF" title in the list. -->
+                                <span class="mt-0.5 hidden w-11 shrink-0 rounded bg-sky/50 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-muted sm:inline-block"
                                       :title="material.fileTypeLabel + ' file'">
                                     {{ material.fileTypeLabel }}
                                 </span>
@@ -613,13 +604,13 @@ watch(() => props.materials, () => { selected.value = [] })
                                        target="_blank" rel="noopener"
                                        :title="`Preview ${material.displayName} (opens in a new tab)`"
                                        class="flex items-center gap-1 text-[15px] font-semibold text-ink underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">
-                                        <span class="truncate">{{ material.displayName }}</span>
-                                        <svg aria-hidden="true" class="size-3.5 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                                        <span class="line-clamp-2 wrap-anywhere sm:truncate">{{ material.displayName }}</span>
+                                        <svg aria-hidden="true" class="size-3.5 shrink-0 self-start text-muted mt-1" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M8 5H5v10h10v-3M12 4h4v4M16 4l-7 7" />
                                         </svg>
                                     </a>
                                     <a v-else-if="material.download_url" :href="material.download_url"
-                                       class="block truncate text-[15px] font-semibold text-ink underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">
+                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40 sm:block sm:truncate">
                                         {{ material.displayName }}
                                     </a>
                                     <span v-else class="block truncate text-[15px] font-semibold text-ink">
@@ -633,40 +624,48 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </div>
                             </div>
                             <div class="flex shrink-0 items-center gap-1">
-                                <template v-if="isOwner && !selectedCount">
-                                    <form :action="material.delete_url" method="POST"
-                                          :data-name="material.displayName"
-                                          @submit="askDeleteFile">
-                                        <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
-                                        <input type="hidden" name="_method" value="DELETE">
-                                        <button type="submit" aria-label="Delete file" title="Delete file"
-                                                class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
-                                            <!-- Redrawn on the app's 20x20 / 1.7-stroke
-                                                 grid — it was the last icon left at
-                                                 viewBox 24, and its 1px corner arcs
-                                                 muddied at 16px. Drawn to ~72% of the
-                                                 viewBox to match the optical size of
-                                                 the old one; the first redraw filled
-                                                 only 60% and read as shrunken next to
-                                                 the download arrow. -->
-                                            <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                                                <path d="M2.8 5.4h14.4" />
-                                                <path d="M7.4 5.4V3.6a1.1 1.1 0 0 1 1.1-1.1h3a1.1 1.1 0 0 1 1.1 1.1v1.8" />
-                                                <path d="M4.7 5.4l.75 10.5a1.2 1.2 0 0 0 1.2 1.1h6.7a1.2 1.2 0 0 0 1.2-1.1l.75-10.5" />
-                                                <path d="M8.2 8.8v5.1M11.8 8.8v5.1" />
-                                            </svg>
+                                <!-- Delete lives in a menu, like Report for classmates:
+                                     a bare bin on every row sat one mis-tap from
+                                     Download, and "Select files" covers clearing out. -->
+                                <details v-if="isOwner && !selecting" class="op-menu relative">
+                                    <summary :aria-label="`More actions for ${material.displayName}`" title="More"
+                                             class="flex size-10 shrink-0 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink marker:hidden sm:size-9">
+                                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
+                                    </summary>
+                                    <div class="absolute right-full top-1/2 z-20 mr-1 w-44 -translate-y-1/2 rounded-xl bg-surface p-1 text-left shadow-xl ring-1 ring-sky">
+                                        <form :action="material.delete_url" method="POST"
+                                              :data-name="material.displayName"
+                                              @submit="askDeleteFile">
+                                            <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
+                                            <input type="hidden" name="_method" value="DELETE">
+                                            <button type="submit"
+                                                    @click="$event.target.closest('details')?.removeAttribute('open')"
+                                                    class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10 sm:min-h-0">
+                                                Delete this file
+                                            </button>
+                                        </form>
+                                    </div>
+                                </details>
+                                <!-- Report lives in a menu, not as a bare flag beside
+                                     Download: a flag doesn't say "report", and on a
+                                     phone it sat one mis-tap from the action people
+                                     came for. <details> + app.js handle open, outside
+                                     click and Escape, as on the operator page. Opens to
+                                     the left, inside the row: the section card clips
+                                     anything that drops below its last row. -->
+                                <details v-if="!isOwner && !selecting" class="op-menu relative">
+                                    <summary :aria-label="`More actions for ${material.displayName}`" title="More"
+                                             class="flex size-10 shrink-0 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink marker:hidden sm:size-9">
+                                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
+                                    </summary>
+                                    <div class="absolute right-full top-1/2 z-20 mr-1 w-44 -translate-y-1/2 rounded-xl bg-surface p-1 text-left shadow-xl ring-1 ring-sky">
+                                        <button type="button"
+                                                @click="$event.target.closest('details')?.removeAttribute('open'); openReport(material)"
+                                                class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10">
+                                            Report this file
                                         </button>
-                                    </form>
-                                </template>
-                                <button v-if="!isOwner && !selectedCount" type="button"
-                                        @click="openReport(material)"
-                                        aria-label="Report this file"
-                                        title="Report this file"
-                                        class="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
-                                    <svg class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M5 17V3.5M5 4h9l-2 3 2 3H5"/>
-                                    </svg>
-                                </button>
+                                    </div>
+                                </details>
                                 <!-- Icon-only on mobile so the filename keeps its width;
                                      text pill from sm up.
                                      Soft grey, not the accent: Download repeats on every
@@ -675,7 +674,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                      because bg-surface was the same tone as the op-card
                                      behind it, which left the blue arrow carrying the
                                      entire affordance (border-sky is 1.23:1 in dark). -->
-                                <a v-if="!selectedCount && material.download_url" :href="material.download_url"
+                                <a v-if="!selecting && material.download_url" :href="material.download_url"
                                    aria-label="Download" title="Download"
                                    class="op-press flex size-10 items-center justify-center rounded-full border border-sky bg-base text-muted transition hover:bg-sky/40 hover:text-ink sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
                                     <svg aria-hidden="true" class="size-4 sm:hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -703,10 +702,13 @@ watch(() => props.materials, () => { selected.value = [] })
                     <!-- Mobile-only FAB — bottom-right thumb zone. On phones the
                          header pill is out of reach and scrolls away; this is the
                          standard mobile counterpart to the desktop header action. -->
+                    <!-- Labelled, not a bare "+": desktop says "Add file", and an
+                         unlabelled icon makes people guess. The page reserves room
+                         beneath the list (pb-28) so it never covers a row. -->
                     <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
-                            aria-label="Add a file"
-                            class="fixed bottom-6 right-6 z-20 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full bg-neon text-2xl font-bold text-white shadow-lg transition hover:brightness-125 sm:hidden">
-                        +
+                            class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+                        Add file
                     </button>
 
                     <!-- Expanded form -->
@@ -755,16 +757,21 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <input id="ufile" type="file" multiple @change="onFileChange"
                                        accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg"
                                        :aria-invalid="!!errors.files" class="sr-only">
+                                <!-- The whole area is the target, with the limits inside it:
+                                     a small pill plus a separate grey line read as two
+                                     things to parse before the one thing to do. -->
                                 <label for="ufile"
-                                       class="op-press teal-accent inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky bg-surface px-4 text-[13px] font-semibold text-teal transition hover:bg-sky/40">
-                                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round">
-                                        <path d="M10 4v12M4 10h12"/>
-                                    </svg>
-                                    {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
+                                       class="op-press flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-muted/50 px-4 py-4 text-center transition hover:bg-sky/30">
+                                    <span class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-neon">
+                                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round">
+                                            <path d="M10 4v12M4 10h12"/>
+                                        </svg>
+                                        {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
+                                    </span>
+                                    <span class="text-xs text-muted">PDF, Word, PowerPoint, image · max {{ maxFileMb }}&nbsp;MB</span>
                                 </label>
-                                <p class="mt-1.5 text-xs text-muted">PDF, Word, PowerPoint, or image · up to {{ maxFileMb }}&nbsp;MB each · pick several at once</p>
-                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg border border-teal/20 bg-teal/5 px-3 py-2.5">
-                                    <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-teal/70">
+                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg bg-base px-3 py-2.5">
+                                    <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                                         {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected
                                     </p>
                                     <ul class="space-y-0.5">
@@ -789,44 +796,41 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <span v-if="errors['files.0']" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors['files.0'] }}</span>
                             </div>
 
-                            <!-- Section and Name share a row. Section is a three-option
-                                 select that never needs full width, and pairing them
-                                 keeps the form short enough to see the Upload button.
-                                 Section leads and is width-capped rather than a 50/50
-                                 split: Name disappears on a multi-file selection, and
-                                 this way Section doesn't move or stretch when it does.
-                                 items-end keeps both inputs aligned when one helper
-                                 line wraps and the other doesn't. -->
-                            <div class="flex flex-col gap-3.5 sm:flex-row sm:items-end sm:gap-3">
-                                <div class="sm:w-44 sm:shrink-0">
-                                    <label for="usection" class="mb-0.5 block text-[13px] font-semibold text-ink">Section</label>
-                                    <p class="mb-1.5 text-[12px] text-muted">What kind of file is this?</p>
-                                    <select id="usection" v-model="uploadForm.section"
-                                            class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                                        <option v-for="(label, key) in sections" :key="key" :value="key">{{ label }}</option>
-                                    </select>
+                            <!-- Three choices, so all three are shown: a dropdown hid the
+                                 options behind a tap and needed a helper line to say what
+                                 it was for. A radio group, styled like the filter pills. -->
+                            <fieldset>
+                                <legend class="mb-1.5 text-[13px] font-semibold text-ink">Section</legend>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <label v-for="(label, key) in sections" :key="key"
+                                           class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-neon sm:min-h-9"
+                                           :class="uploadForm.section === key ? 'bg-neon text-white' : 'bg-base text-muted hover:text-ink'">
+                                        <input type="radio" name="usection" :value="key" v-model="uploadForm.section" class="sr-only">
+                                        {{ label }}
+                                    </label>
                                 </div>
+                            </fieldset>
 
-                                <!-- Only meaningful for a single file -->
+                            <!-- Both optional, so both are quiet: one row, labels doing the
+                                 work of the helper lines that used to sit under each.
+                                 The file's own name field only exists for a single upload. -->
+                            <div class="flex flex-col gap-3.5 sm:flex-row sm:gap-3">
                                 <div v-if="uploadForm.files.length <= 1" class="min-w-0 flex-1">
-                                    <label for="utitle" class="mb-0.5 block text-[13px] font-semibold text-ink">Name this file (optional)</label>
-                                    <p class="mb-1.5 text-[12px] text-muted">Helps classmates find it if the filename isn't clear.</p>
+                                    <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">File name <span class="font-normal text-muted">(optional)</span></label>
                                     <input id="utitle" type="text" v-model="uploadForm.title"
                                            placeholder="e.g. Week 7 quiz solutions"
                                            :aria-invalid="!!errors.title"
                                            class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                                     <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
                                 </div>
-                            </div>
-
-                            <!-- Width-capped: the answer is a first name, and a
-                                 full-bleed box invites a sentence. -->
-                            <div class="sm:max-w-xs">
-                                <label for="uploaderName" class="mb-1.5 block text-[13px] font-semibold text-ink">Your name (optional)</label>
-                                <input id="uploaderName" type="text" v-model="uploadForm.uploaderName"
-                                       :aria-invalid="!!errors.uploaderName"
-                                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
-                                <span v-if="errors.uploaderName" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.uploaderName[0] }}</span>
+                                <div class="min-w-0 flex-1">
+                                    <label for="uploaderName" class="mb-1.5 block text-[13px] font-semibold text-ink">Your name <span class="font-normal text-muted">(optional)</span></label>
+                                    <input id="uploaderName" type="text" v-model="uploadForm.uploaderName"
+                                           placeholder="e.g. Ama"
+                                           :aria-invalid="!!errors.uploaderName"
+                                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                    <span v-if="errors.uploaderName" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.uploaderName[0] }}</span>
+                                </div>
                             </div>
 
                             <button type="submit" :disabled="uploadForm.processing || uploadForm.files.length === 0 || hasOversizedFile"
