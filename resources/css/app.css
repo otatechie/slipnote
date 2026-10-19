@@ -67,6 +67,18 @@
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* Cards (.op-card) and pills (.op-pill): a panel with a crisp, translucent
+   1px edge. Dark: a near-black panel, darker than the page, so the card
+   reads as set into it, with a faint highlight inside the top edge. Light:
+   a white panel on the off-white page. The edge is translucent so it sits
+   right on whatever is behind it. */
+:root {
+    --card-frame: rgba(16, 24, 40, 0.11);
+    --card-well: #ffffff;
+    --card-inner: rgba(16, 24, 40, 0.06);
+    --card-highlight: transparent;
+}
+
 html[data-theme='dark'] {
     color-scheme: dark;
 }
@@ -83,6 +95,10 @@ html[data-theme='system'][data-system-theme='dark'] {
     --color-ink: #e6e9ec;        /* cool off-white — body text */
     --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
     --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
+    --card-frame: rgba(255, 255, 255, 0.12);
+    --card-well: #0c0d0f;
+    --card-inner: rgba(255, 255, 255, 0.06);
+    --card-highlight: rgba(255, 255, 255, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -103,6 +119,10 @@ html[data-theme='system'][data-system-theme='dark'] {
         --color-ink: #e6e9ec;        /* cool off-white — body text */
         --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
         --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
+        --card-frame: rgba(255, 255, 255, 0.12);
+        --card-well: #0c0d0f;
+        --card-inner: rgba(255, 255, 255, 0.06);
+        --card-highlight: rgba(255, 255, 255, 0.05);
     }
 }
 
@@ -390,28 +410,99 @@ textarea:focus-visible {
     box-shadow: 0 1px 2px color-mix(in srgb, black 12%, transparent);
 }
 
-/* Cards lift with a soft shadow instead of an outline, matching the landing
-   page. In dark mode the shadow is invisible and the surface step carries it. */
+/* Cards: the panel with a double edge, inside the card: the brighter 1px
+   border, 4px of the panel's own colour, then a fainter 1px line. Drawn as
+   two inset shadows (the panel-coloured 4px band painted over a 5px line
+   band), so it takes no layout room and follows the radius. The gap is
+   the panel, never the page: an outline gap showing the page read as two
+   loose dividers. Tokens above (--card-frame, --card-well, --card-inner). */
 .op-card {
     border-radius: var(--op-radius);
-    background: var(--color-surface);
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px -16px rgba(16, 24, 40, 0.2);
+    background: var(--card-well);
+    border: 1px solid var(--card-frame);
+    box-shadow: inset 0 0 0 4px var(--card-well), inset 0 0 0 5px var(--card-inner);
+}
+/* Messages (upload receipt, recovery ask, operator note, feedback ask):
+   fully clear, edge only, so a passing note never outweighs the lists. */
+.op-card.op-card-quiet {
+    background: transparent;
+    box-shadow: none;
 }
 
+/* Pills and fields beside the cards (Share board, QR, search, sort,
+   Download) in the same language: clear panel, translucent hairline.
+   Unlayered, so it outranks the utilities on the element; hover and focus
+   restated. */
+.op-pill {
+    background-color: var(--card-well);
+    border: 1px solid var(--card-frame);
+    box-shadow: inset 0 1px 0 var(--card-highlight);
+}
+.op-pill:hover {
+    background-color: color-mix(in srgb, var(--card-frame) 50%, transparent);
+}
+.op-pill:focus-visible,
+input.op-pill:focus,
+select.op-pill:focus {
+    border-color: var(--color-neon);
+}
+/* A native select draws its open list on the select's own background. With
+   the pill's near-clear fill that list came out unreadable in dark mode, so
+   the options get a solid surface and ink. The closed select keeps the
+   pill look; color-scheme (set per theme) styles the list chrome. */
+select.op-pill option {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+}
+/* Messages (upload receipt, recovery ask, operator note, feedback ask) are
+   lighter than the lists: the same panel with a hairline, so a passing note
+   never outweighs the content it sits above. */
+.op-card.op-card-quiet {
+    border-width: 1px;
+    border-color: var(--color-sky);
+    box-shadow: none;
+}
+
+/* No dividers between rows: inside the framed well, spacing and the hover
+   tint separate them, and the lines read as clutter. Phones (no hover) get
+   more vertical room below. The operator console's denser tables keep their
+   lines (.op-ruled). */
 .op-row {
     padding: 0.95rem 1.1rem;
-    border-bottom: 1px solid var(--op-hairline);
     transition: background-color 160ms ease;
 }
 /* Phones: a file row spends its width on a checkbox and two icon buttons before
    the filename gets any, so the row's own gutter is worth 8px back. */
 @media (max-width: 639px) {
     .op-row {
-        padding-left: 0.85rem;
-        padding-right: 0.85rem;
+        padding: 1.1rem 0.85rem;
     }
 }
-.op-row:last-child {
+/* Inside a card, rows sit 8px in from each edge (padding trimmed to match,
+   so text doesn't move), clear of the card's inner line: an edge-to-edge
+   hover tint covered that line beside the hovered row. The tint becomes a
+   rounded highlight inside the frame. */
+.op-card .op-row {
+    margin-inline: 8px;
+    padding-inline: calc(1.1rem - 8px);
+    border-radius: calc(var(--op-radius) - 8px);
+}
+.op-card .op-row:first-child {
+    margin-top: 8px;
+}
+.op-card .op-row:last-child {
+    margin-bottom: 8px;
+}
+@media (max-width: 639px) {
+    .op-card .op-row {
+        padding-inline: calc(0.85rem - 8px);
+    }
+}
+
+.op-ruled .op-row {
+    border-bottom: 1px solid var(--op-hairline);
+}
+.op-ruled .op-row:last-child {
     border-bottom: 0;
 }
 
@@ -423,8 +514,10 @@ textarea:focus-visible {
     display: none;
 }
 @media (hover: hover) and (pointer: fine) {
+    /* The rim colour, so the tint matches the card in both themes; at the
+       old sky/22% it was all but invisible on the dark well. */
     .op-row:hover {
-        background-color: color-mix(in srgb, var(--color-sky) 22%, transparent);
+        background-color: color-mix(in srgb, var(--card-frame) 60%, transparent);
     }
 }
 

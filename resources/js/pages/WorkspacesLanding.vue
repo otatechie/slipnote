@@ -223,7 +223,7 @@ function confirmForget() {
                         </div>
                     </div>
 
-                    <div class="mt-5 border-t border-sky pt-4">
+                    <div class="mt-5">
                         <!-- Labelled "once it has files": an empty board shared
                              into a group chat converts nobody and doesn't get a
                              second look. Save the link now, share it later. -->
@@ -281,7 +281,7 @@ function confirmForget() {
                 <template v-if="returning">
                     <ul class="op-card">
                         <li v-for="ws in props.recent" :key="ws.slug"
-                            class="flex items-center gap-1 border-t border-sky/80 py-1.5 pl-5 pr-1.5 first:border-t-0">
+                            class="flex items-center gap-1 py-1.5 pl-5 pr-1.5">
                             <a :href="'/' + ws.slug" class="group min-w-0 flex-1 py-2">
                                 <span class="block truncate text-[15px] font-semibold text-ink group-hover:text-neon">{{ ws.name }}</span>
                                 <span class="block text-[12px] text-muted">{{ boardSummary(ws) }}</span>

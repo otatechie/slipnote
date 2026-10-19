@@ -476,7 +476,7 @@ watch(() => props.materials, () => { selected.value = [] })
                  the board worth opening. Undo is the rare case, so it's a quiet
                  line, and its time limit is a fact, not a red warning. -->
             <div v-if="flash.uploaded && !receiptClosed" ref="uploadReceipt"
-                 class="op-card relative mb-5 scroll-mt-4 py-3.5 pl-4 pr-12 text-sm">
+                 class="op-card op-card-quiet relative mb-5 scroll-mt-4 py-3.5 pl-4 pr-12 text-sm">
                 <button type="button" @click="closeReceipt" aria-label="Close"
                         class="absolute right-0.5 top-0.5 flex size-11 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-sky/60 hover:text-ink">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15"/></svg>
@@ -504,7 +504,7 @@ watch(() => props.materials, () => { selected.value = [] })
                      class group, pre-written, no composing. WhatsApp first:
                      it's where the class is. This banner is uploads only; pins
                      and removals are a FlashNotice. -->
-                <div class="-mr-8 mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-sky/60 pt-3">
+                <div class="-mr-8 mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-2">
                     <span class="text-[13px] font-semibold text-ink">Tell the class it's here</span>
                     <div class="flex flex-wrap gap-2">
                         <a :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
@@ -547,10 +547,10 @@ watch(() => props.materials, () => { selected.value = [] })
                     <input type="text" inputmode="search" v-model="localSearch"
                            :placeholder="`Search ${resultCount} files by name…`"
                            aria-label="Search files"
-                           class="box-border w-full min-w-0 flex-1 appearance-none rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[14px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                           class="op-pill box-border w-full min-w-0 flex-1 appearance-none rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[14px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                     <div class="relative w-full sm:w-auto">
                         <select v-model="localSort" aria-label="Sort files"
-                                class="box-border w-full appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-10 text-[14px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                                class="op-pill box-border w-full appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-10 text-[14px] font-medium text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                             <option value="newest">Newest first</option>
                             <option value="oldest">Oldest first</option>
                             <option value="az">A–Z</option>
@@ -637,7 +637,7 @@ watch(() => props.materials, () => { selected.value = [] })
                          section is full). The last row rounds its own corners so a
                          selected row's tint still fits the card. -->
                     <section :id="'sec-' + key" class="op-card mb-4 scroll-mt-20">
-                        <div class="flex items-center justify-between gap-3 border-b border-sky/60 px-4 py-3 sm:px-5">
+                        <div class="flex items-center justify-between gap-3 px-4 pb-1 pt-3 sm:px-5">
                             <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                                 {{ label }}
                             </h2>
@@ -784,7 +784,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                      entire affordance (border-sky is 1.23:1 in dark). -->
                                 <a v-if="!selecting && material.download_url" :href="material.download_url"
                                    aria-label="Download" title="Download"
-                                   class="op-press flex size-10 items-center justify-center rounded-full border border-sky bg-base text-muted transition hover:bg-sky/40 hover:text-ink sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
+                                   class="op-pill op-press flex size-10 items-center justify-center rounded-full border border-sky bg-base text-muted transition hover:bg-sky/40 hover:text-ink sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
                                     <svg aria-hidden="true" class="size-4 sm:hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
                                     </svg>

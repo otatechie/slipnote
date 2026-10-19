@@ -500,7 +500,7 @@ function persistOrder() {
             <!-- The operator's note, for the owner only: first thing under the
                  title, because it's addressed to them and rarely sent. -->
             <aside v-if="showNote" aria-label="A note from the SlipNote team"
-                class="op-card mb-4 flex items-start gap-3 px-4 py-3.5">
+                class="op-card op-card-quiet mb-4 flex items-start gap-3 px-4 py-3.5">
                 <div class="min-w-0 flex-1">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">From the SlipNote team</p>
                     <p class="mt-1 whitespace-pre-line text-[14px] text-ink">{{ operatorNote.text }}</p>
@@ -518,7 +518,7 @@ function persistOrder() {
             <!-- The recovery email, asked for in place once there are files to
                  lose: one field, not a trip to Board settings, where it also lives. -->
             <aside v-if="showRecoveryAsk" aria-labelledby="recoveryAskTitle"
-                class="op-card mb-4 px-4 py-3.5">
+                class="op-card op-card-quiet mb-4 px-4 py-3.5">
                 <p v-if="recoveryAskSaved" role="status"
                     class="teal-accent flex items-center gap-1.5 text-[14px] font-semibold text-teal">
                     <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
@@ -572,7 +572,7 @@ function persistOrder() {
                  nowhere on an empty board: it appears once there's a course. -->
             <div v-if="totalCourses > 0" class="mb-7 flex items-center gap-2">
                 <button type="button" @click="share"
-                    class="op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted transition hover:text-ink sm:h-8 sm:flex-none">
+                    class="op-pill op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted transition hover:text-ink sm:h-8 sm:flex-none">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M10 3v10" />
@@ -585,7 +585,7 @@ function persistOrder() {
                 <!-- QR for the "get the notes here" moment in a lecture hall. -->
                 <button type="button" @click="toggleQr"
                     :aria-expanded="qrOpen" aria-label="Show QR code for this board" title="QR code"
-                    class="op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-muted transition hover:text-ink sm:size-8">
+                    class="op-pill op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-muted transition hover:text-ink sm:size-8">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
                     </svg>
@@ -654,10 +654,10 @@ function persistOrder() {
                 <div v-if="totalCourses > 6" class="mb-4 flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch" :placeholder="`Search ${totalCourses} courses…`"
                         aria-label="Search courses"
-                        class="box-border h-11 w-full min-w-0 appearance-none rounded-xl border border-sky bg-surface px-3.5 text-[14px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
+                        class="op-pill box-border h-11 w-full min-w-0 appearance-none rounded-xl border border-sky bg-surface px-3.5 text-[14px] font-medium leading-none text-ink shadow-sm placeholder:font-normal placeholder:text-muted focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:flex-1">
                     <div class="relative">
                         <select v-model="localSort" aria-label="Sort courses"
-                            class="box-border h-11 w-full appearance-none rounded-xl border border-sky bg-surface pl-3.5 pr-10 text-[14px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
+                            class="op-pill box-border h-11 w-full appearance-none rounded-xl border border-sky bg-surface pl-3.5 pr-10 text-[14px] font-medium leading-none text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20 sm:w-auto">
                             <option value="manual">Custom order</option>
                             <option value="active">Most recently active</option>
                             <option value="az">A–Z</option>
@@ -796,7 +796,7 @@ function persistOrder() {
                 <!-- Below the list, never above it: the board is for finding notes,
                      and this is a favour asked of the people who already do. -->
                 <aside v-if="showFeedback" aria-label="Feedback"
-                    class="op-card mt-6 flex items-start gap-3 px-4 py-3.5">
+                    class="op-card op-card-quiet mt-6 flex items-start gap-3 px-4 py-3.5">
                     <div class="min-w-0 flex-1">
                         <p class="text-[14px] font-semibold tracking-tight text-ink">Using SlipNote a lot? Tell us how 👋</p>
                         <p class="mt-0.5 text-[13px] text-muted">One line helps: what your class uses it for, and what's missing.</p>
@@ -1161,7 +1161,7 @@ function persistOrder() {
                             </svg>
                         </button>
                     </h2>
-                    <div v-if="unlockOpen" id="unlockPanel" class="border-t border-sky/60 px-4 pb-4 pt-3.5">
+                    <div v-if="unlockOpen" id="unlockPanel" class="px-4 pb-4 pt-1">
                         <label for="ownerInput" class="block text-[13px] font-semibold text-ink">
                             Owner secret or link
                             <span class="font-normal text-muted">— either works</span>

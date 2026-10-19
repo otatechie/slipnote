@@ -1,5 +1,5 @@
 <x-layouts.operator title="Operator">
-<div class="op mx-auto w-full max-w-5xl flex-1 px-5 pb-12">
+<div class="op op-ruled mx-auto w-full max-w-5xl flex-1 px-5 pb-12">
     {{-- Not pinned: a title and Log out don't need to follow you down a list,
          and pinned they floated translucent over every row on the way. --}}
     <header class="mb-4 flex items-center justify-between gap-4 pb-1 pt-6 sm:pt-8">
