@@ -399,7 +399,9 @@ watch(() => props.materials, () => { selected.value = [] })
                  bar below already claims the sticky slot at top-0, and the bulk bar
                  offsets from its height. On a file list, search that stays reachable
                  beats a title that does — so this keeps the look, not the pinning. -->
-            <header class="mb-4 flex items-center justify-between gap-4 pt-6 pb-3 sm:pt-8">
+            <!-- Code, then the course name right under it as its subtitle (a
+                 separate paragraph 40px below read as another block). -->
+            <header class="mb-4 flex items-center justify-between gap-4 pt-6 sm:pt-8">
                 <div class="min-w-0">
                     <Link :href="courseListUrl()"
                           class="op-kicker group -mt-2 mb-0 inline-flex min-h-11 items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon sm:mt-0 sm:mb-1 sm:min-h-0">
@@ -412,21 +414,22 @@ watch(() => props.materials, () => { selected.value = [] })
                         </svg>
                         <span class="truncate">{{ workspace.name }}</span>
                     </Link>
-                    <h1 ref="courseHeading" tabindex="-1" class="op-title truncate text-[1.85rem] font-bold text-ink outline-none sm:text-[2.15rem]">{{ course.code }}</h1>
+                    <h1 ref="courseHeading" tabindex="-1" class="op-title truncate text-[1.6rem] font-bold text-ink outline-none sm:text-[1.85rem]">{{ course.code }}</h1>
+                    <p class="mt-0.5 truncate text-[14px] text-muted">{{ course.title }}</p>
                 </div>
                 <!-- Desktop only — on mobile the FAB below covers this from the thumb
                      zone. Hidden when the board is full (can't upload) and on an empty
                      course, where the empty-state card's CTA is the sole invitation. -->
                 <button v-if="canUpload && !storageFull && resultCount > 0" type="button" @click="uploadOpen = true"
-                        class="op-press hidden h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex sm:h-8">
+                        class="op-press hidden h-11 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex sm:h-9">
                     <span class="text-base leading-none">+</span> Add file
                 </button>
             </header>
 
-            <p class="mb-5 text-[13px] text-muted">{{ course.title }}</p>
-
             <!-- Owner mode — quiet inline note, not a full banner -->
-            <div v-if="isOwner" class="mb-5">
+            <!-- Owner tools and the storage meter on one line, so files start
+                 higher up the screen. -->
+            <div v-if="isOwner" class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <p class="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
                     Owner
                     <template v-if="resultCount > 1 && !selecting">
@@ -437,7 +440,7 @@ watch(() => props.materials, () => { selected.value = [] })
                 </p>
                 <!-- Storage meter — makes the soft per-board cap legible before
                      uploads bounce. From 90% the notice below says it in words. -->
-                <div v-if="storageUsed > 0 && storagePct < 90" class="mt-1.5 flex items-center gap-2">
+                <div v-if="storageUsed > 0 && storagePct < 90" class="flex items-center gap-2">
                     <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">
                         <div class="h-full rounded-full transition-all"
                              :class="storagePct >= 75 ? 'bg-neon' : 'bg-muted'"
@@ -508,13 +511,13 @@ watch(() => props.materials, () => { selected.value = [] })
                     <span class="text-[13px] font-semibold text-ink">Tell the class it's here</span>
                     <div class="flex flex-wrap gap-2">
                         <a :href="whatsAppUrl" target="_blank" rel="noopener noreferrer"
-                            class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky bg-base px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/40 sm:h-9 sm:px-3.5">
+                            class="op-pill op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold text-ink transition sm:h-9 sm:px-3.5">
                             <svg aria-hidden="true" class="size-4" viewBox="0 0 256 256" fill="currentColor"><path d="M187.3,68.7A83.3,83.3,0,0,0,128,44a84,84,0,0,0-72.9,125.9L44.6,204.7a8,8,0,0,0,9.8,9.8l35.2-10.5A84,84,0,0,0,212,128,83.3,83.3,0,0,0,187.3,68.7ZM128,196a67.6,67.6,0,0,1-34.6-9.5,8,8,0,0,0-6.4-.8L64.4,192.3l6.7-22.6a8,8,0,0,0-.8-6.4A68,68,0,1,1,128,196Zm37.6-49.3-14.3-8.2a8,8,0,0,0-8.7.5l-8,6a2,2,0,0,1-2.2.2,52.3,52.3,0,0,1-21.6-21.6,2,2,0,0,1,.2-2.2l6-8a8,8,0,0,0,.5-8.7L109.3,90.4A8,8,0,0,0,102.4,86a26.2,26.2,0,0,0-24.7,20.2,60.1,60.1,0,0,0,72.1,72.1A26.2,26.2,0,0,0,170,153.6,8,8,0,0,0,165.6,146.7Z"/></svg>
                             <span>WhatsApp</span>
                             <span class="sr-only">(opens WhatsApp)</span>
                         </a>
                         <button type="button" @click="shareCourse"
-                            class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky bg-base px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/40 sm:h-9 sm:px-3.5">
+                            class="op-pill op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold text-ink transition sm:h-9 sm:px-3.5">
                             <span v-if="!shareCopied">Copy link</span>
                             <span v-else>Copied ✓</span>
                         </button>
@@ -638,8 +641,11 @@ watch(() => props.materials, () => { selected.value = [] })
                          selected row's tint still fits the card. -->
                     <section :id="'sec-' + key" class="op-card mb-4 scroll-mt-20">
                         <div class="flex items-center justify-between gap-3 px-4 pb-1 pt-3 sm:px-5">
-                            <h2 class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                                {{ label }}
+                            <!-- With no dividers the heading is all that separates
+                                 sections, so body-size ink with its count, not 11px
+                                 grey capitals. -->
+                            <h2 class="text-[14px] font-semibold text-ink">
+                                {{ label }} <span class="font-normal text-muted">· {{ sectionCounts[key] ?? 0 }}</span>
                             </h2>
                             <a v-if="sectionCounts[key] > 1" :href="sectionZipUrl(key)"
                                class="op-press inline-flex min-h-11 shrink-0 items-center gap-1 text-[12px] font-semibold text-muted transition hover:text-ink sm:min-h-0">
@@ -678,7 +684,10 @@ watch(() => props.materials, () => { selected.value = [] })
                                     {{ material.fileTypeLabel }}
                                 </span>
                                 <div class="min-w-0">
-                                    <!-- Title opens the preview (look inside — the library mental model);
+                                    <!-- No underline until hover or focus: in a list the ↗, the row
+                                         highlight and the position already say "link", and an
+                                         underline on every title striped the page.
+                                         Title opens the preview (look inside — the library mental model);
                                          the ↗ icon signals it opens in a new tab so it isn't a silent
                                          trapdoor. Non-previewable types (docx/ppt) have no preview, so the
                                          title downloads and shows no icon. The pill stays the download action. -->
@@ -693,14 +702,14 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <a v-if="material.preview_url" :href="material.preview_url"
                                        target="_blank" rel="noopener"
                                        :title="`Preview ${material.displayName} (opens in a new tab)`"
-                                       class="flex items-center gap-1 text-[15px] font-semibold text-ink underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">
+                                       class="flex items-center gap-1 text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline focus-visible:underline">
                                         <span class="line-clamp-2 wrap-anywhere sm:truncate">{{ material.displayName }}</span>
                                         <svg aria-hidden="true" class="size-3.5 shrink-0 self-start text-muted mt-1" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M8 5H5v10h10v-3M12 4h4v4M16 4l-7 7" />
                                         </svg>
                                     </a>
                                     <a v-else-if="material.download_url" :href="material.download_url"
-                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40 sm:block sm:truncate">
+                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline focus-visible:underline sm:block sm:truncate">
                                         {{ material.displayName }}
                                     </a>
                                     <span v-else class="block truncate text-[15px] font-semibold text-ink">
@@ -784,7 +793,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                      entire affordance (border-sky is 1.23:1 in dark). -->
                                 <a v-if="!selecting && material.download_url" :href="material.download_url"
                                    aria-label="Download" title="Download"
-                                   class="op-pill op-press flex size-10 items-center justify-center rounded-full border border-sky bg-base text-muted transition hover:bg-sky/40 hover:text-ink sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
+                                   class="op-pill op-press flex size-10 items-center justify-center rounded-full border border-sky bg-base text-ink transition hover:bg-sky/40 sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
                                     <svg aria-hidden="true" class="size-4 sm:hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
                                     </svg>

@@ -478,7 +478,7 @@ function persistOrder() {
                      costs you your own access. -->
                 <button v-if="isOwner" type="button" @click="settingsOpen = true"
                     aria-haspopup="dialog" aria-label="Owner: board settings"
-                    class="op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky/50 bg-surface px-3 text-[12px] font-semibold text-ink transition hover:bg-sky/30 sm:h-8">
+                    class="op-pill op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold text-ink transition sm:h-9">
                     Owner
                     <svg aria-hidden="true" class="size-3.5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
                 </button>
@@ -490,9 +490,9 @@ function persistOrder() {
             <header class="mb-2.5 flex items-center justify-between gap-4 pt-1 sm:sticky sm:top-0 sm:z-10 sm:bg-base/70 sm:py-3 sm:backdrop-blur-xl">
                 <!-- Two lines on a phone, one from sm up: most board names lost
                      the word that tells you which board you're in at one line. -->
-                <h1 class="op-title line-clamp-2 min-w-0 wrap-break-word text-[1.85rem] font-bold text-ink sm:line-clamp-1 sm:text-[2.15rem]">{{ workspace.name }}</h1>
+                <h1 class="op-title line-clamp-2 min-w-0 wrap-break-word text-[1.6rem] font-bold text-ink sm:line-clamp-1 sm:text-[1.85rem]">{{ workspace.name }}</h1>
                 <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
-                    class="op-press hidden h-8 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex">
+                    class="op-press hidden h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex">
                     <span class="text-base leading-none">+</span> New course
                 </button>
             </header>
@@ -572,7 +572,7 @@ function persistOrder() {
                  nowhere on an empty board: it appears once there's a course. -->
             <div v-if="totalCourses > 0" class="mb-7 flex items-center gap-2">
                 <button type="button" @click="share"
-                    class="op-pill op-press inline-flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-muted transition hover:text-ink sm:h-8 sm:flex-none">
+                    class="op-pill op-press inline-flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-ink transition sm:h-9 sm:flex-none">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
                         stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M10 3v10" />
@@ -585,7 +585,7 @@ function persistOrder() {
                 <!-- QR for the "get the notes here" moment in a lecture hall. -->
                 <button type="button" @click="toggleQr"
                     :aria-expanded="qrOpen" aria-label="Show QR code for this board" title="QR code"
-                    class="op-pill op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-muted transition hover:text-ink sm:size-8">
+                    class="op-pill op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-ink transition sm:size-9">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
                     </svg>
@@ -639,8 +639,10 @@ function persistOrder() {
 
                 <!-- Search + sort -->
                 <div class="mb-2 flex min-h-11 items-center justify-between gap-3 sm:min-h-8">
-                    <h2 class="flex items-baseline gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                        Courses <span class="text-muted/70 tabular-nums">{{ totalCourses }}</span>
+                    <!-- Same as the course page's section headings: body-size ink
+                         with its count. -->
+                    <h2 class="text-[14px] font-semibold text-ink">
+                        Courses <span class="font-normal tabular-nums text-muted">· {{ totalCourses }}</span>
                     </h2>
                     <button v-if="canReorder" type="button" @click="reordering = !reordering"
                         :aria-pressed="reordering"
@@ -803,7 +805,7 @@ function persistOrder() {
                         <!-- Opens the same form as the footer's "Suggest a feature",
                              with the sentence started so there's less to type. -->
                         <button type="button" @click="tellUs"
-                            class="op-press mt-2.5 inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/30 sm:h-8">
+                            class="op-pill op-press mt-2.5 inline-flex h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold text-ink transition sm:h-9">
                             Tell us
                         </button>
                     </div>
@@ -981,7 +983,7 @@ function persistOrder() {
                                 Shared it by mistake? Reset it. You get a new owner link, and the old one stops working on every device.
                             </p>
                             <button type="button" @click="confirmingReset = true"
-                                class="op-press mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/30 sm:min-h-9">
+                                class="op-pill op-press mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold text-ink transition sm:min-h-9">
                                 Reset owner link
                             </button>
                         </section>
