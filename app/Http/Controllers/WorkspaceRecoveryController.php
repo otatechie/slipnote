@@ -87,7 +87,7 @@ class WorkspaceRecoveryController extends Controller
         $workspace->forceFill(['owner_secret_hash' => $hash])->save();
 
         session()->regenerate(); // anti-fixation on privilege change
-        session([$workspace->ownerSessionKey() => true]);
+        session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
 
         return redirect()
             ->route('start')

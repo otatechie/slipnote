@@ -136,7 +136,7 @@ class WorkspaceLandingTest extends TestCase
 
         // Owner of B opens B: B moves first.
         $this->withCookie('recent_workspaces', $cookie)
-            ->withSession([$b->ownerSessionKey() => true])
+            ->withSession([$b->ownerSessionKey() => $b->ownerSessionValue()])
             ->get('/board-b')
             ->assertOk()
             ->assertCookie('recent_workspaces', json_encode([

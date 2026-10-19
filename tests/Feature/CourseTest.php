@@ -80,7 +80,7 @@ class CourseTest extends TestCase
             ['ownerInput' => $this->ownerSecret]
         )->assertRedirect(route('courses.index', $this->wsParams()));
 
-        $this->assertTrue(session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
     }
 
     public function test_returning_owner_can_unlock_by_pasting_the_full_owner_link(): void
@@ -92,7 +92,7 @@ class CourseTest extends TestCase
             ['ownerInput' => $ownerUrl]
         )->assertRedirect(route('courses.index', $this->wsParams()));
 
-        $this->assertTrue(session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
     }
 
     public function test_owner_query_link_unlocks_then_redirects_to_the_clean_workspace_url(): void
@@ -100,17 +100,17 @@ class CourseTest extends TestCase
         $this->get(route('courses.index', $this->wsParams()).'?owner='.$this->ownerSecret)
             ->assertRedirect(route('courses.index', $this->wsParams()));
 
-        $this->assertTrue(session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
     }
 
     public function test_owner_can_lock_the_board_to_leave_owner_mode(): void
     {
         $this->unlockOwnerSession();
-        $this->assertTrue(session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
 
         $this->post(route('courses.lock', $this->wsParams()))->assertRedirect();
 
-        $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
+        $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
     }
 
     public function test_a_wrong_owner_secret_is_rejected_and_does_not_unlock(): void
@@ -120,7 +120,7 @@ class CourseTest extends TestCase
             ['ownerInput' => 'definitely-not-the-secret']
         )->assertSessionHasErrors(['ownerInput']);
 
-        $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
+        $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
     }
 
     public function test_owner_unlock_affordance_is_hidden_once_in_owner_mode(): void

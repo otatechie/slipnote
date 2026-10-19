@@ -72,7 +72,7 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 
     $byToken = filled($material->manage_token)
         && hash_equals($material->manage_token, $token);
-    $byOwner = session($workspace->ownerSessionKey()) === true;
+    $byOwner = $workspace->sessionIsOwner();
 
     abort_unless($byToken || $byOwner, 403);
 
@@ -111,6 +111,7 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/lock', [CourseController::class, 'exitOwner'])->name('courses.lock');
     Route::post('/{workspace}/recovery-email', [CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
     Route::post('/{workspace}/upload-access', [CoursesController::class, 'setUploadAccess'])->name('courses.upload-access');
+    Route::post('/{workspace}/owner-link/reset', [CoursesController::class, 'resetOwnerLink'])->name('courses.owner-link.reset');
 
     Route::get('/{workspace}/c/{slug}', [CourseController::class, 'show'])->name('course.show');
     Route::get('/{workspace}/c/{slug}/download/{section}', [CourseController::class, 'downloadSection'])->name('course.download-section');

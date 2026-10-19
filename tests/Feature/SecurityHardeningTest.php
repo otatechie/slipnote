@@ -142,7 +142,7 @@ class SecurityHardeningTest extends TestCase
 
         // The real secret is refused through either door until the window clears.
         $this->get($url.'?owner='.$this->ownerSecret);
-        $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
+        $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
         $this->post(route('courses.unlock', $this->wsParams()), ['ownerInput' => $this->ownerSecret])
             ->assertSessionHasErrors('ownerInput');
     }
@@ -154,7 +154,7 @@ class SecurityHardeningTest extends TestCase
 
         $this->get($url.'?owner='.$this->ownerSecret)->assertRedirect($url);
 
-        $this->assertSame(true, session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
         $this->assertSame(0, RateLimiter::attempts('unlock_owner:'.$this->workspace->id));
     }
 

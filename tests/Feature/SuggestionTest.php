@@ -106,7 +106,7 @@ class SuggestionTest extends TestCase
             ->assertRedirect(route('operator.dashboard', ['tab' => 'boards']));
 
         // The owner sees it ...
-        $this->withSession([$ws->ownerSessionKey() => true])
+        $this->withSession([$ws->ownerSessionKey() => $ws->ownerSessionValue()])
             ->get('/heavy-users')
             ->assertInertia(fn ($page) => $page->where('operatorNote.text', 'Could we ask you two questions?'));
 

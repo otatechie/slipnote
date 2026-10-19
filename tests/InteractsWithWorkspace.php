@@ -42,7 +42,7 @@ trait InteractsWithWorkspace
     {
         $workspace ??= $this->workspace;
 
-        session([$workspace->ownerSessionKey() => true]);
+        session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
     }
 
     /**

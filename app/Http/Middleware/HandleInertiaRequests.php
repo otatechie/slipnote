@@ -32,6 +32,7 @@ class HandleInertiaRequests extends Middleware
                 'createdUrl' => $session->get('createdUrl'),
                 'ownerUrl' => $session->get('ownerUrl'),
                 'recovered' => $session->get('recovered'),
+                'ownerReset' => $session->get('ownerReset'),
             ],
             'errors' => fn () => $session->get('errors')
                 ? $session->get('errors')->getBag('default')->getMessages()

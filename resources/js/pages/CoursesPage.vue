@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { openSuggest } from '@/components/suggest'
+import { vModalFocus } from '@/components/modalFocus'
 
 const props = defineProps({
     workspace: Object,
@@ -100,8 +101,10 @@ function replyToNote() {
 
 // Who can add files. Saved on tap: two choices, nothing to confirm.
 const uploadAccessSaving = ref(false)
+// Busy, not disabled, while saving: a button that turns disabled drops keyboard
+// focus to the page body, so the owner would lose their place in the sheet.
 function setUploadAccess(ownerOnly) {
-    if (ownerOnly === props.uploadsOwnerOnly) return
+    if (uploadAccessSaving.value || ownerOnly === props.uploadsOwnerOnly) return
     uploadAccessSaving.value = true
     router.post('/' + props.workspace.slug + '/upload-access', { ownerOnly }, {
         preserveScroll: true,
@@ -219,6 +222,36 @@ const settingsOpen = ref(
     !!page.props.flash?.recoverySaved
     || !!page.props.errors?.recoveryEmail,
 )
+// On a phone the sheet rises from the bottom, so the on-screen keyboard (for
+// the recovery email) would cover it: neither iOS nor Android Chrome shrinks
+// the layout viewport for the keyboard, only the visual one. While it's open,
+// lift the sheet by the keyboard's height and cap it to what's still visible.
+// Phones only; from sm up it's a full-height drawer and needs none of this.
+const settingsLift = ref(null)
+function measureSettingsLift() {
+    const vv = window.visualViewport
+    if (!vv || !window.matchMedia('(max-width: 639.98px)').matches) { settingsLift.value = null; return }
+    const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+    settingsLift.value = { bottom: keyboard + 'px', maxHeight: Math.round(vv.height * 0.9) + 'px' }
+}
+watch(settingsOpen, (open) => {
+    const vv = window.visualViewport
+    if (!vv) return
+    if (open) {
+        measureSettingsLift()
+        vv.addEventListener('resize', measureSettingsLift)
+        vv.addEventListener('scroll', measureSettingsLift)
+    } else {
+        vv.removeEventListener('resize', measureSettingsLift)
+        vv.removeEventListener('scroll', measureSettingsLift)
+        settingsLift.value = null
+    }
+}, { immediate: true })
+onBeforeUnmount(() => {
+    window.visualViewport?.removeEventListener('resize', measureSettingsLift)
+    window.visualViewport?.removeEventListener('scroll', measureSettingsLift)
+})
+
 const recoveryForm = useForm({ recoveryEmail: '' })
 function saveRecoveryEmail() {
     recoveryForm.post('/' + props.workspace.slug + '/recovery-email', {
@@ -242,6 +275,7 @@ watch(unlockOpen, (v) => {
 // the two disclosures can be backed out of like the sheet and the QR overlay —
 // they were the only things here a keyboard couldn't dismiss.
 function onEscape() {
+    if (confirmingReset.value) { confirmingReset.value = false; return }
     if (confirmingExit.value) { confirmingExit.value = false; return }
     if (qrOpen.value) { qrOpen.value = false; return }
     if (sheet.value) { sheet.value = false; return }
@@ -259,6 +293,17 @@ function unlockOwner() {
 // the only way back in is the owner link, and a board owner who never saved it is
 // locked out of their own board by one click on a button the width of a word.
 const confirmingExit = ref(false)
+
+// Reset owner link: for a link pasted somewhere by mistake. Confirmed first,
+// because it signs out every other device that used the old link.
+const confirmingReset = ref(false)
+const resetting = ref(false)
+function resetOwnerLink() {
+    resetting.value = true
+    router.post('/' + props.workspace.slug + '/owner-link/reset', {}, {
+        onFinish: () => { resetting.value = false },
+    })
+}
 
 function lockBoard() {
     confirmingExit.value = false
@@ -698,7 +743,7 @@ function persistOrder() {
 
             <!-- Owner: create-course slide-in panel -->
             <template v-if="isOwner">
-                <div v-if="sheet" class="fixed inset-0 z-40" role="dialog" aria-modal="true"
+                <div v-if="sheet" v-modal-focus class="fixed inset-0 z-40" role="dialog" aria-modal="true"
                     :aria-label="editing ? 'Edit course' : 'New course'">
                     <!-- Black, not ink: --color-ink is near-white in dark mode, so an
                          ink scrim brightened the page to a mid-grey lighter than the
@@ -769,13 +814,19 @@ function persistOrder() {
                 </div>
 
                 <!-- Board settings sheet. Same panel as New course. -->
-                <div v-if="settingsOpen" class="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Board settings">
+                <div v-if="settingsOpen" v-modal-focus class="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Board settings">
                     <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="settingsOpen = false"></div>
-                    <div class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col overflow-y-auto bg-surface px-5 py-6 shadow-xl sm:px-6">
-                        <div class="mb-5 flex items-start justify-between">
+                    <!-- Phone: a bottom sheet as tall as its content, like every other
+                         sheet here, with the board still visible above it. From sm up:
+                         the right-hand drawer. -->
+                    <div :style="settingsLift"
+                        class="absolute inset-x-0 bottom-0 flex max-h-[90vh] flex-col overflow-y-auto overscroll-contain rounded-t-2xl bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl
+                               sm:inset-x-auto sm:right-0 sm:top-0 sm:h-full sm:max-h-none sm:w-full sm:max-w-md sm:rounded-none sm:px-6 sm:py-6">
+                        <div aria-hidden="true" class="mx-auto mb-2 h-1 w-10 shrink-0 rounded-full bg-muted/30 sm:hidden"></div>
+                        <div class="-mt-1.5 mb-3.5 flex items-center justify-between">
                             <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Board settings</h2>
                             <button type="button" @click="settingsOpen = false" aria-label="Close"
-                                class="op-press -mr-1.5 -mt-1.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
+                                class="op-press -mr-1.5 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
                                 <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none"
                                     stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
                                     <path d="M5 5l10 10M15 5L5 15" />
@@ -794,8 +845,8 @@ function persistOrder() {
                             <div class="flex items-center justify-between gap-4">
                                 <p id="uploadAccessLabel" class="text-[14px] font-semibold text-ink">Anyone with the link can add files</p>
                                 <button type="button" role="switch" :aria-checked="!uploadsOwnerOnly" aria-labelledby="uploadAccessLabel"
-                                    :disabled="uploadAccessSaving" @click="setUploadAccess(!uploadsOwnerOnly)"
-                                    class="relative inline-flex h-11 w-14 shrink-0 cursor-pointer items-center justify-center disabled:opacity-60">
+                                    :aria-busy="uploadAccessSaving" @click="setUploadAccess(!uploadsOwnerOnly)"
+                                    class="relative inline-flex h-11 w-14 shrink-0 cursor-pointer items-center justify-center aria-busy:opacity-60">
                                     <!-- Off track at /70: at /40 it measured ~2.3:1 against
                                          the card, under the 3:1 a control needs to be seen. -->
                                     <span aria-hidden="true" class="h-7 w-12 rounded-full transition-colors duration-200"
@@ -807,9 +858,9 @@ function persistOrder() {
                         </section>
 
                         <section v-if="recoveryAvailable" class="mt-7 border-t border-sky pt-6">
-                            <p class="text-[14px] font-semibold text-ink">
+                            <h3 class="text-[14px] font-semibold text-ink">
                                 {{ needsRecoveryEmail ? 'Recovery email' : 'Recovery email is set' }}
-                            </p>
+                            </h3>
                             <p v-if="flash.recoverySaved" role="status"
                                class="teal-accent mt-2 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
                                 <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
@@ -852,9 +903,21 @@ function persistOrder() {
                             <p v-if="!needsRecoveryEmail" class="mt-2 text-[11px] text-muted">Saving an empty field removes the current recovery email.</p>
                         </section>
 
+                        <!-- For a link pasted into the class group by mistake. -->
+                        <section class="mt-7 border-t border-sky pt-6">
+                            <h3 class="text-[14px] font-semibold text-ink">Owner link</h3>
+                            <p class="mt-1 text-[12px] text-muted">
+                                Shared it by mistake? Reset it. You get a new owner link, and the old one stops working on every device.
+                            </p>
+                            <button type="button" @click="confirmingReset = true"
+                                class="op-press mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[13px] font-semibold text-ink transition hover:bg-sky/30 sm:min-h-9">
+                                Reset owner link
+                            </button>
+                        </section>
+
                         <!-- Last, and quiet: rare, and it only affects this browser.
                              The confirm explains what you'll need to get back in. -->
-                        <section class="mt-auto border-t border-sky pt-5">
+                        <section class="mt-7 border-t border-sky pt-5 sm:mt-auto">
                             <button type="button" @click="confirmingExit = true"
                                 class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-[13px] font-semibold text-muted transition hover:text-ink">
                                 <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor"
@@ -878,8 +941,8 @@ function persistOrder() {
                  only way back is the owner link — which the /start receipt screen
                  exists precisely because people lose. So the dialog's job is not
                  "are you sure" but "here is what you'll need to get back in". -->
-            <div v-if="confirmingExit" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-                 role="dialog" aria-modal="true" aria-label="Exit owner mode">
+            <div v-if="confirmingExit" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-labelledby="exitTitle" aria-describedby="exitDesc">
                 <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingExit = false"></div>
                 <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
@@ -889,13 +952,13 @@ function persistOrder() {
                             <path d="M5 5l10 10M15 5L5 15" />
                         </svg>
                     </button>
-                    <h2 class="pr-10 text-[15px] font-semibold text-ink">Exit owner mode on this device?</h2>
-                    <p class="mt-2 text-[13px] leading-relaxed text-muted">
+                    <h2 id="exitTitle" class="pr-10 text-[15px] font-semibold text-ink">Exit owner mode on this device?</h2>
+                    <p id="exitDesc" class="mt-2 text-[13px] leading-relaxed text-muted">
                         The board stays exactly as it is &mdash; this only signs you out here.
                         To manage it again you&rsquo;ll need your owner link, so make sure you still have it.
                     </p>
                     <div class="mt-5 flex items-center justify-end gap-2">
-                        <button type="button" @click="confirmingExit = false"
+                        <button type="button" @click="confirmingExit = false" data-autofocus
                                 class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Stay in owner mode</button>
                         <button type="button" @click="lockBoard"
                                 class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
@@ -905,7 +968,37 @@ function persistOrder() {
                 </div>
             </div>
 
-            <div v-if="qrOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Board QR code">
+            <!-- Reset owner link confirm. Says who loses access (everyone on the
+                 old link, including the owner's other devices) and that the new
+                 link is shown once. -->
+            <div v-if="confirmingReset" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-labelledby="resetTitle" aria-describedby="resetDesc">
+                <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingReset = false"></div>
+                <div class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                    <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                    <button type="button" @click="confirmingReset = false" aria-label="Close"
+                            class="op-press absolute right-3 top-3 hidden size-9 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:flex">
+                        <svg aria-hidden="true" class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                            <path d="M5 5l10 10M15 5L5 15" />
+                        </svg>
+                    </button>
+                    <h2 id="resetTitle" class="pr-10 text-[15px] font-semibold text-ink">Reset the owner link?</h2>
+                    <p id="resetDesc" class="mt-2 text-[13px] leading-relaxed text-muted">
+                        The old link stops working right away, and anyone who used it loses owner access, including your other devices.
+                        You'll see the new link once, so save it.
+                    </p>
+                    <div class="mt-5 flex items-center justify-end gap-2">
+                        <button type="button" @click="confirmingReset = false" data-autofocus
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
+                        <button type="button" @click="resetOwnerLink" :disabled="resetting"
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white disabled:opacity-60">
+                            Reset link
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div v-if="qrOpen" v-modal-focus class="fixed inset-0 z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Board QR code">
                 <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="qrOpen = false"></div>
                 <div class="relative flex w-full max-w-xs flex-col items-center rounded-2xl bg-surface px-6 pb-6 pt-11 shadow-xl">
                     <button type="button" @click="qrOpen = false" aria-label="Close"

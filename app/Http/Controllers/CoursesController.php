@@ -114,7 +114,7 @@ class CoursesController extends Controller
             RateLimiter::clear($key);
             session()->regenerate(); // anti-fixation on privilege change
 
-            session([$workspace->ownerSessionKey() => true]);
+            session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
 
             return redirect()
                 ->route('courses.index', ['workspace' => $workspace->slug])
@@ -124,6 +124,34 @@ class CoursesController extends Controller
         RateLimiter::hit($key, 600);
 
         return back()->withErrors(['ownerInput' => "That owner secret or link isn't right for this board — check you copied the whole thing."]);
+    }
+
+    /**
+     * Issue a new owner link and kill the old one, for a link pasted into the
+     * class group by mistake. Every other browser that unlocked with the old
+     * link loses owner access on its next request (owner sessions hold a
+     * fingerprint of the secret); this one keeps it. The new link is shown
+     * once, on the same receipt as a new board.
+     */
+    public function resetOwnerLink(Request $request)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        [$secret, $hash] = $workspace->draftOwnerSecretRotation();
+        $workspace->forceFill(['owner_secret_hash' => $hash])->save();
+
+        session()->regenerate(); // anti-fixation on privilege change
+        session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
+
+        return redirect()
+            ->route('start')
+            ->with([
+                'ownerReset' => true,
+                'createdName' => $workspace->name,
+                'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),
+                'ownerUrl' => route('courses.index', ['workspace' => $workspace->slug]).'?owner='.$secret,
+            ]);
     }
 
     /** Who can add files: anyone with the link, or only the owner. */

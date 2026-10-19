@@ -545,7 +545,7 @@ class UploadTest extends TestCase
             'manage_token' => 'someone-elses-token',
         ]);
 
-        $this->withSession([$this->workspace->ownerSessionKey() => true])
+        $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])
             ->delete(route('material.destroy', ['material' => $material->id, 'token' => 'owner']))
             ->assertRedirect(route('course.show', $this->wsParams(['slug' => $this->course->slug])));
 
@@ -563,7 +563,7 @@ class UploadTest extends TestCase
 
         // Visiting with a wrong ?owner= must not set the session flag
         $this->get(route('course.show', $this->wsParams(['slug' => $this->course->slug])).'?owner=not-the-secret');
-        $this->assertNotSame(true, session($this->workspace->ownerSessionKey()));
+        $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
 
         // and the destroy route still rejects without owner/token
         $this->delete(route('material.destroy', ['material' => $material->id, 'token' => 'owner']))
@@ -576,7 +576,7 @@ class UploadTest extends TestCase
         $this->get(route('course.show', $this->wsParams(['slug' => $this->course->slug])).'?owner='.$this->ownerSecret)
             ->assertRedirect(route('course.show', $this->wsParams(['slug' => $this->course->slug])));
 
-        $this->assertTrue(session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
     }
 
     public function test_uploads_are_open_when_no_passphrase_is_configured(): void
@@ -767,7 +767,7 @@ class UploadTest extends TestCase
 
     public function test_the_owner_can_keep_uploads_to_themselves(): void
     {
-        $this->withSession([$this->workspace->ownerSessionKey() => true])
+        $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])
             ->post('/'.$this->workspace->slug.'/upload-access', ['ownerOnly' => true])
             ->assertRedirect();
 
@@ -804,10 +804,10 @@ class UploadTest extends TestCase
         $course = $this->workspace->courses()->firstOrFail();
         $url = '/'.$this->workspace->slug.'/c/'.$course->slug;
 
-        $this->withSession([$this->workspace->ownerSessionKey() => true])
+        $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])
             ->get($url)->assertInertia(fn ($page) => $page->where('canUpload', true));
 
-        $this->withSession([$this->workspace->ownerSessionKey() => true])
+        $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])
             ->post($url.'/upload', [
                 'section' => 'notes',
                 'files' => [UploadedFile::fake()->create('notes.pdf', 10, 'application/pdf')],
@@ -822,7 +822,7 @@ class UploadTest extends TestCase
         [$other] = \App\Models\Workspace::provision('Someone Else');
 
         // Owner of this test board, posting to the other board's switch.
-        $this->withSession([$this->workspace->ownerSessionKey() => true])
+        $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])
             ->post('/'.$other->slug.'/upload-access', ['ownerOnly' => true])
             ->assertForbidden();
 

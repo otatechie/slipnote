@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue'
 import { Head, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
+import { vModalFocus } from '@/components/modalFocus'
 
 const props = defineProps({
     recent: { type: Array, default: () => [] },
@@ -186,6 +187,7 @@ function confirmForget() {
                      the one thing here that genuinely needs to be noticed. -->
                 <div class="op-card p-5 sm:p-6">
                     <p v-if="flash.recovered" class="text-[15px] font-bold text-teal">Owner access to "{{ flash.createdName }}" is restored</p>
+                    <p v-else-if="flash.ownerReset" class="text-[15px] font-bold text-teal">New owner link for "{{ flash.createdName }}". The old one no longer works.</p>
                     <p v-else class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
 
                     <!-- One red thing: the label. The box, the label and a third red
@@ -263,7 +265,7 @@ function confirmForget() {
                             class="op-press mt-3 min-h-11 w-full rounded-full text-[15px] font-semibold transition
                                    enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:shadow-sm
                                    disabled:cursor-not-allowed disabled:bg-sky/50 disabled:text-muted/70">
-                        <template v-if="flash.recovered">Open {{ flash.createdName }}</template>
+                        <template v-if="flash.recovered || flash.ownerReset">Open {{ flash.createdName }}</template>
                         <template v-else>Add your first course</template>
                     </button>
                 </div>
@@ -375,7 +377,7 @@ function confirmForget() {
 
         <!-- Remove-from-list confirm. Matches the report/QR modals: backdrop
              click + Escape close, danger-styled confirm. -->
-        <div v-if="forgetTarget" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+        <div v-if="forgetTarget" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
              role="dialog" aria-modal="true" aria-label="Remove board from list"
              @keydown.escape.window="forgetTarget = null">
             <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="forgetTarget = null"></div>

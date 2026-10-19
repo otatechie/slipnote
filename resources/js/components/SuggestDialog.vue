@@ -2,6 +2,7 @@
 import { nextTick, ref, watch } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import { suggestOpen, suggestPrefill } from './suggest'
+import { vModalFocus } from './modalFocus'
 
 // A form, not a mailto: link. Most students have no mail app set up on their
 // phone, so "Email us" opened nothing at all. This posts to the server, which
@@ -39,7 +40,7 @@ function submit() {
 </script>
 
 <template>
-    <div v-if="suggestOpen" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+    <div v-if="suggestOpen" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
          role="dialog" aria-modal="true" aria-labelledby="suggestTitle"
          @keydown.escape.window="close">
         <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="close"></div>

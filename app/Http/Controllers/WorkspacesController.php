@@ -79,7 +79,7 @@ class WorkspacesController extends Controller
         // don't have to re-paste the secret on the next page. Regenerate the
         // session ID on every privilege change (anti-fixation).
         session()->regenerate();
-        session([$workspace->ownerSessionKey() => true]);
+        session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
 
         return back()
             ->withCookie(RecentWorkspaces::add($request, $workspace))

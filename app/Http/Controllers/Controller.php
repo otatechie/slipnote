@@ -44,7 +44,7 @@ abstract class Controller
 
         RateLimiter::clear($key);
         session()->regenerate(); // anti-fixation on privilege change
-        session([$workspace->ownerSessionKey() => true]);
+        session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
 
         return true;
     }
@@ -58,6 +58,6 @@ abstract class Controller
     /** Whether the current session has owner access to the resolved workspace. */
     protected function isOwner(): bool
     {
-        return session($this->workspace()->ownerSessionKey()) === true;
+        return $this->workspace()->sessionIsOwner();
     }
 }

@@ -151,7 +151,7 @@ class OwnerRecoveryTest extends TestCase
 
         $fresh = $this->workspace->fresh();
         $this->assertFalse($fresh->verifyOwner($oldSecret), 'old link retired on redeem');
-        $this->assertSame(true, session($this->workspace->ownerSessionKey()));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
 
         // The new owner link is shown once, on the same screen a new board gets.
         parse_str((string) parse_url(session('ownerUrl'), PHP_URL_QUERY), $q);
@@ -267,5 +267,56 @@ class OwnerRecoveryTest extends TestCase
         ])->assertSessionHas('done', true);
 
         $this->assertTrue($this->workspace->fresh()->verifyOwner($oldSecret));
+    }
+
+    // --- Reset owner link ---
+
+    public function test_resetting_the_owner_link_signs_out_everyone_on_the_old_link(): void
+    {
+        $old = $this->ownerSecret;
+
+        // Someone pasted the owner link into the class group, and a classmate used it.
+        $this->get('/'.$this->workspace->slug.'?owner='.$old)->assertRedirect();
+        $intruder = session()->all();
+        $this->flushSession();
+
+        // The owner, in their own browser, resets it.
+        $this->withSession([$this->workspace->ownerSessionKey() => $this->workspace->ownerSessionValue()])
+            ->post('/'.$this->workspace->slug.'/owner-link/reset')
+            ->assertRedirect(route('start'))
+            ->assertSessionHas('ownerReset', true)
+            ->assertSessionHas('ownerUrl', fn ($url) => ! str_contains($url, $old));
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner(), 'the owner stays owner');
+
+        // The classmate's session from the old link is no longer owner.
+        $this->flushSession();
+        $this->withSession($intruder)
+            ->get('/'.$this->workspace->slug)
+            ->assertInertia(fn ($page) => $page->where('isOwner', false));
+
+        // And the old link no longer unlocks.
+        $this->flushSession();
+        $this->get('/'.$this->workspace->slug.'?owner='.$old);
+        $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
+    }
+
+    public function test_only_the_owner_can_reset_the_owner_link(): void
+    {
+        $before = $this->workspace->owner_secret_hash;
+
+        $this->post('/'.$this->workspace->slug.'/owner-link/reset')->assertForbidden();
+
+        $this->assertSame($before, $this->workspace->fresh()->owner_secret_hash);
+    }
+
+    public function test_a_session_unlocked_before_fingerprints_stays_owner_until_a_reset(): void
+    {
+        // Sessions from before this change hold a bare true.
+        $this->withSession([$this->workspace->ownerSessionKey() => true])
+            ->get('/'.$this->workspace->slug)
+            ->assertInertia(fn ($page) => $page->where('isOwner', true));
+
+        // It was upgraded to the fingerprint, so a reset now revokes it.
+        $this->assertSame($this->workspace->ownerSessionValue(), session($this->workspace->ownerSessionKey()));
     }
 }

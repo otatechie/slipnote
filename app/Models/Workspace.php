@@ -197,6 +197,36 @@ class Workspace extends Model
         return "ws_owner_{$this->id}";
     }
 
+    /**
+     * What an owner session holds: a fingerprint of the current owner secret's
+     * hash, not a bare true. Rotating the secret (recovery, or Reset owner
+     * link) changes it, so every browser that unlocked with the old link stops
+     * being owner on its next request. With true, a leaked link that had been
+     * used stayed owner for as long as its session lived.
+     */
+    public function ownerSessionValue(): string
+    {
+        return hash('sha256', 'owner|'.$this->owner_secret_hash);
+    }
+
+    /** Whether this session holds owner access under the current secret. */
+    public function sessionIsOwner(): bool
+    {
+        $held = session($this->ownerSessionKey());
+
+        // A session unlocked before fingerprints holds a bare true. Bind it to
+        // the current secret on first sight rather than signing every owner
+        // out on deploy -- some have lost their link. From here on a rotation
+        // revokes it like any other.
+        if ($held === true) {
+            session([$this->ownerSessionKey() => $this->ownerSessionValue()]);
+
+            return true;
+        }
+
+        return is_string($held) && hash_equals($this->ownerSessionValue(), $held);
+    }
+
     public function uploadUnlockKey(): string
     {
         return "ws_upload_ok_{$this->id}";
