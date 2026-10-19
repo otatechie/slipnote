@@ -8,34 +8,37 @@
 
 /* Open Runde, self-hosted (public/fonts). A rounded Inter (OFL) — served from
    our own origin so the production CSP (font-src 'self') allows it and no
-   visitor IPs leak to a font CDN. Ships as four static weights, not variable. */
+   visitor IPs leak to a font CDN. Ships as four static weights, not variable.
+   Relative URLs, so Vite serves them: as /fonts/ from public/ they 404'd
+   under the dev server (CSS from :5173 asked :5173 for them) and every local
+   page fell back to the system font. Built, they land hashed in /build. */
 @font-face {
     font-family: 'Open Runde';
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url('/fonts/OpenRunde-Regular.woff2') format('woff2');
+    src: url('../fonts/OpenRunde-Regular.woff2') format('woff2');
 }
 @font-face {
     font-family: 'Open Runde';
     font-style: normal;
     font-weight: 500;
     font-display: swap;
-    src: url('/fonts/OpenRunde-Medium.woff2') format('woff2');
+    src: url('../fonts/OpenRunde-Medium.woff2') format('woff2');
 }
 @font-face {
     font-family: 'Open Runde';
     font-style: normal;
     font-weight: 600;
     font-display: swap;
-    src: url('/fonts/OpenRunde-Semibold.woff2') format('woff2');
+    src: url('../fonts/OpenRunde-Semibold.woff2') format('woff2');
 }
 @font-face {
     font-family: 'Open Runde';
     font-style: normal;
     font-weight: 700;
     font-display: swap;
-    src: url('/fonts/OpenRunde-Bold.woff2') format('woff2');
+    src: url('../fonts/OpenRunde-Bold.woff2') format('woff2');
 }
 @theme {
     --font-sans: 'Open Runde', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',

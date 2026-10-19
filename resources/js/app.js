@@ -2,6 +2,10 @@ import { createApp, h } from 'vue'
 import { createInertiaApp, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 
+// The fonts go through Vite (see @font-face in app.css); listing them here puts
+// them in the build manifest, so Blade can preload them with Vite::asset().
+import.meta.glob(['../fonts/**'])
+
 const THEME_KEY = 'slipnote-theme'
 const THEME_OPTIONS = ['system', 'light', 'dark']
 

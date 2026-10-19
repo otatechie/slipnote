@@ -61,8 +61,8 @@
          CSP happy (font-src 'self') and no visitor IPs go to a font CDN.
          Preload the two most-used weights (body + headings); the other two
          load on demand. --}}
-    <link rel="preload" href="/fonts/OpenRunde-Regular.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/fonts/OpenRunde-Semibold.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ Vite::asset('resources/fonts/OpenRunde-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{ Vite::asset('resources/fonts/OpenRunde-Semibold.woff2') }}" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @inertiaHead
 </head>
