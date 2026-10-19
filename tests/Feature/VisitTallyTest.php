@@ -172,25 +172,4 @@ class VisitTallyTest extends TestCase
             ->assertOk()
             ->assertSee('No arrivals counted yet');
     }
-
-    // --- Feedback prompt ---
-
-    public function test_the_board_gets_prefilled_feedback_links_when_configured(): void
-    {
-        config(['noteshare.feedback_whatsapp' => '233241234567', 'noteshare.feedback_email' => 'hi@example.com']);
-
-        $this->get(route('courses.index', $this->wsParams()))
-            ->assertInertia(fn ($page) => $page
-                ->where('feedback.whatsapp', fn ($url) => str_starts_with($url, 'https://wa.me/233241234567?text=')
-                    && str_contains(rawurldecode($url), 'Test Workspace'))
-                ->where('feedback.email', fn ($url) => str_starts_with($url, 'mailto:hi@example.com?subject=')));
-    }
-
-    public function test_no_feedback_prompt_when_nowhere_to_send_it(): void
-    {
-        config(['noteshare.feedback_whatsapp' => '', 'noteshare.feedback_email' => null]);
-
-        $this->get(route('courses.index', $this->wsParams()))
-            ->assertInertia(fn ($page) => $page->where('feedback', null));
-    }
 }

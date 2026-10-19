@@ -1,8 +1,15 @@
 <x-layouts.operator title="Operator">
 <div class="op mx-auto w-full max-w-5xl flex-1 px-5 pb-12">
-    <header class="op-top mb-4 flex items-center justify-between gap-4">
+    {{-- Not pinned: a title and Log out don't need to follow you down a list,
+         and pinned they floated translucent over every row on the way. --}}
+    <header class="mb-4 flex items-center justify-between gap-4 pb-1 pt-6 sm:pt-8">
         <div class="min-w-0">
-            <p class="op-kicker mb-1 text-[11px] font-semibold uppercase text-muted">SlipNote · Moderation</p>
+            {{-- The mark, as on the login page and /start. "Moderation" went:
+                 the page also holds boards, visitors and suggestions. --}}
+            <a href="/" class="-my-2.5 inline-flex min-h-11 items-center gap-1.5 text-[13px] font-bold text-muted transition hover:text-ink sm:my-0 sm:mb-1 sm:min-h-0">
+                <img src="/logo-mark.png" alt="" class="size-4">
+                SlipNote
+            </a>
             <h1 class="op-title text-[1.85rem] font-bold text-ink sm:text-[2.15rem]">Operator</h1>
         </div>
         <form method="POST" action="{{ route('operator.logout') }}">
@@ -37,7 +44,7 @@
         <a href="{{ route('operator.dashboard') }}"
            @if ($tab === 'reported') aria-current="page" @endif
            class="op-press">
-            <span class="sm:hidden">Reported</span><span class="hidden sm:inline">Reported files</span>
+            <span class="sm:hidden">Reports</span><span class="hidden sm:inline">Reported files</span>
             @if ($reportedTotal > 0)
                 <span class="rounded-full bg-base px-1.5 text-[11px] font-semibold tabular-nums text-danger">{{ $reportedTotal }}</span>
             @endif
@@ -46,12 +53,19 @@
            @if ($tab === 'boards') aria-current="page" @endif
            class="op-press">
             <span class="sm:hidden">Boards</span><span class="hidden sm:inline">Newest boards</span>
-            <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $recent->count() }}</span>
         </a>
         <a href="{{ route('operator.dashboard', ['tab' => 'visitors']) }}"
            @if ($tab === 'visitors') aria-current="page" @endif
            class="op-press">
-            Visitors
+            <span class="sm:hidden">Visits</span><span class="hidden sm:inline">Visitors</span>
+        </a>
+        <a href="{{ route('operator.dashboard', ['tab' => 'suggestions']) }}"
+           @if ($tab === 'suggestions') aria-current="page" @endif
+           class="op-press">
+            <span class="sm:hidden">Ideas</span><span class="hidden sm:inline">Suggestions</span>
+            @if ($suggestionsWeek > 0)
+                <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted" title="This week">{{ $suggestionsWeek }}</span>
+            @endif
         </a>
         <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}"
            @if ($tab === 'ambassadors') aria-current="page" @endif
@@ -96,7 +110,9 @@
                 <input id="amb-campus" name="campus" value="{{ old('campus') }}" maxlength="80"
                        class="w-full rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
             </div>
-            <div class="grid grid-cols-[1fr_auto] gap-2">
+            {{-- Side by side from sm up; stacked on phones, where the pair left
+                 the Phone label wrapping over two lines beside a cramped select. --}}
+            <div class="grid gap-3 sm:grid-cols-[1fr_auto] sm:gap-2">
                 <div>
                     <label for="amb-phone" class="mb-1.5 block text-[13px] font-semibold text-ink">Phone <span class="font-normal text-muted">(optional — where the bundle goes)</span></label>
                     <input id="amb-phone" name="phone" value="{{ old('phone') }}" maxlength="30" inputmode="tel"
@@ -105,7 +121,7 @@
                 <div>
                     <label for="amb-network" class="mb-1.5 block text-[13px] font-semibold text-ink">Network</label>
                     <select id="amb-network" name="network"
-                            class="h-[46px] rounded-xl border border-sky bg-surface px-3 text-[15px] text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
+                            class="h-[46px] w-full rounded-xl border border-sky bg-surface px-3 text-[15px] sm:w-auto text-ink shadow-sm focus:border-neon focus:outline-none focus:ring-2 focus:ring-neon/20">
                         <option value="">Not set</option>
                         @foreach (\App\Models\Ambassador::NETWORKS as $key => $label)
                             <option value="{{ $key }}" @selected(old('network') === $key)>{{ $label }}</option>
@@ -264,12 +280,9 @@
          source, never a visitor. An arrival is a page opened from outside the
          site, so clicking around a board doesn't inflate anything. --}}
     @if ($visitors['total'] === 0)
-        <div class="op-card px-6 py-10 text-center">
-            <p class="text-[15px] font-semibold text-ink">No arrivals counted yet</p>
-            <p class="mx-auto mt-1.5 max-w-md text-[13px] text-muted">
-                Counting starts with the next visit. Countries need Cloudflare in front of the site and its
-                ranges in TRUSTED_PROXIES; without them every country reads Unknown.
-            </p>
+        <div class="op-card px-5 py-4">
+            <p class="text-[14px] text-muted"><span class="font-semibold text-ink">No arrivals counted yet.</span> Counting starts with the next visit.</p>
+            <p class="mt-1 text-[12px] text-muted">Countries need Cloudflare in front of the site and its ranges in TRUSTED_PROXIES; without them every country reads Unknown.</p>
         </div>
     @else
         <p class="mb-4 text-[13px] text-muted">
@@ -326,6 +339,37 @@
     @endif
     @endif
 
+    @if ($tab === 'suggestions')
+    {{-- From the "Suggest a feature" form. Newest first, last 100. --}}
+    @if ($suggestions->isEmpty())
+        <div class="op-card px-5 py-4">
+            <p class="text-[14px] text-muted"><span class="font-semibold text-ink">No suggestions yet.</span> They come from "Suggest a feature" in the app footer and the "Tell us" card on busy boards.</p>
+        </div>
+    @else
+        <div class="op-card overflow-hidden">
+            @foreach ($suggestions as $s)
+                <div class="op-row flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="whitespace-pre-line break-words text-[14px] text-ink">{{ $s->message }}</p>
+                        <p class="mt-1 text-[12px] text-muted">
+                            {{ $s->created_at->diffForHumans() }}
+                            @if ($s->page) · from <span class="font-medium text-ink">{{ $s->page }}</span> @endif
+                            @if ($s->reply_to) · reply to <span class="select-all font-medium text-ink">{{ $s->reply_to }}</span> @endif
+                        </p>
+                    </div>
+                    <form method="POST" action="{{ route('operator.suggestions.delete', $s->id) }}" class="shrink-0">
+                        @csrf
+                        <button type="submit" aria-label="Delete this suggestion" title="Delete"
+                                class="op-press flex size-11 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
+                            <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M5 5l10 10M15 5L5 15" /></svg>
+                        </button>
+                    </form>
+                </div>
+            @endforeach
+        </div>
+    @endif
+    @endif
+
     @if ($tab === 'boards')
     <div class="op-card overflow-hidden">
         @forelse ($recent as $ws)
@@ -339,10 +383,12 @@
             @endphp
             {{-- Stacks on phones: the right column plus a truncating board name
                  leaves ~190px for the name at 320px wide, which cuts it mid-word. --}}
-            <div class="op-row flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
+            {{-- The whole row opens the board (the link stretches over it): the
+                 name alone was a 19px-tall target on a phone. --}}
+            <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
                 <div class="min-w-0">
                     <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
-                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $ws->name }}</a>
+                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="underline decoration-muted/40 underline-offset-4 after:absolute after:inset-0 hover:decoration-ink/40">{{ $ws->name }}</a>
                     </p>
                     <p class="mt-0.5 text-[12px] text-muted">
                         {{-- "0 courses · 0 files" on eight of ten rows is the same
@@ -527,21 +573,25 @@
             @endforeach
         </div>
     @else
-        <div class="op-card px-6 py-16 text-center">
-            <p class="text-[16px] font-semibold tracking-tight text-ink">Nothing reported</p>
-            <p class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">No files are currently flagged. Reports show up here when someone uses the report button on a file.</p>
+        {{-- One line, not a 200px card: an empty queue is good news, and a
+             tall empty state pushed "At a glance" below the fold for nothing. --}}
+        <div class="op-card flex items-center gap-3 px-5 py-4">
+            <svg aria-hidden="true" class="size-5 shrink-0 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
+            <p class="text-[14px] text-muted"><span class="font-semibold text-ink">Nothing reported.</span> Flagged files appear here.</p>
         </div>
     @endif
     @endif
 
     {{-- Context, not the task — so it sits after the queue rather than pushing
          it below the fold. Deltas only when they moved: "+0 this week" on every
-         tile is chrome that looks like a signal and isn't. --}}
-    <h2 class="mb-2 mt-10 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">At a glance</h2>
+         tile is chrome that looks like a signal and isn't. On the landing tab
+         only: repeated under every other tab it was a footer nobody asked for. --}}
+    @if ($tab === 'reported')
+    <h2 class="mb-2 mt-8 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">At a glance</h2>
     <div class="op-metrics">
         <div class="op-metric">
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Boards</p>
-            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['workspaces']) }}</p>
+            <p class="mt-0.5 text-[1.35rem] font-bold leading-tight tabular-nums tracking-tight text-ink sm:mt-1 sm:text-[1.65rem]">{{ number_format($stats['workspaces']) }}</p>
             @if ($stats['workspaces_week'] > 0)
                 <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['workspaces_week'] }} this week</p>
             @endif
@@ -551,7 +601,7 @@
              used. This is the number the empty-board work has to move. --}}
         <div class="op-metric">
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">With files</p>
-            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['workspaces'] - $stats['empty_boards']) }}</p>
+            <p class="mt-0.5 text-[1.35rem] font-bold leading-tight tabular-nums tracking-tight text-ink sm:mt-1 sm:text-[1.65rem]">{{ number_format($stats['workspaces'] - $stats['empty_boards']) }}</p>
             <p class="mt-0.5 text-[12px] text-muted">of {{ number_format($stats['workspaces']) }} boards</p>
         </div>
         {{-- Opened or downloaded from, not uploaded to: an archive nobody adds
@@ -560,24 +610,25 @@
              Before any board has been visited the count is 0 for a reason that
              isn't "nobody came" — say which, or it reads as broken. --}}
         <div class="op-metric">
-            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Opened</p>
-            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
+            <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Active</p>
+            <p class="mt-0.5 text-[1.35rem] font-bold leading-tight tabular-nums tracking-tight text-ink sm:mt-1 sm:text-[1.65rem]">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
             <p class="mt-0.5 text-[12px] text-muted">
-                {{ $stats['tracking_started'] ? 'or downloaded from · last 7 days' : 'no visits recorded yet' }}
+                {!! $stats['tracking_started'] ? 'opened or downloaded, 7&nbsp;days' : 'no visits recorded yet' !!}
             </p>
         </div>
         <div class="op-metric">
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Files</p>
-            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['files']) }}</p>
+            <p class="mt-0.5 text-[1.35rem] font-bold leading-tight tabular-nums tracking-tight text-ink sm:mt-1 sm:text-[1.65rem]">{{ number_format($stats['files']) }}</p>
             @if ($stats['files_week'] > 0)
                 <p class="mt-0.5 text-[12px] text-muted">+{{ $stats['files_week'] }} this week</p>
             @endif
         </div>
         <div class="op-metric">
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Storage</p>
-            <p class="mt-1 text-[1.65rem] font-bold tabular-nums tracking-tight text-ink">{{ number_format($stats['storage_mb'], 1) }} <span class="text-[14px] font-semibold text-muted">MB</span></p>
+            <p class="mt-0.5 text-[1.35rem] font-bold leading-tight tabular-nums tracking-tight text-ink sm:mt-1 sm:text-[1.65rem]">{{ number_format($stats['storage_mb'], 1) }} <span class="text-[14px] font-semibold text-muted">MB</span></p>
             <p class="mt-0.5 text-[12px] text-muted">across all boards</p>
         </div>
     </div>
+    @endif
 </div>
 </x-layouts.operator>

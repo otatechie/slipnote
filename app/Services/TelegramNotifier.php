@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Material;
+use App\Models\Suggestion;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -92,6 +93,45 @@ class TelegramNotifier
                 'message' => $e->getMessage(),
                 'material_id' => $material->id,
             ]);
+        }
+    }
+
+    /**
+     * A message from the "Suggest a feature" form. Already stored in the
+     * database, so an unconfigured or failing Telegram only costs the ping.
+     */
+    public function notifySuggestion(Suggestion $suggestion): void
+    {
+        $token = (string) config('noteshare.telegram_bot_token');
+        $chatId = (string) config('noteshare.telegram_chat_id');
+
+        if ($token === '' || $chatId === '') {
+            return;
+        }
+
+        $lines = ['💡 <b>Suggestion</b>', $this->esc($suggestion->message)];
+        if (filled($suggestion->reply_to)) {
+            $lines[] = 'Reply to: '.$this->esc($suggestion->reply_to);
+        }
+        if (filled($suggestion->page)) {
+            $lines[] = 'From: '.$this->esc($suggestion->page);
+        }
+
+        try {
+            $response = Http::asJson()
+                ->timeout(5)
+                ->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                    'chat_id' => $chatId,
+                    'text' => implode("\n", $lines),
+                    'parse_mode' => 'HTML',
+                    'disable_web_page_preview' => true,
+                ]);
+
+            if ($response->failed()) {
+                Log::warning('Telegram suggestion notification failed', ['status' => $response->status()]);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Telegram suggestion notification threw', ['message' => $e->getMessage()]);
         }
     }
 

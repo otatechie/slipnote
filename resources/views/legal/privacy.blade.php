@@ -38,7 +38,8 @@
                 <li>A one-time <strong>manage token</strong> for each upload. It is what the "delete your own file" link contains, so it stays with the file until the file is deleted.</li>
                 <li>A <strong>content fingerprint</strong> (SHA-256 hash) of each file, used to skip duplicate uploads and to stop files the operator removed from being re-uploaded. Fingerprints of operator-removed files are kept after the file itself is gone; a fingerprint can't be turned back into the file.</li>
                 <li>If you <strong>report a file</strong>: the report reason and your IP address, used only to review the report.</li>
-                <li>Your <strong>IP address as a rate-limit counter</strong> when you create a board, upload a file, report a file, or try the operator login. These counters live in a short-lived cache and exist to blunt automated abuse, not to identify you.</li>
+                <li>If you <strong>suggest a feature</strong>: your message, the page you sent it from, and a reply address only if you choose to give one. No IP address is stored with it.</li>
+                <li>Your <strong>IP address as a rate-limit counter</strong> when you create a board, upload a file, report a file, send a suggestion, or try the operator login. These counters live in a short-lived cache and exist to blunt automated abuse, not to identify you.</li>
                 <li>When a board was <strong>last opened</strong>. One timestamp per board, overwritten each visit &mdash; it tells the operator which boards are still in use. It records no visitor details and keeps no history.</li>
                 <li>The board's <strong>owner secret</strong>, and an <strong>upload passphrase</strong> if the owner sets one — both stored only as one-way hashes, so we can't read them back.</li>
                 <li>An optional <strong>recovery email</strong> if the owner opts in. It is stored encrypted at rest and used only to send a fresh owner link when requested.</li>
@@ -54,7 +55,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">How long we keep it</h2>
-            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, workspaces, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
+            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, workspaces, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
         </section>
 
         <section>
@@ -83,7 +84,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Telegram notifications (optional)</h2>
-            <p class="text-[14px] text-ink">If the site operator has configured Telegram, a one-line notice (course, section, filename, link) is posted to the configured channel on every new upload. This is set by the operator, not per workspace.</p>
+            <p class="text-[14px] text-ink">If the site operator has configured Telegram, a one-line notice (course, section, filename, link) is posted to the configured channel on every new upload, and each feature suggestion (the message, the page, and any reply address you gave) is posted there too. This is set by the operator, not per workspace.</p>
         </section>
 
         <section>

@@ -4,6 +4,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CoursesController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\OperatorController;
+use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\WorkspaceRecoveryController;
 use App\Http\Controllers\WorkspacesController;
 use App\Models\Material;
@@ -22,6 +23,7 @@ Route::get('/start', [WorkspacesController::class, 'index'])->name('start');
 Route::post('/workspaces', [WorkspacesController::class, 'store'])->name('workspaces.store');
 Route::post('/workspaces/open', [WorkspacesController::class, 'open'])->name('workspaces.open');
 Route::post('/workspaces/forget', [WorkspacesController::class, 'forget'])->name('workspaces.forget');
+Route::post('/suggestions', [SuggestionController::class, 'store'])->name('suggestions.store');
 
 // Static routes below are declared BEFORE the /{workspace} catch-all so their
 // paths (privacy, terms, download, operator, …) aren't read as workspace slugs.
@@ -91,6 +93,7 @@ Route::post('/operator/logout', [OperatorController::class, 'logout'])->name('op
 Route::post('/operator/material/{material}/remove', [OperatorController::class, 'remove'])->name('operator.remove');
 Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');
+Route::post('/operator/suggestions/{suggestion}/delete', [OperatorController::class, 'deleteSuggestion'])->name('operator.suggestions.delete');
 Route::post('/operator/ambassadors', [OperatorController::class, 'storeAmbassador'])->name('operator.ambassadors.store');
 Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::class, 'retireAmbassador'])->name('operator.ambassadors.retire');
 

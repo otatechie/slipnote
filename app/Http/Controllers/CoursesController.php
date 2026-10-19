@@ -83,7 +83,6 @@ class CoursesController extends Controller
             'storagePct' => $cap > 0 ? min(100, (int) round($used / $cap * 100)) : 0,
             'search' => $search,
             'sort' => $sort,
-            'feedback' => $this->feedbackLinks($workspace->name),
         ]);
     }
 
@@ -235,32 +234,5 @@ class CoursesController extends Controller
         return redirect()
             ->route('courses.index', ['workspace' => $workspace->slug])
             ->with('created', "\u{201C}{$course->code}\u{201D} updated.");
-    }
-
-    /**
-     * Where "Tell us how you use it" goes, with the message half-written so
-     * a student only has to finish the sentence. Null when nothing is set,
-     * so the board never shows a prompt that leads nowhere.
-     *
-     * @return array{whatsapp: ?string, email: ?string}|null
-     */
-    private function feedbackLinks(string $boardName): ?array
-    {
-        $number = (string) config('noteshare.feedback_whatsapp');
-        $email = config('noteshare.feedback_email');
-        $email = is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : null;
-
-        if ($number === '' && $email === null) {
-            return null;
-        }
-
-        $text = "Hi! I use SlipNote for \"{$boardName}\". Here's how we use it: ";
-
-        return [
-            'whatsapp' => $number !== '' ? 'https://wa.me/'.$number.'?text='.rawurlencode($text) : null,
-            'email' => $email !== null
-                ? 'mailto:'.$email.'?subject='.rawurlencode('How we use SlipNote').'&body='.rawurlencode($text)
-                : null,
-        ];
     }
 }

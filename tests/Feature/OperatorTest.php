@@ -89,13 +89,21 @@ class OperatorTest extends TestCase
         // setUp's workspace holds one file; this one holds nothing at all.
         Workspace::provision('Made And Left');
 
-        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
-            ->get(route('operator.dashboard', ['tab' => 'boards']))
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+
+        // "At a glance" lives on the landing tab only.
+        $this->withSession($session)
+            ->get(route('operator.dashboard'))
             ->assertOk()
             ->assertSee('With files', false)
-            ->assertSee('of 2 boards', false)
+            ->assertSee('of 2 boards', false);
+
+        $this->withSession($session)
+            ->get(route('operator.dashboard', ['tab' => 'boards']))
+            ->assertOk()
             ->assertSee('Nothing added yet', false)
-            ->assertDontSee('0 courses', false);
+            ->assertDontSee('0 courses', false)
+            ->assertDontSee('With files', false);
     }
 
     public function test_rotating_the_operator_secret_invalidates_existing_sessions(): void

@@ -6,6 +6,7 @@ use App\Models\Ambassador;
 use App\Models\BlockedUpload;
 use App\Models\Material;
 use App\Models\Report;
+use App\Models\Suggestion;
 use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,7 +56,7 @@ class OperatorController extends Controller
             && hash_equals($this->secretFingerprint(), session('operator_fp'));
     }
 
-    private const TABS = ['reported', 'boards', 'visitors', 'ambassadors'];
+    private const TABS = ['reported', 'boards', 'visitors', 'suggestions', 'ambassadors'];
 
     /** Reported is the default: action before browsing. */
     private function tab(Request $request): string
@@ -144,6 +145,10 @@ class OperatorController extends Controller
             'ambassadors' => $ambassadors = Ambassador::query()->orderBy('name')->get(),
             'ambassadorRows' => $this->ambassadorRows($ambassadors),
             'visitors' => $this->tab($request) === 'visitors' ? $this->visitorStats() : null,
+            // Newest first; the tab badge counts only this week's, so it reads
+            // as "new since you last looked" for an operator who checks weekly.
+            'suggestions' => $this->tab($request) === 'suggestions' ? Suggestion::latest()->limit(100)->get() : collect(),
+            'suggestionsWeek' => Suggestion::where('created_at', '>=', now()->subDays(7))->count(),
         ]);
     }
 
@@ -442,6 +447,16 @@ class OperatorController extends Controller
         $material->reports()->delete();
 
         return $this->dashboardRedirect($request)->with('done', 'Reports dismissed.');
+    }
+
+    /** Delete a suggestion: read and dealt with, or its sender asked for it gone. */
+    public function deleteSuggestion(Request $request, Suggestion $suggestion)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $suggestion->delete();
+
+        return $this->dashboardRedirect($request, 'suggestions')->with('done', 'Suggestion deleted.');
     }
 
     /** Reverse the last dismiss or remove, if the window hasn't closed. */

@@ -1,4 +1,6 @@
 <script setup>
+import SuggestDialog from './SuggestDialog.vue'
+import { openSuggest } from './suggest'
 </script>
 
 <template>
@@ -23,6 +25,8 @@
                         </svg>
                         <span class="sr-only">(opens in a new tab)</span>
                     </a>
+                    <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                    <button type="button" @click="openSuggest()" class="cursor-pointer py-1.5 hover:text-neon">Suggest a feature</button>
                     <template v-if="$page.props.ambassadorFormUrl">
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>
                         <a :href="$page.props.ambassadorFormUrl" class="inline-flex items-center gap-1 py-1.5 hover:text-neon" target="_blank" rel="noopener noreferrer">
@@ -66,5 +70,6 @@
                 </p>
             </div>
         </footer>
+        <SuggestDialog />
     </div>
 </template>
