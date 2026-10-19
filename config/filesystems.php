@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Off: files go out through the token download route only, so no
+            // extra /storage/{path} route exists for them.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

@@ -156,7 +156,11 @@ class Material extends Model
      */
     public function downloadName(): string
     {
-        $ext = pathinfo($this->original_filename, PATHINFO_EXTENSION);
+        // The extension comes from the stored file, which was named from its
+        // content when uploaded, never from the uploader's filename: a PDF
+        // named "slides.hta" must not reach a classmate's disk as an .hta.
+        $ext = pathinfo((string) $this->stored_path, PATHINFO_EXTENSION)
+            ?: pathinfo($this->original_filename, PATHINFO_EXTENSION);
         $base = filled($this->title) ? $this->title : pathinfo($this->original_filename, PATHINFO_FILENAME);
         if ($base === '') {
             $base = $this->original_filename;

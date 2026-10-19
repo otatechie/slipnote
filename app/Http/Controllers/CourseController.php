@@ -6,6 +6,7 @@ use App\Models\BlockedUpload;
 use App\Models\Course;
 use App\Models\Material;
 use App\Services\TelegramNotifier;
+use App\Support\ClientKey;
 use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
@@ -42,7 +43,7 @@ class CourseController extends Controller
             Cookie::queue($recent);
         }
 
-        $search = trim($request->input('search', ''));
+        $search = $this->searchInput($request);
         $sort = $request->input('sort', 'newest');
 
         $query = $course->materials();
@@ -50,10 +51,9 @@ class CourseController extends Controller
             // Each word must match title or filename, so "past paper" finds
             // "past_papers_2023.pdf" — separators in filenames shouldn't hide
             // files from the natural query.
-            foreach (preg_split('/\s+/', $search) as $term) {
-                $query->where(function ($q) use ($term) {
-                    $q->where('title', 'like', "%{$term}%")->orWhere('original_filename', 'like', "%{$term}%");
-                });
+            // At most 8 words: each adds a clause.
+            foreach (array_slice(preg_split('/\s+/', $search), 0, 8) as $term) {
+                $this->whereLikeAny($query, ['title', 'original_filename'], $term);
             }
         }
         // Pinned files lead their section whatever the sort; the list groups
@@ -143,11 +143,16 @@ class CourseController extends Controller
     {
         abort_unless(isset(Material::SECTIONS[$section]), 404);
 
-        $key = 'section_zip:'.$request->ip().':'.$this->workspace()->id;
-        if (RateLimiter::tooManyAttempts($key, 10)) {
+        // 10 per board per 10 min, and 20 an hour across all boards: each zip
+        // is built on disk, so one client fanning out over many boards could
+        // otherwise fill the temp directory.
+        $key = 'section_zip:'.ClientKey::of($request).':'.$this->workspace()->id;
+        $anyKey = 'section_zip_any:'.ClientKey::of($request);
+        if (RateLimiter::tooManyAttempts($key, 10) || RateLimiter::tooManyAttempts($anyKey, 20)) {
             abort(429, 'Too many section downloads. Try again in a few minutes.');
         }
         RateLimiter::hit($key, 600);
+        RateLimiter::hit($anyKey, 3600);
 
         $course = Course::where('slug', $slug)->firstOrFail();
 
@@ -157,6 +162,15 @@ class CourseController extends Controller
             ->get();
 
         abort_if($materials->isEmpty(), 404);
+
+        // The temp directory is often its own small filesystem, which the
+        // upload free-space check never looks at: leave the build room for
+        // this zip plus 256 MB to spare, or refuse it for now.
+        $free = disk_free_space(sys_get_temp_dir());
+        $needed = (int) $materials->sum('file_size') + 256 * 1024 * 1024;
+        if ($free === false || $free < $needed) {
+            abort(503, 'Downloads are busy right now. Try again in a few minutes.');
+        }
 
         $zipPath = tempnam(sys_get_temp_dir(), 'slipzip');
         $zip = new \ZipArchive;
@@ -277,13 +291,16 @@ class CourseController extends Controller
         // (scoped) course — a report can only target a file in this board.
         $material = $course->materials()->whereKey($material)->firstOrFail();
 
-        // Throttle to blunt spam/notification floods: 5 reports / 10 min,
-        // keyed per material + client IP.
-        $key = 'report:'.$material->id.':'.$request->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        // Throttle to blunt spam/notification floods: 5 reports per file and
+        // client per 10 min, and 20 an hour per client across all files (per
+        // file alone, one client could flood the operator's Telegram).
+        $key = 'report:'.$material->id.':'.ClientKey::of($request);
+        $clientKey = 'report_any:'.ClientKey::of($request);
+        if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($clientKey, 20)) {
             return back()->with('reported', 'Thanks — this file has already been reported.');
         }
         RateLimiter::hit($key, 600);
+        RateLimiter::hit($clientKey, 3600);
 
         $reason = trim((string) $request->input('reason', ''));
         $reason = $reason !== '' ? strip_tags(mb_substr($reason, 0, 280)) : null;
@@ -318,7 +335,19 @@ class CourseController extends Controller
             // mimes checks the extension; mimetypes checks the real content
             // type (magic bytes via finfo), so a renamed executable — e.g.
             // virus.exe → notes.pdf — fails even though its extension passes.
-            'files.*' => 'file|max:25600|mimes:pdf,docx,pptx,png,jpg,jpeg|mimetypes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg',
+            'files.*' => ['file', 'max:25600', 'mimes:pdf,docx,pptx,png,jpg,jpeg', 'mimetypes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg',
+                // mimes/mimetypes read the content, not the name, so a PDF
+                // named "slides.hta" passed and kept its name: a script for
+                // whoever opened it. The name's extension must be allowed and
+                // match what's inside.
+                function (string $attribute, mixed $file, \Closure $fail) {
+                    $norm = fn (?string $e) => $e === 'jpeg' ? 'jpg' : strtolower((string) $e);
+                    $named = $norm($file->getClientOriginalExtension());
+                    if (! in_array($named, ['pdf', 'docx', 'pptx', 'png', 'jpg'], true) || $named !== $norm($file->guessExtension())) {
+                        $fail('A file\'s name doesn\'t match what\'s inside it. Upload the original PDF, Word, PowerPoint or image file.');
+                    }
+                },
+            ],
         ], [
             'files.required' => 'Choose at least one file to upload.',
             'files.min' => 'Choose at least one file to upload.',
@@ -331,7 +360,7 @@ class CourseController extends Controller
 
         // Per-IP upload throttle: blunts automated abuse / mass dumping while
         // staying generous for a student uploading a semester's notes.
-        $rlKey = 'upload:'.$request->ip();
+        $rlKey = 'upload:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($rlKey, 30)) {
             return back()->withErrors(['files' => 'Too many uploads in a short time. Please wait a few minutes and try again.']);
         }
@@ -345,14 +374,18 @@ class CourseController extends Controller
         }
 
         if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true) {
-            // Brute-force limit: 5 attempts per 10 min per workspace.
-            $key = 'upload_passphrase:'.$workspace->id;
-            if (RateLimiter::tooManyAttempts($key, 5)) {
+            // 5 attempts per 10 min per board and client, so one client can't
+            // lock a whole class out; 30 per board in all, since a passphrase
+            // is human-chosen and guessable where an owner secret isn't.
+            $key = 'upload_passphrase:'.$workspace->id.':'.ClientKey::of($request);
+            $boardKey = 'upload_passphrase_board:'.$workspace->id;
+            if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($boardKey, 30)) {
                 return back()->withErrors(['passphrase' => 'Too many attempts. Try again in a few minutes.']);
             }
 
             if (! $workspace->uploadPassphraseMatches($data['passphrase'] ?? null)) {
                 RateLimiter::hit($key, 600);
+                RateLimiter::hit($boardKey, 600);
 
                 return back()->withErrors(['passphrase' => "That passphrase isn't right — ask your course rep."]);
             }

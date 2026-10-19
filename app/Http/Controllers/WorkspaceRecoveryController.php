@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\OwnerLinkRecovery;
+use App\Support\ClientKey;
 use App\Support\RecentWorkspaces;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
@@ -37,16 +38,26 @@ class WorkspaceRecoveryController extends Controller
     public function store(Request $request)
     {
         $workspace = app(Tenancy::class)->current();
-        $key = 'recovery:'.$workspace->id;
+        // Per board and client (5 per 10 min), so one client can't use up a
+        // board's requests and leave the owner's genuine one unsent; 50 per
+        // board in all.
+        $key = 'recovery:'.$workspace->id.':'.ClientKey::of($request);
+        $boardKey = 'recovery_board:'.$workspace->id;
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($boardKey, 50)) {
             return back()->with('done', true);
         }
 
         $data = $request->validate(['email' => 'required|email:rfc']);
         RateLimiter::hit($key, 600);
+        RateLimiter::hit($boardKey, 600);
 
-        if ($workspace->recoveryEmailMatches($data['email'])) {
+        // Never "send" through the log or array mailer: the link would be a
+        // working owner takeover written to laravel.log. The board page hides
+        // recovery for these mailers; this holds the line on the route too.
+        $mailOn = ! in_array(config('mail.default'), ['log', 'array', null], true);
+
+        if ($mailOn && $workspace->recoveryEmailMatches($data['email'])) {
             $nonce = Str::random(40);
             Cache::put(self::redeemKey($nonce), $workspace->id, self::REDEEM_TTL_SECONDS);
 

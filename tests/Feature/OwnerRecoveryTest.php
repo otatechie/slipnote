@@ -127,6 +127,32 @@ class OwnerRecoveryTest extends TestCase
         });
     }
 
+    public function test_no_restore_link_is_made_when_mail_only_goes_to_the_log(): void
+    {
+        // With the log mailer the link would be a working owner takeover
+        // written to laravel.log, readable by anyone with log access.
+        config(['mail.default' => 'log']);
+        $this->workspace->setRecoveryEmail('owner@example.com');
+
+        $this->post(route('workspace.recover.store', $this->wsParams()), ['email' => 'owner@example.com'])
+            ->assertRedirect()->assertSessionHas('done', true);
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_one_clients_requests_do_not_use_up_the_owners(): void
+    {
+        $this->workspace->setRecoveryEmail('owner@example.com');
+        $url = route('workspace.recover.store', $this->wsParams());
+
+        for ($i = 0; $i < 6; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.9'])->post($url, ['email' => "x{$i}@example.com"]);
+        }
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])->post($url, ['email' => 'owner@example.com']);
+
+        Mail::assertSent(OwnerLinkRecovery::class, fn ($mail) => $mail->hasTo('owner@example.com'));
+    }
+
     private function requestRestoreLink(string $email = 'owner@example.com'): string
     {
         $this->workspace->setRecoveryEmail($email);

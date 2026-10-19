@@ -35,7 +35,12 @@ class AppServiceProvider extends ServiceProvider
         // Which proxies may speak for the client (see config/noteshare.php).
         // Set here rather than in bootstrap/app.php because config is not
         // loaded yet when that closure runs.
-        $proxies = config('noteshare.trusted_proxies', []);
+        // '*' is dropped, never honoured: trusting every hop lets any client
+        // pick its own IP and step around every per-IP rate limit.
+        $proxies = array_values(array_filter(
+            config('noteshare.trusted_proxies', []),
+            fn ($p) => $p !== '*' && $p !== '**',
+        ));
         if ($proxies !== []) {
             TrustProxies::at($proxies);
         }

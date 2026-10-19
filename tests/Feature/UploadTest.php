@@ -131,7 +131,9 @@ class UploadTest extends TestCase
             'section' => 'notes',
             'original_filename' => $original,
             'title' => $title,
-            'stored_path' => UploadedFile::fake()->create('f.pdf', 1)->store('materials', 'local'),
+            // Stored under its real type, as an upload is: the download's
+            // extension comes from the stored file.
+            'stored_path' => UploadedFile::fake()->create($original, 1)->store('materials', 'local'),
             'download_token' => 'dl-'.Str::random(37),
         ]);
     }
@@ -478,6 +480,44 @@ class UploadTest extends TestCase
             $m = new Material(['original_filename' => $name]);
             $this->assertSame($expected, $m->fileType(), "for {$name}");
         }
+    }
+
+    public function test_a_file_whose_name_does_not_match_its_content_is_refused(): void
+    {
+        // A real PDF named as a script: the content check alone let it in,
+        // and it reached classmates' disks under the script's extension.
+        // A real file on disk, not a fake: fakes report a type from their
+        // name, and this is about names that lie about the content.
+        $path = tempnam(sys_get_temp_dir(), 'poly');
+        file_put_contents($path, "%PDF-1.4\n<script>x</script>\n%%EOF\n");
+
+        foreach (['slides.hta', 'slides.html', 'slides.exe', 'slides.docx'] as $name) {
+            $file = new UploadedFile($path, $name, null, null, true);
+
+            $this->post($this->uploadUrl(), ['section' => 'notes', 'files' => [$file]])
+                ->assertSessionHasErrors('files.0');
+        }
+
+        $this->assertSame(0, Material::count());
+
+        // The same content named .pdf is fine.
+        $this->post($this->uploadUrl(), ['section' => 'notes', 'files' => [new UploadedFile($path, 'slides.pdf', null, null, true)]])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(1, Material::count());
+        @unlink($path);
+    }
+
+    public function test_a_download_takes_its_extension_from_the_stored_file(): void
+    {
+        // A file uploaded before the name check, named .hta but stored as the
+        // PDF it is, downloads as .pdf.
+        $m = $this->course->materials()->create([
+            'section' => 'notes', 'original_filename' => 'slides.hta', 'title' => null,
+            'stored_path' => UploadedFile::fake()->create('x.pdf', 1)->store('materials', 'local'),
+            'download_token' => 'dl-'.Str::random(37),
+        ]);
+
+        $this->assertStringEndsWith('.pdf', $m->downloadName());
     }
 
     public function test_a_name_sent_by_an_old_tab_is_ignored(): void

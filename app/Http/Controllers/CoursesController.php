@@ -25,7 +25,7 @@ class CoursesController extends Controller
                 ->withCookie(RecentWorkspaces::add($request, $workspace));
         }
 
-        $search = trim($request->input('search', ''));
+        $search = $this->searchInput($request);
         $sort = $request->input('sort', 'manual');
 
         // Files newer than this browser's last visit to each course. One query:
@@ -48,7 +48,7 @@ class CoursesController extends Controller
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('code', 'like', "%{$search}%")->orWhere('title', 'like', "%{$search}%");
+                $this->whereLikeAny($q, ['code', 'title'], $search);
             });
         }
 
@@ -101,20 +101,24 @@ class CoursesController extends Controller
     public function unlock(Request $request)
     {
         $workspace = $this->workspace();
-        $key = $this->ownerUnlockKey($workspace);
 
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        if ($this->ownerUnlockThrottled($workspace)) {
             return back()->withErrors(['ownerInput' => 'Too many attempts. Try again in a few minutes.']);
         }
 
-        $given = trim($request->input('ownerInput', ''));
+        // A string whatever is sent (ownerInput[]=x was a 500), and an empty
+        // submit is not a guess, so it doesn't count against the limit.
+        $given = is_string($request->input('ownerInput')) ? trim($request->input('ownerInput')) : '';
+        if ($given === '') {
+            return back()->withErrors(['ownerInput' => 'Paste your owner link or secret.']);
+        }
         if (str_contains($given, 'owner=')) {
             parse_str((string) parse_url($given, PHP_URL_QUERY), $q);
             $given = $q['owner'] ?? $given;
         }
 
-        if ($workspace->verifyOwner($given !== '' ? $given : null)) {
-            RateLimiter::clear($key);
+        if ($workspace->verifyOwner($given)) {
+            RateLimiter::clear($this->ownerUnlockKey($workspace));
             session()->regenerate(); // anti-fixation on privilege change
 
             session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
@@ -124,7 +128,7 @@ class CoursesController extends Controller
                 ->withCookie(RecentWorkspaces::add($request, $workspace));
         }
 
-        RateLimiter::hit($key, 600);
+        $this->ownerUnlockFailed($workspace);
 
         return back()->withErrors(['ownerInput' => "That owner secret or link isn't right for this board — check you copied the whole thing."]);
     }

@@ -35,11 +35,14 @@ FROM serversideup/php:8.4-fpm-nginx AS runtime
 # Dokploy notes (set as env vars on the service):
 #   APP_ENV=production, APP_DEBUG=false, APP_KEY=base64:...
 #   DB_CONNECTION=sqlite, DB_DATABASE=/var/www/html/database/database.sqlite
-#   FILESYSTEM_DISK=public  (uploads live on a persistent volume)
+#   FILESYSTEM_DISK=local   (uploads are on the private disk, never public)
 #   SESSION_DRIVER=database, CACHE_STORE=database, QUEUE_CONNECTION=database
 # Mount persistent volumes:
 #   /var/www/html/database               -> SQLite file (NEVER let this disappear)
-#   /var/www/html/storage/app/public     -> user uploads (course materials)
+#   /var/www/html/storage/app            -> user uploads (they live in
+#                                           storage/app/private; mounting only
+#                                           storage/app/public loses every
+#                                           upload on redeploy)
 #   /var/www/html/storage/framework      -> sessions/views/cache
 #   /var/www/html/storage/logs           -> optional, helpful
 ENV PHP_OPCACHE_ENABLE=1 \
@@ -60,6 +63,7 @@ RUN install-php-extensions gd exif intl pdo_sqlite bcmath \
  && install -d -o www-data -g www-data \
         /var/www/html/database \
         /var/www/html/bootstrap/cache \
+        /var/www/html/storage/app/private \
         /var/www/html/storage/app/public \
         /var/www/html/storage/framework/sessions \
         /var/www/html/storage/framework/views \

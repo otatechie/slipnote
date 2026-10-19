@@ -8,8 +8,10 @@ use App\Models\Material;
 use App\Models\Report;
 use App\Models\Suggestion;
 use App\Models\Workspace;
+use App\Support\ClientKey;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -252,8 +254,8 @@ class OperatorController extends Controller
      * the reward order: active ambassadors by live boards, then refs nobody
      * owns (worth a look), then retired ones with their history kept.
      *
-     * @param  \Illuminate\Support\Collection<int, Ambassador>  $ambassadors
-     * @return \Illuminate\Support\Collection<int, array{ambassador: ?Ambassador, slug: string, boards: int, seeded: int, active: int}>
+     * @param  Collection<int, Ambassador>  $ambassadors
+     * @return Collection<int, array{ambassador: ?Ambassador, slug: string, boards: int, seeded: int, active: int}>
      */
     private function ambassadorRows($ambassadors)
     {
@@ -286,7 +288,7 @@ class OperatorController extends Controller
      * 3rd and the 20th is live even if you look on the 28th. Slugs with no
      * matching ambassador are shown too: a typo, or someone guessing.
      *
-     * @return \Illuminate\Support\Collection<int, array{slug:string, boards:int, seeded:int, active:int}>
+     * @return Collection<int, array{slug:string, boards:int, seeded:int, active:int}>
      */
     private function referrerStats()
     {
@@ -360,7 +362,7 @@ class OperatorController extends Controller
     {
         abort_unless($this->enabled(), 404);
 
-        $key = 'operator_login:'.$request->ip();
+        $key = 'operator_login:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors(['secret' => 'Too many attempts. Try again in a few minutes.']);
         }

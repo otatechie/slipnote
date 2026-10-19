@@ -46,7 +46,7 @@ class TelegramNotifier
         } catch (\Throwable $e) {
             // Network error, DNS, timeout — never propagate to the uploader.
             Log::warning('Telegram upload notification threw', [
-                'message' => $e->getMessage(),
+                'message' => $this->safeMessage($e),
             ]);
         }
     }
@@ -90,7 +90,7 @@ class TelegramNotifier
             }
         } catch (\Throwable $e) {
             Log::warning('Telegram abuse report threw', [
-                'message' => $e->getMessage(),
+                'message' => $this->safeMessage($e),
                 'material_id' => $material->id,
             ]);
         }
@@ -131,7 +131,7 @@ class TelegramNotifier
                 Log::warning('Telegram suggestion notification failed', ['status' => $response->status()]);
             }
         } catch (\Throwable $e) {
-            Log::warning('Telegram suggestion notification threw', ['message' => $e->getMessage()]);
+            Log::warning('Telegram suggestion notification threw', ['message' => $this->safeMessage($e)]);
         }
     }
 
@@ -222,5 +222,17 @@ class TelegramNotifier
             ['&amp;', '&lt;', '&gt;'],
             $value,
         );
+    }
+
+    /**
+     * An exception's message without the bot token. Guzzle's network errors
+     * end "for https://api.telegram.org/bot<TOKEN>/sendMessage", and that
+     * would put the token in the logs: anyone who can read them owns the bot.
+     */
+    private function safeMessage(\Throwable $e): string
+    {
+        $token = (string) config('noteshare.telegram_bot_token');
+
+        return $token !== '' ? str_replace($token, '[token]', $e->getMessage()) : $e->getMessage();
     }
 }

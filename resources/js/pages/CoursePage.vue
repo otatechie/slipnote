@@ -40,6 +40,12 @@ function closeReceipt() {
     nextTick(() => courseHeading.value?.focus())
 }
 const errors = computed(() => page.props.errors)
+// A per-file error (files.0, files.3, …): the first message from whichever
+// file failed. Errors arrive as arrays, so the message is [0], not the list.
+const perFileError = computed(() => {
+    const key = Object.keys(errors.value ?? {}).find((k) => k.startsWith('files.'))
+    return key ? [].concat(errors.value[key])[0] : null
+})
 
 // Share, offered at the one moment it is earned: a file just landed. Never
 // the owner link. "Tell the class it's here": the link goes to this course
@@ -925,7 +931,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                     </ul>
                                 </div>
                                 <span v-if="errors.files" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.files[0] }}</span>
-                                <span v-if="errors['files.0']" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors['files.0'] }}</span>
+                                <span v-if="perFileError" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ perFileError }}</span>
                             </div>
 
                             <!-- Three choices, so all three are shown: a dropdown hid the

@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Material;
 use App\Models\Report;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -85,7 +86,7 @@ class SecurityHardeningTest extends TestCase
     {
         $response = $this->post(route('course.upload', $this->wsParams(['slug' => 'cs-101'])), [
             'section' => 'notes',
-            'files' => [\Illuminate\Http\UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')],
+            'files' => [UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')],
         ]);
 
         $material = Material::firstOrFail();
@@ -138,13 +139,48 @@ class SecurityHardeningTest extends TestCase
 
         // Five checked, three refused before reaching bcrypt.
         Hash::shouldHaveReceived('check')->times(5);
-        $this->assertSame(5, RateLimiter::attempts('unlock_owner:'.$this->workspace->id));
+        $this->assertSame(5, RateLimiter::attempts('unlock_owner:'.$this->workspace->id.':127.0.0.1'));
 
         // The real secret is refused through either door until the window clears.
         $this->get($url.'?owner='.$this->ownerSecret);
         $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
         $this->post(route('courses.unlock', $this->wsParams()), ['ownerInput' => $this->ownerSecret])
             ->assertSessionHasErrors('ownerInput');
+    }
+
+    public function test_one_clients_bad_guesses_do_not_lock_the_owner_out(): void
+    {
+        // Keyed on the board alone, five guesses from anyone locked the real
+        // owner out of their own link. Now each client has its own budget.
+        $url = route('courses.index', $this->wsParams());
+        for ($i = 0; $i < 6; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.9'])->get($url.'?owner=wrong-'.$i);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])->get($url.'?owner='.$this->ownerSecret);
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
+    }
+
+    public function test_an_empty_unlock_is_not_counted_and_an_array_is_not_a_500(): void
+    {
+        $url = route('courses.unlock', $this->wsParams());
+
+        $this->post($url, ['ownerInput' => ''])->assertSessionHasErrors('ownerInput');
+        $this->post($url, ['ownerInput' => ['x']])->assertSessionHasErrors('ownerInput');
+        $this->assertSame(0, RateLimiter::attempts('unlock_owner:'.$this->workspace->id.':127.0.0.1'));
+    }
+
+    public function test_search_is_capped_and_wildcards_are_literal(): void
+    {
+        $this->makeMaterial();
+
+        // % no longer matches everything, and a huge query can't build a
+        // thousand-clause WHERE.
+        $this->get(route('course.show', $this->wsParams(['slug' => 'cs-101', 'search' => '%'])))
+            ->assertOk()->assertInertia(fn ($page) => $page->where('materials', []));
+        $this->get(route('course.show', $this->wsParams(['slug' => 'cs-101', 'search' => str_repeat('word ', 2000)])))
+            ->assertOk();
+        $this->get(route('course.show', $this->wsParams(['slug' => 'cs-101'])).'?search[]=x')->assertOk();
     }
 
     public function test_a_correct_owner_link_still_unlocks_and_clears_the_counter(): void

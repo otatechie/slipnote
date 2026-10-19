@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Suggestion;
 use App\Services\TelegramNotifier;
+use App\Support\ClientKey;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -17,7 +18,7 @@ class SuggestionController extends Controller
             return back();
         }
 
-        $rlKey = 'suggestion:'.$request->ip();
+        $rlKey = 'suggestion:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($rlKey, 5)) {
             return back()->withErrors(['message' => 'You\'ve sent a few already. Try again in an hour.']);
         }

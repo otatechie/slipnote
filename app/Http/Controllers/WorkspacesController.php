@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workspace;
+use App\Support\ClientKey;
 use App\Support\RecentWorkspaces;
 use App\Support\Referral;
 use Illuminate\Http\Request;
@@ -48,7 +49,7 @@ class WorkspacesController extends Controller
     {
         // Per-IP throttle: stops one source from spinning up many boards to
         // host abuse across them. Generous for genuine use (few boards each).
-        $rlKey = 'workspace_create:'.$request->ip();
+        $rlKey = 'workspace_create:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($rlKey, 10)) {
             return back()->withErrors(['name' => 'Too many workspaces created from here recently. Try again later.']);
         }
