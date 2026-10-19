@@ -44,7 +44,7 @@
         <ol class="mt-3 space-y-2 text-[15px] text-ink">
             <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">1</span><span>Open the file on the board your students use.</span></li>
             <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">2</span><span>Tap <strong class="font-semibold">⋯</strong> → <strong class="font-semibold">Report this file</strong> → <strong class="font-semibold">Copyright</strong>.</span></li>
-            <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">3</span><span>We remove it, and it can't be uploaded again anywhere on SlipNote.</span></li>
+            <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">3</span><span>We review it within {{ config('noteshare.takedown_turnaround') }}. Once removed, it can't be uploaded again anywhere on SlipNote.</span></li>
         </ol>
         @if (filled(config('noteshare.contact_email')))
             <p class="mt-4 text-[13px] text-muted">
@@ -65,5 +65,20 @@
             Create a board
         </a>
     </section>
+
+    {{-- A face behind the site: "some site a rep found" is how it gets
+         described otherwise. Shown when the deployment names its operator. --}}
+    @if (filled(config('noteshare.operator_name')))
+        <section class="mt-8">
+            <h2 class="text-[17px] font-semibold text-ink">Who runs SlipNote</h2>
+            <p class="mt-1.5 text-[15px] leading-relaxed text-muted">
+                {{ config('noteshare.operator_name') }}, independently: not a university service, and nobody pays to see what's on a board.
+                @if (filled(config('noteshare.contact_email')))
+                    Questions or concerns:
+                    <a href="mailto:{{ config('noteshare.contact_email') }}" class="font-semibold text-neon hover:underline">{{ config('noteshare.contact_email') }}</a>.
+                @endif
+            </p>
+        </section>
+    @endif
 </div>
 </x-layouts.app>

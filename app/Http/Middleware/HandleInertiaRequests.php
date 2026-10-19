@@ -20,6 +20,7 @@ class HandleInertiaRequests extends Middleware
             // which can't rely on the XSRF cookie header that axios sends.
             'csrf_token' => csrf_token(),
             'ambassadorFormUrl' => config('noteshare.ambassador_form_url'),
+            'operatorName' => config('noteshare.operator_name'),
             'flash' => [
                 'success' => $session->get('success'),
                 'created' => $session->get('created'),

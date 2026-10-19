@@ -68,7 +68,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Copyright takedowns</h2>
-            <p class="text-[14px] text-ink">If you believe content on SlipNote infringes your copyright, report the file or contact the operator with a description of the material and its URL. The operator will remove infringing content promptly when verified. Lecturers: <a href="{{ route('lecturers') }}" class="font-semibold text-neon hover:underline">how to have your material removed</a>.</p>
+            <p class="text-[14px] text-ink">If you believe content on SlipNote infringes your copyright, report the file or contact the operator with a description of the material and its URL. The operator reviews reports within {{ config('noteshare.takedown_turnaround') }} and removes infringing content once verified. Lecturers: <a href="{{ route('lecturers') }}" class="font-semibold text-neon hover:underline">how to have your material removed</a>.</p>
         </section>
 
         <section>

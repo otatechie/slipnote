@@ -87,6 +87,12 @@ function visitFilter() {
 }
 
 // Grouped materials by section
+// One section in use across the course (not just the current search): a
+// plain list, no section heading, since the heading only told files apart
+// from other sections that aren't there. Download all stays.
+const singleSection = computed(() =>
+    Object.values(props.sectionCounts ?? {}).filter((n) => n > 0).length === 1)
+
 const materialsBySection = computed(() => {
     const map = {}
     for (const key of Object.keys(props.sections)) {
@@ -640,11 +646,15 @@ watch(() => props.materials, () => { selected.value = [] })
                          section is full). The last row rounds its own corners so a
                          selected row's tint still fits the card. -->
                     <section :id="'sec-' + key" class="op-card mb-4 scroll-mt-20">
-                        <div class="flex items-center justify-between gap-3 px-4 pb-1 pt-3 sm:px-5">
+                        <!-- A course using one section: no visible heading (still named
+                             for screen readers), just Download all, or nothing. -->
+                        <div v-if="!singleSection || sectionCounts[key] > 1"
+                             class="flex items-center gap-3 px-4 pb-1 pt-3 sm:px-5"
+                             :class="singleSection ? 'justify-end' : 'justify-between'">
                             <!-- With no dividers the heading is all that separates
                                  sections, so body-size ink with its count, not 11px
                                  grey capitals. -->
-                            <h2 class="text-[14px] font-semibold text-ink">
+                            <h2 class="text-[14px] font-semibold text-ink" :class="singleSection ? 'sr-only' : ''">
                                 {{ label }} <span class="font-normal text-muted">· {{ sectionCounts[key] ?? 0 }}</span>
                             </h2>
                             <a v-if="sectionCounts[key] > 1" :href="sectionZipUrl(key)"
