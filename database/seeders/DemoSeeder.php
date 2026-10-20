@@ -111,7 +111,8 @@ class DemoSeeder extends Seeder
 
     private function deleteExisting(string $name): void
     {
-        $existing = Workspace::where('slug', Str::slug($name))->first();
+        // By name: board links end in a random code, so the slug isn't known.
+        $existing = Workspace::where('name', $name)->first();
         if (! $existing) {
             return;
         }

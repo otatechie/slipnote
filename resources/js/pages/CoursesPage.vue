@@ -1188,6 +1188,12 @@ function persistOrder() {
                         <p id="ownerInputNote" class="mt-2 text-[11px] text-muted">
                             Goes only to this board · SlipNote never asks for it by email.
                         </p>
+                        <!-- Here, not only on /start: an owner who lost their link
+                             most likely got back to the board through its share link. -->
+                        <Link v-if="recoveryAvailable" :href="recoveryUrl()"
+                            class="mt-1 inline-flex min-h-11 items-center text-[12px] font-semibold text-neon hover:underline sm:min-h-0">
+                            Lost your owner link? Recover it
+                        </Link>
                     </div>
                 </div>
             </template>

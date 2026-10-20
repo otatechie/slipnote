@@ -45,35 +45,46 @@ function create() {
     createForm.post('/workspaces', { preserveScroll: true })
 }
 
-// Open form
-const openForm = useForm({ openName: '' })
+// Open form: the board's link, not its name. New links end in a random code
+// so they can't be guessed, and a name lookup would undo that.
+const openForm = useForm({ openLink: '' })
 
 function open() {
     openForm.post('/workspaces/open', { preserveScroll: true })
 }
 
-function recoveryUrl() {
-    const slug = openForm.openName.trim().toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
+// "https://slipnote.co/econ-200-k7q2m9/c/x", "slipnote.co/econ-200-k7q2m9"
+// or "econ-200-k7q2m9" → "econ-200-k7q2m9" (the server parses it the same way).
+function boardSlug(input) {
+    let t = input.trim()
+    if (!t) return ''
+    if (t.includes('/')) {
+        try {
+            t = new URL(t.includes('://') ? t : 'https://' + t.replace(/^\/+/, '')).pathname.split('/')[1] || ''
+        } catch { return '' }
+    }
+    return t.toLowerCase()
+}
 
+function recoveryUrl() {
+    const slug = boardSlug(openForm.openLink)
     return slug ? `/${slug}/recover` : null
 }
 
-const openNameRef = ref(null)
-// Finding by name is the rare path, so its field stays folded into a line of
+const openLinkRef = ref(null)
+// Opening by link is the rare path, so its field stays folded into a line of
 // links until asked for.
-const finding = ref(!!errors.value?.openName)
+const finding = ref(!!errors.value?.openLink)
 
 function startFinding() {
     finding.value = true
-    nextTick(() => openNameRef.value?.focus())
+    nextTick(() => openLinkRef.value?.focus())
 }
 
 function recover() {
     const url = recoveryUrl()
-    // Nothing typed yet: the recovery URL is built from the board name, so
-    // open the name field and put the cursor there. Disabling the control
+    // Nothing pasted yet: the recovery URL is built from the board's link, so
+    // open the link field and put the cursor there. Disabling the control
     // instead meant explaining, in more text, how to un-disable it.
     if (!url) {
         startFinding()
@@ -328,11 +339,13 @@ function confirmForget() {
 
                     <div class="mt-2 text-[12px]">
                         <span v-if="errors.name" role="alert" class="text-danger">{{ errors.name[0] }}</span>
+                        <!-- The code is made on the server; the dots stand for it. -->
                         <span v-else-if="slugPreview" class="text-muted">
-                            Your link: <span class="font-semibold text-ink">/{{ slugPreview }}</span>
+                            Your link: <span class="font-semibold text-ink">/{{ slugPreview }}-······</span>
+                            · ends in a code, so it can't be guessed
                         </span>
                         <span v-else class="text-muted">
-                            Your link will look like <span class="font-medium text-ink">/computer-science-level-100</span>
+                            Your link will look like <span class="font-medium text-ink">/computer-science-level-100-k7q2m9</span>
                         </span>
                     </div>
 
@@ -351,7 +364,7 @@ function confirmForget() {
                     <p>
                         {{ returning ? 'Looking for another board?' : 'Already made one?' }}
                         <button type="button" @click="startFinding"
-                                class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-neon hover:underline">{{ returning ? 'Find by name' : 'Find it by name' }}</button>
+                                class="inline-flex min-h-11 cursor-pointer items-center font-semibold text-neon hover:underline">Open it with its link</button>
                     </p>
                     <p>
                         <button type="button" @click="recover"
@@ -361,19 +374,19 @@ function confirmForget() {
 
                 <div v-if="finding" class="mt-4">
                     <form @submit.prevent="open" class="flex flex-col gap-2 sm:flex-row">
-                        <input id="openName" ref="openNameRef" type="text" v-model="openForm.openName"
-                               aria-label="Board name"
-                               placeholder="Board name…"
+                        <input id="openLink" ref="openLinkRef" type="text" v-model="openForm.openLink"
+                               aria-label="Board link" inputmode="url" autocapitalize="off" spellcheck="false"
+                               placeholder="Paste the board's link…"
                                class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink placeholder:text-muted shadow-sm">
                         <button type="submit" :disabled="openForm.processing"
                                 class="op-press min-h-11 w-full shrink-0 cursor-pointer rounded-full border border-muted/50 px-5 text-[15px] font-semibold text-ink transition hover:bg-sky/30 disabled:opacity-60 sm:w-auto">
                             Open
                         </button>
                     </form>
-                    <span v-if="errors.openName" role="alert" class="mt-2 block text-[13px] text-danger">{{ errors.openName[0] }}</span>
+                    <span v-if="errors.openLink" role="alert" class="mt-2 block text-[13px] text-danger">{{ errors.openLink[0] }}</span>
                     <p class="mt-2 text-[12px] text-muted">
                         Lost the owner link?
-                        <button type="button" @click="recover" class="cursor-pointer font-semibold text-neon hover:underline">Recover it with this name</button>
+                        <button type="button" @click="recover" class="cursor-pointer font-semibold text-neon hover:underline">Recover it with this board's link</button>
                     </p>
                 </div>
             </template>

@@ -62,10 +62,6 @@ class WorkspacesController extends Controller
             return back()->withErrors(['name' => 'Use some letters or numbers — "'.$clean.'" can\'t become a link.']);
         }
 
-        if (Workspace::where('slug', $slug)->exists()) {
-            return back()->withErrors(['name' => 'A workspace with this name already exists — pick a different name.']);
-        }
-
         [$workspace, $secret] = Workspace::provision($clean);
         RateLimiter::hit($rlKey, 3600); // count only successful creations
 
@@ -92,21 +88,43 @@ class WorkspacesController extends Controller
             ]);
     }
 
+    /**
+     * Open a board from its pasted link (or bare address). Not by name: new
+     * links end in a random code, and a name lookup is exactly the guessing
+     * the code prevents. Exact match only, and misses are rate-limited.
+     */
     public function open(Request $request)
     {
-        $typed = trim($request->input('openName', ''));
-
+        $typed = is_string($request->input('openLink')) ? trim($request->input('openLink')) : '';
         if ($typed === '') {
-            return back()->withErrors(['openName' => 'Type the workspace name, or use the link you saved.']);
+            return back()->withErrors(['openLink' => 'Paste the board\'s link.']);
         }
 
-        $slug = Str::slug($typed);
+        $key = 'open_board:'.ClientKey::of($request);
+        if (RateLimiter::tooManyAttempts($key, 20)) {
+            return back()->withErrors(['openLink' => 'Too many tries. Wait a few minutes, or open the link directly.']);
+        }
+
+        $slug = self::slugFromLink($typed);
         $workspace = $slug !== '' ? Workspace::where('slug', $slug)->first() : null;
 
         if (! $workspace) {
-            return back()->withErrors(['openName' => "Couldn't find \"{$typed}\". The link you saved is the surest way in."]);
+            RateLimiter::hit($key, 600);
+
+            return back()->withErrors(['openLink' => "That link doesn't match a board. Check you copied all of it."]);
         }
 
         return redirect()->route('courses.index', ['workspace' => $workspace->slug]);
+    }
+
+    /** "https://slipnote.co/econ-200-k7q2m9/c/x", "slipnote.co/econ-200-k7q2m9" or "econ-200-k7q2m9". */
+    public static function slugFromLink(string $typed): string
+    {
+        if (str_contains($typed, '/')) {
+            $path = (string) parse_url(str_contains($typed, '://') ? $typed : 'https://'.ltrim($typed, '/'), PHP_URL_PATH);
+            $typed = explode('/', trim($path, '/'))[0] ?? '';
+        }
+
+        return strtolower(trim($typed));
     }
 }

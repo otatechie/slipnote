@@ -9,12 +9,26 @@ use App\Http\Controllers\WorkspaceRecoveryController;
 use App\Http\Controllers\WorkspacesController;
 use App\Models\Material;
 use App\Models\Workspace;
+use App\Support\ClientKey;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 // Resolve {workspace} by slug, not id (implicit binding would 404 every slug).
-Route::bind('workspace', fn ($slug) => Workspace::where('slug', $slug)->firstOrFail());
+// Misses are counted per client (60 per 10 min): a board's link is its only
+// key, so walking through addresses to find boards gets cut off.
+Route::bind('workspace', function ($slug) {
+    $workspace = Workspace::where('slug', $slug)->first();
+    if ($workspace) {
+        return $workspace;
+    }
+
+    $key = 'board_miss:'.ClientKey::of(request());
+    abort_if(RateLimiter::tooManyAttempts($key, 60), 429, 'Too many tries. Wait a few minutes.');
+    RateLimiter::hit($key, 600);
+    abort(404);
+});
 
 // Marketing landing page — Blade, not Inertia, for SEO.
 Route::view('/', 'welcome')->name('welcome');

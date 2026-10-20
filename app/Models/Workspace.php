@@ -160,14 +160,20 @@ class Workspace extends Model
     /** Slug from the name, with a numeric suffix if it collides. */
     public static function uniqueSlug(string $name): string
     {
-        $base = Str::slug($name) ?: 'workspace';
-        $slug = $base;
-        $n = 2;
+        // The name, then a random code: the link is the only key to a board,
+        // and from the name alone ("econ-level-200") anyone could guess it.
+        // 6 characters from 31 (no 0/o, 1/l/i to misread): about 900 million
+        // per name, with misses rate-limited (see the workspace binding).
+        $base = Str::limit(Str::slug($name) ?: 'board', 60, '');
+        $alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
         $reserved = static::reservedSlugs();
-        while (in_array($slug, $reserved, true) || static::where('slug', $slug)->exists()) {
-            $slug = "{$base}-{$n}";
-            $n++;
-        }
+        do {
+            $code = '';
+            for ($i = 0; $i < 6; $i++) {
+                $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            $slug = "{$base}-{$code}";
+        } while (in_array($slug, $reserved, true) || static::where('slug', $slug)->exists());
 
         return $slug;
     }
