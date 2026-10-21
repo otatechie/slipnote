@@ -32,6 +32,11 @@ return [
         explode(',', (string) env('TRUSTED_PROXIES', ''))
     ))),
 
+    // A header the trusted proxy in front sets to the visitor's own address
+    // (CF-Connecting-IP behind Cloudflare). Read only on requests that come
+    // straight from a TRUSTED_PROXIES address; empty reads no header.
+    'client_ip_header' => trim((string) env('CLIENT_IP_HEADER', '')),
+
     // Ambassador sign-up form (footer link), and the monthly reward per used
     // board, paid by hand. Defaults: a 2 GB MTN bundle, Ghana 2026.
     'ambassador_form_url' => env('AMBASSADOR_FORM_URL'),

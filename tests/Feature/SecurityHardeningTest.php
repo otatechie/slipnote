@@ -126,6 +126,77 @@ class SecurityHardeningTest extends TestCase
         $this->assertSame($count, Report::count(), 'a new header value must not buy a fresh quota');
     }
 
+    // --- 2b. Behind Cloudflare and Traefik, every visitor looked like one address ---
+
+    private function behindCloudflare(): void
+    {
+        config([
+            'noteshare.trusted_proxies' => ['10.0.0.0/8'],
+            'noteshare.client_ip_header' => 'CF-Connecting-IP',
+        ]);
+    }
+
+    private function reportVia(string $peer, array $headers): void
+    {
+        $material = Material::first() ?? $this->makeMaterial();
+        $url = route('material.report', $this->wsParams(['slug' => 'cs-101', 'material' => $material->id]));
+        $this->withServerVariables(['REMOTE_ADDR' => $peer])->withHeaders($headers)->post($url, ['reason' => 'spam']);
+    }
+
+    public function test_the_visitors_address_comes_from_cf_connecting_ip_through_a_trusted_proxy(): void
+    {
+        $this->behindCloudflare();
+
+        $this->reportVia('10.0.1.5', ['CF-Connecting-IP' => '203.0.113.9']);
+
+        $this->assertSame('203.0.113.9', Report::first()->reporter_ip);
+    }
+
+    public function test_cf_connecting_ip_is_ignored_from_anywhere_but_a_trusted_proxy(): void
+    {
+        $this->behindCloudflare();
+
+        $this->reportVia('198.51.100.50', ['CF-Connecting-IP' => '203.0.113.9']);
+
+        $this->assertSame('198.51.100.50', Report::first()->reporter_ip);
+    }
+
+    public function test_cf_connecting_ip_is_ignored_when_it_is_not_an_address_or_not_configured(): void
+    {
+        $this->behindCloudflare();
+        $this->reportVia('10.0.1.5', ['CF-Connecting-IP' => 'not-an-ip']);
+        $this->assertSame('10.0.1.5', Report::first()->reporter_ip);
+
+        Report::query()->delete();
+        config(['noteshare.client_ip_header' => '']);
+        $this->reportVia('10.0.1.5', ['CF-Connecting-IP' => '203.0.113.9']);
+        $this->assertSame('10.0.1.5', Report::first()->reporter_ip);
+    }
+
+    public function test_two_visitors_behind_the_same_proxy_have_their_own_rate_limits(): void
+    {
+        $this->behindCloudflare();
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->reportVia('10.0.1.5', ['CF-Connecting-IP' => '203.0.113.9']);
+        }
+        $count = Report::count();
+        $this->reportVia('10.0.1.5', ['CF-Connecting-IP' => '203.0.113.9']);
+        $this->assertSame($count, Report::count(), 'the first visitor has used their quota');
+
+        $this->reportVia('10.0.1.5', ['CF-Connecting-IP' => '198.51.100.7']);
+        $this->assertSame($count + 1, Report::count(), 'a second visitor is not held to the first one\'s quota');
+    }
+
+    public function test_a_star_in_trusted_proxies_is_still_never_honoured(): void
+    {
+        config(['noteshare.trusted_proxies' => ['*'], 'noteshare.client_ip_header' => 'CF-Connecting-IP']);
+
+        $this->reportVia('198.51.100.50', ['CF-Connecting-IP' => '203.0.113.9', 'X-Forwarded-For' => '203.0.113.10']);
+
+        $this->assertSame('198.51.100.50', Report::first()->reporter_ip);
+    }
+
     // --- 3. ?owner= on a GET ran bcrypt with nothing counting failures ---
 
     public function test_owner_link_guesses_on_get_are_rate_limited_and_share_the_form_budget(): void

@@ -20,6 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Generated URLs are already forced to https by the provider, so
         // proxy trust is only about the client IP, not the scheme.
 
+        // First, so sessions and rate limits all see the visitor's address.
+        $middleware->prepend(\App\Http\Middleware\ClientIpFromHeader::class);
         $middleware->append(SecureHeaders::class);
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,

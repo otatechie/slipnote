@@ -37,6 +37,8 @@ FROM serversideup/php:8.4-fpm-nginx AS runtime
 #   DB_CONNECTION=sqlite, DB_DATABASE=/var/www/html/database/database.sqlite
 #   FILESYSTEM_DISK=local   (uploads are on the private disk, never public)
 #   SESSION_DRIVER=database, CACHE_STORE=database, QUEUE_CONNECTION=database
+#   TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16  (Traefik's Docker network; never "*")
+#   CLIENT_IP_HEADER=CF-Connecting-IP   (behind Cloudflare: the visitor's own address)
 # Mount persistent volumes:
 #   /var/www/html/database               -> SQLite file (NEVER let this disappear)
 #   /var/www/html/storage/app            -> user uploads (they live in

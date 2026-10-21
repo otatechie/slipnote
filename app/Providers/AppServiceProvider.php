@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\ClientIpFromHeader;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\URL;
@@ -35,12 +36,8 @@ class AppServiceProvider extends ServiceProvider
         // Which proxies may speak for the client (see config/noteshare.php).
         // Set here rather than in bootstrap/app.php because config is not
         // loaded yet when that closure runs.
-        // '*' is dropped, never honoured: trusting every hop lets any client
-        // pick its own IP and step around every per-IP rate limit.
-        $proxies = array_values(array_filter(
-            config('noteshare.trusted_proxies', []),
-            fn ($p) => $p !== '*' && $p !== '**',
-        ));
+        // '*' is dropped (see ClientIpFromHeader::trustedProxies).
+        $proxies = ClientIpFromHeader::trustedProxies();
         if ($proxies !== []) {
             TrustProxies::at($proxies);
         }
