@@ -2,7 +2,7 @@
 # Cache-bust: 2026-05-21-3 (trust Cloudflare proxy — fix Livewire upload 401)
 
 # ---- Stage 1: Build front-end assets ----
-FROM node:22-alpine AS assets
+FROM node:22.23.4-alpine AS assets
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -30,7 +30,7 @@ RUN composer install \
     --optimize-autoloader
 
 # ---- Stage 3: Runtime image (nginx + php-fpm) ----
-FROM serversideup/php:8.4-fpm-nginx AS runtime
+FROM serversideup/php:8.4.27-fpm-nginx AS runtime
 
 # Dokploy notes (set as env vars on the service):
 #   APP_ENV=production, APP_DEBUG=false, APP_KEY=base64:...
