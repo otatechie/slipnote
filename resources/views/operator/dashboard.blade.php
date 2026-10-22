@@ -388,6 +388,9 @@
         @if ($boardSort !== 'newest')
             <input type="hidden" name="sort" value="{{ $boardSort }}">
         @endif
+        @if ($showEmpty)
+            <input type="hidden" name="empty" value="1">
+        @endif
         <input type="search" name="q" value="{{ $boardQuery }}" aria-label="Find a board by name"
                placeholder="Find a board by name…"
                class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm placeholder:text-muted">
@@ -404,7 +407,7 @@
     <nav aria-label="Sort boards" class="mb-4 flex items-center gap-0.5 overflow-x-auto text-[13px] sm:gap-1.5">
         <span class="mr-1 shrink-0 text-muted">Sort</span>
         @foreach ($boardSorts as $key => $label)
-            <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'sort' => $key === 'newest' ? null : $key])) }}"
+            <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'sort' => $key === 'newest' ? null : $key, 'empty' => $showEmpty ? 1 : null])) }}"
                @if ($boardSort === $key) aria-current="true" @endif
                aria-label="{{ $label }}"
                class="op-press inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3 font-semibold sm:min-h-8 sm:px-3.5 {{ $boardSort === $key ? 'bg-sky/70 text-ink' : 'text-muted hover:text-ink' }}"><span class="sm:hidden">{{ $shortSort[$key] }}</span><span class="hidden sm:inline">{{ $label }}</span></a>
@@ -546,10 +549,17 @@
                 @if ($boardQuery !== '')
                     {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }} {{ Str::plural('board', $recent->total()) }} matching “{{ $boardQuery }}”.
                 @else
-                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}, {{ ['newest' => 'newest first', 'visited' => 'most visited first (30 days)', 'opened' => 'most recently opened first', 'largest' => 'largest first'][$boardSort] }}.
+                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}{{ $showEmpty ? '' : ' with files' }}, {{ ['newest' => 'newest first', 'visited' => 'most visited first (30 days)', 'opened' => 'most recently opened first', 'largest' => 'largest first'][$boardSort] }}.
                 @endif
-                @if ($stats['empty_boards'] > 0)
+                @if ($stats['empty_boards'] > 0 && ($showEmpty || $boardQuery !== ''))
                     <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
+                @endif
+                {{-- Empty boards (made, never filled) are most of the list:
+                     hidden by default, one tap away here, under the list and
+                     never cut off on a phone. A search finds every board. --}}
+                @if ($boardQuery === '' && $stats['empty_boards'] > 0)
+                    <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $boardSort === 'newest' ? null : $boardSort, 'empty' => $showEmpty ? null : 1])) }}"
+                       class="-my-3 inline-flex min-h-11 items-center font-semibold text-ink underline decoration-muted/50 underline-offset-2 hover:decoration-ink sm:my-0 sm:min-h-0">{{ $showEmpty ? 'Hide empty boards' : 'Show '.$stats['empty_boards'].' empty '.Str::plural('board', $stats['empty_boards']) }}</a>
                 @endif
             </p>
             {{-- Newer / page / Older: two directions and where you are, all a

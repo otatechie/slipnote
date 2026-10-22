@@ -95,16 +95,16 @@ class OperatorTest extends TestCase
         $this->workspace->forceFill(['created_at' => now()->subDays(1)])->saveQuietly();
         $session = ['operator_fp' => hash('sha256', 'op-secret')];
 
-        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards']))
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1]))
             ->assertOk()
             ->assertSee('1–20 of 25, newest first.', false)
             ->assertSee('Page 1 of 2')
             ->assertSee('Paged Board 24')
             ->assertDontSee('Test Workspace')
-            ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'page' => 2]));
+            ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1, 'page' => 2]));
 
         // The oldest board, unreachable before without searching for it.
-        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'page' => 2]))
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1, 'page' => 2]))
             ->assertOk()
             ->assertSee('21–25 of 25', false)
             ->assertSee('Test Workspace')
@@ -135,7 +135,7 @@ class OperatorTest extends TestCase
                 'stored_path' => 'materials/big.pdf', 'download_token' => 'dl-big', 'file_size' => 900_000_000]);
 
         $first = fn (?string $sort) => $this->withSession($session)
-            ->get(route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $sort])))
+            ->get(route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $sort, 'empty' => 1])))
             ->assertOk()->viewData('recent')->first()->name;
 
         $this->assertSame('Newest Board', $first(null));
@@ -144,7 +144,7 @@ class OperatorTest extends TestCase
         $this->assertSame('Large Board', $first('largest'));
         $this->assertSame('Newest Board', $first('nonsense'));
 
-        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'visited']))
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'visited', 'empty' => 1]))
             ->assertSee('9 visits in 30 days')
             ->assertSee('most visited first (30 days)');
     }
@@ -185,12 +185,26 @@ class OperatorTest extends TestCase
             ->assertSee('With files', false)
             ->assertSee('of 2 boards', false);
 
+        // Empty boards are hidden from the list by default, one tap away.
         $this->withSession($session)
             ->get(route('operator.dashboard', ['tab' => 'boards']))
             ->assertOk()
+            ->assertDontSee('Made And Left')
+            ->assertSee('Show 1 empty board');
+
+        $this->withSession($session)
+            ->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1]))
+            ->assertOk()
+            ->assertSee('Made And Left')
             ->assertSee('Nothing added yet', false)
+            ->assertSee('Hide empty boards')
             ->assertDontSee('0 courses', false)
             ->assertDontSee('With files', false);
+
+        // A search finds any board, empty or not.
+        $this->withSession($session)
+            ->get(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Made And']))
+            ->assertSee('Made And Left');
     }
 
     public function test_rotating_the_operator_secret_invalidates_existing_sessions(): void

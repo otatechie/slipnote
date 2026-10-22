@@ -90,6 +90,7 @@ class OperatorController extends Controller
         return route('operator.dashboard', self::boardParams(
             is_string($from['q'] ?? null) ? trim($from['q']) : '',
             $sort,
+            ($from['empty'] ?? null) === '1',
             $page > 1 ? ['page' => $page] : [],
         ));
     }
@@ -142,6 +143,11 @@ class OperatorController extends Controller
         // operator could only reach by guessing a name to search for.
         $boardQuery = trim((string) $request->query('q', ''));
         $boardSort = self::boardSort($request);
+        // Boards with no files are most of the list (made and left), so they
+        // are hidden unless asked for. Never deleted: their owners' links
+        // still work, and Privacy promises boards aren't removed. A search
+        // finds any board: searching means looking for one in particular.
+        $showEmpty = $request->query('empty') === '1';
         $visitsSince = now()->subDays(self::VISITOR_DAYS - 1)->toDateString();
 
         $recent = Workspace::query()
@@ -155,6 +161,7 @@ class OperatorController extends Controller
             ->when($boardQuery !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$boardQuery}%")
                 ->orWhere('slug', 'like', '%'.Str::slug($boardQuery).'%')))
+            ->when($boardQuery === '' && ! $showEmpty, fn ($q) => $q->whereHas('materials'))
             ->withCount([
                 'courses',
                 'materials',
@@ -178,7 +185,7 @@ class OperatorController extends Controller
             // Page links keep the tab, search and sort, not ?note= (the note
             // form belongs to the board it was opened from).
             ->paginate(20)
-            ->appends(self::boardParams($boardQuery, $boardSort));
+            ->appends(self::boardParams($boardQuery, $boardSort, $showEmpty));
 
         return view('operator.dashboard', [
             'materials' => $materials,
@@ -187,6 +194,7 @@ class OperatorController extends Controller
             'recent' => $recent,
             'boardQuery' => $boardQuery,
             'boardSort' => $boardSort,
+            'showEmpty' => $showEmpty,
             'boardSorts' => self::BOARD_SORTS,
             'tab' => $this->tab($request),
             'undo' => $undo,
@@ -218,10 +226,10 @@ class OperatorController extends Controller
         return is_string($sort) && isset(self::BOARD_SORTS[$sort]) ? $sort : 'newest';
     }
 
-    /** Query string for the boards list: tab, plus search and sort when set. */
-    private static function boardParams(string $q, string $sort, array $extra = []): array
+    /** Query string for the boards list: tab, plus search, sort and "show empty" when set. */
+    private static function boardParams(string $q, string $sort, bool $showEmpty = false, array $extra = []): array
     {
-        return array_filter(['tab' => 'boards', 'q' => $q, 'sort' => $sort === 'newest' ? null : $sort] + $extra);
+        return array_filter(['tab' => 'boards', 'q' => $q, 'sort' => $sort === 'newest' ? null : $sort, 'empty' => $showEmpty ? 1 : null] + $extra);
     }
 
     /**
