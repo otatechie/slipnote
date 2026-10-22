@@ -453,8 +453,7 @@ select.op-pill option {
 
 /* No dividers between rows: inside the framed well, spacing and the hover
    tint separate them, and the lines read as clutter. Phones (no hover) get
-   more vertical room below. The operator console's denser tables keep their
-   lines (.op-ruled). */
+   more vertical room below. The operator console tightens rows (.op-compact). */
 .op-row {
     padding: 0.95rem 1.1rem;
     transition: background-color 160ms ease;
@@ -487,11 +486,11 @@ select.op-pill option {
     }
 }
 
-.op-ruled .op-row {
-    border-bottom: 1px solid var(--op-hairline);
-}
-.op-ruled .op-row:last-child {
-    border-bottom: 0;
+/* The operator console's tables: denser rows, since it's scanned for
+   numbers and names, not read on a phone in a lecture hall. */
+.op-compact .op-row {
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
 }
 
 /* Row overflow menu: <details> for a no-JS toggle under the nonce-only CSP.

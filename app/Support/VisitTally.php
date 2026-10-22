@@ -104,6 +104,12 @@ class VisitTally
             return 'direct';
         }
 
+        // A referrer that is a bare IP address is the site reached by its own
+        // IP (a CDN edge, a scanner), not a place anyone found it.
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return 'other';
+        }
+
         foreach (self::KNOWN_SOURCES as $name => $pattern) {
             if (preg_match($pattern, $host)) {
                 return $name;

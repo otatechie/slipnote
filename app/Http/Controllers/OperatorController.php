@@ -118,10 +118,10 @@ class OperatorController extends Controller
             'empty_boards' => Workspace::whereDoesntHave('materials')->count(),
         ];
 
-        // Most recent boards, with how much they hold and when they were last
-        // touched — a board with files but no recent access is a dead one.
-        // Find any board by name or slug: the newest ten won't hold the
-        // established board whose owner the operator wants to reach.
+        // Boards newest first, 20 to a page, with how much they hold and when
+        // they were last touched — a board with files but no recent access is a
+        // dead one. Paged, not capped: past the first page sat boards the
+        // operator could only reach by guessing a name to search for.
         $boardQuery = trim((string) $request->query('q', ''));
 
         $recent = Workspace::query()
@@ -141,8 +141,11 @@ class OperatorController extends Controller
             // three hundred megabytes.
             ->withSum('materials', 'file_size')
             ->latest()
-            ->limit(10)
-            ->get();
+            ->latest('id')
+            // Page links keep the tab and the search, not ?note= (the note
+            // form belongs to the board it was opened from).
+            ->paginate(20)
+            ->appends(array_filter(['tab' => 'boards', 'q' => $boardQuery]));
 
         return view('operator.dashboard', [
             'materials' => $materials,
@@ -217,10 +220,14 @@ class OperatorController extends Controller
                 'label' => self::countryLabel($r->country),
                 'total' => (int) $r->total,
             ]),
-            'sources' => $sum('source', 12)->map(fn ($r) => [
-                'source' => $r->source,
-                'total' => (int) $r->total,
-            ]),
+            // IP-address "sources" recorded before VisitTally folded them are
+            // folded here too: they are the site's own address, not a source.
+            'sources' => $sum('source', 1000)
+                ->groupBy(fn ($r) => filter_var($r->source, FILTER_VALIDATE_IP) ? 'other' : $r->source)
+                ->map(fn ($rows, $source) => ['source' => $source, 'total' => (int) $rows->sum('total')])
+                ->sortByDesc('total')
+                ->take(12)
+                ->values(),
             'boards' => $boards->map(fn ($r) => [
                 'workspace' => $names->get($r->workspace_id),
                 'total' => (int) $r->total,

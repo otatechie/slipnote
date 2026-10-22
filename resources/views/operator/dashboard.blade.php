@@ -1,5 +1,5 @@
 <x-layouts.operator title="Operator">
-<div class="op op-ruled mx-auto w-full max-w-5xl flex-1 px-5 pb-12">
+<div class="op op-compact mx-auto w-full max-w-5xl flex-1 px-5 pb-12">
     {{-- Not pinned: a title and Log out don't need to follow you down a list,
          and pinned they floated translucent over every row on the way. --}}
     <header class="mb-4 flex items-center justify-between gap-4 pb-1 pt-6 sm:pt-8">
@@ -293,17 +293,29 @@
             @endif
         </p>
 
+        {{-- Each count with its share, so the split reads at a glance. --}}
+        @php
+            $share = fn ($n) => max(1, (int) round($n / max(1, $visitors['total']) * 100)).'%';
+        @endphp
         <div class="grid gap-5 sm:grid-cols-2">
             <section>
                 <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Countries</h2>
-                <div class="op-card overflow-hidden">
-                    @foreach ($visitors['countries'] as $row)
-                        <div class="op-row flex items-center justify-between gap-3">
-                            <span class="truncate text-[14px] text-ink">{{ $row['label'] }}</span>
-                            <span class="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{{ number_format($row['total']) }}</span>
-                        </div>
-                    @endforeach
-                </div>
+                {{-- All Unknown means the country header isn't trusted yet: say
+                     why, rather than show one row that tells you nothing. --}}
+                @if ($visitors['countries']->count() === 1 && $visitors['countries']->first()['code'] === '')
+                    <div class="op-card px-4 py-3">
+                        <p class="text-[13px] text-muted"><span class="font-semibold text-ink">Not known yet.</span> Countries come from Cloudflare, and are only believed once its ranges are in TRUSTED_PROXIES.</p>
+                    </div>
+                @else
+                    <div class="op-card overflow-hidden">
+                        @foreach ($visitors['countries'] as $row)
+                            <div class="op-row flex items-center justify-between gap-3">
+                                <span class="truncate text-[14px] text-ink">{{ $row['label'] }}</span>
+                                <span class="shrink-0 text-[13px] tabular-nums text-muted"><span class="font-semibold text-ink">{{ number_format($row['total']) }}</span> · {{ $share($row['total']) }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
             </section>
             <section>
                 <h2 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">How they found it</h2>
@@ -311,12 +323,12 @@
                     @foreach ($visitors['sources'] as $row)
                         <div class="op-row flex items-center justify-between gap-3">
                             <span class="truncate text-[14px] text-ink">{{ $row['source'] }}</span>
-                            <span class="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{{ number_format($row['total']) }}</span>
+                            <span class="shrink-0 text-[13px] tabular-nums text-muted"><span class="font-semibold text-ink">{{ number_format($row['total']) }}</span> · {{ $share($row['total']) }}</span>
                         </div>
                     @endforeach
                 </div>
                 {{-- "direct" is the bucket people misread as "nobody". --}}
-                <p class="mt-2 text-[12px] text-muted">"direct" is a typed link, a QR scan, the installed app, or a tap in an app that hides where it came from. WhatsApp usually does.</p>
+                <p class="mt-2 text-[12px] text-muted">"direct" is a typed link, a QR scan, the installed app, or a tap in an app that hides where it came from. WhatsApp usually does. "other" includes visits that came by the site's own IP address.</p>
             </section>
         </div>
 
@@ -331,7 +343,7 @@
                             </p>
                             <p class="mt-0.5 truncate text-[12px] text-muted">{{ implode(' · ', $row['countries']) }}</p>
                         </div>
-                        <span class="shrink-0 text-[13px] font-semibold tabular-nums text-ink">{{ number_format($row['total']) }}</span>
+                        <span class="shrink-0 text-[13px] tabular-nums text-muted"><span class="font-semibold text-ink">{{ number_format($row['total']) }}</span> · {{ $share($row['total']) }}</span>
                     </div>
                 @endforeach
             </div>
@@ -475,16 +487,35 @@
          both are invisible rules until stated. The empty count is the useful
          number here: boards created and never filled are the drop-off. --}}
     @if ($recent->isNotEmpty())
-        <p class="mt-3 text-[13px] text-muted">
-            @if ($boardQuery !== '')
-                {{ $recent->count() }} {{ Str::plural('board', $recent->count()) }} matching “{{ $boardQuery }}”.
-            @else
-                The {{ $recent->count() }} newest of {{ number_format($stats['workspaces']) }}.
+        <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-[13px] text-muted">
+                @if ($boardQuery !== '')
+                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }} {{ Str::plural('board', $recent->total()) }} matching “{{ $boardQuery }}”.
+                @else
+                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}, newest first.
+                @endif
+                @if ($stats['empty_boards'] > 0)
+                    <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
+                @endif
+            </p>
+            {{-- Newer / page / Older: two directions and where you are, all a
+                 list sorted by date needs. Links, so the page is in the URL. --}}
+            @if ($recent->hasPages())
+                <nav aria-label="Board pages" class="flex shrink-0 items-center gap-2 text-[13px]">
+                    @if ($recent->onFirstPage())
+                        <span class="op-pill inline-flex min-h-11 items-center rounded-full px-4 font-semibold text-muted opacity-50 sm:min-h-9" aria-disabled="true">← Newer</span>
+                    @else
+                        <a href="{{ $recent->previousPageUrl() }}" rel="prev" class="op-pill op-press inline-flex min-h-11 items-center rounded-full px-4 font-semibold text-ink sm:min-h-9">← Newer</a>
+                    @endif
+                    <span class="px-1 tabular-nums text-muted">Page {{ $recent->currentPage() }} of {{ $recent->lastPage() }}</span>
+                    @if ($recent->hasMorePages())
+                        <a href="{{ $recent->nextPageUrl() }}" rel="next" class="op-pill op-press inline-flex min-h-11 items-center rounded-full px-4 font-semibold text-ink sm:min-h-9">Older →</a>
+                    @else
+                        <span class="op-pill inline-flex min-h-11 items-center rounded-full px-4 font-semibold text-muted opacity-50 sm:min-h-9" aria-disabled="true">Older →</span>
+                    @endif
+                </nav>
             @endif
-            @if ($stats['empty_boards'] > 0)
-                <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
-            @endif
-        </p>
+        </div>
     @endif
     @endif
 

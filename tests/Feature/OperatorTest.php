@@ -84,6 +84,37 @@ class OperatorTest extends TestCase
             ->assertDontSee('Review file', false);
     }
 
+    public function test_the_boards_tab_pages_through_every_board_newest_first(): void
+    {
+        // setUp made one board; 24 more, oldest first, so 25 in all.
+        for ($i = 1; $i <= 24; $i++) {
+            [$ws] = Workspace::provision("Paged Board {$i}");
+            $ws->forceFill(['created_at' => now()->subMinutes(100 - $i)])->saveQuietly();
+        }
+        $this->workspace->forceFill(['created_at' => now()->subDays(1)])->saveQuietly();
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards']))
+            ->assertOk()
+            ->assertSee('1–20 of 25, newest first.', false)
+            ->assertSee('Page 1 of 2')
+            ->assertSee('Paged Board 24')
+            ->assertDontSee('Test Workspace')
+            ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'page' => 2]));
+
+        // The oldest board, unreachable before without searching for it.
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'page' => 2]))
+            ->assertOk()
+            ->assertSee('21–25 of 25', false)
+            ->assertSee('Test Workspace')
+            ->assertDontSee('Paged Board 24');
+
+        // A search pages too, and its links keep the search.
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Paged']))
+            ->assertSee('1–20 of 24 boards matching', false)
+            ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Paged', 'page' => 2]));
+    }
+
     public function test_at_a_glance_shows_the_activation_rate_and_empty_boards_say_so(): void
     {
         // setUp's workspace holds one file; this one holds nothing at all.
