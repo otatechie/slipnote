@@ -368,7 +368,7 @@
             <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
                 <div class="min-w-0 sm:flex-1">
                     <p class="truncate pr-10 text-[14px] font-semibold tracking-tight text-ink sm:pr-0">
-                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-0 hover:underline">{{ $ws->name }}</a>
+                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-y-0 after:left-0 after:right-14 hover:underline">{{ $ws->name }}</a>
                     </p>
                     <p class="mt-0.5 text-[12px] text-muted">
                         @if ($ws->courses_count === 0 && $ws->materials_count === 0)
