@@ -99,7 +99,7 @@ html[data-theme='system'][data-system-theme='dark'] {
     --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
     --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
     --card-frame: rgba(255, 255, 255, 0.12);
-    --card-well: #131418;
+    --card-well: #16181c;
     --card-inner: rgba(255, 255, 255, 0.06);
     --card-highlight: rgba(255, 255, 255, 0.05);
 }
@@ -123,7 +123,7 @@ html[data-theme='system'][data-system-theme='dark'] {
         --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
         --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
         --card-frame: rgba(255, 255, 255, 0.12);
-        --card-well: #131418;
+        --card-well: #16181c;
         --card-inner: rgba(255, 255, 255, 0.06);
         --card-highlight: rgba(255, 255, 255, 0.05);
     }
