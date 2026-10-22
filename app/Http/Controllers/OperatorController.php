@@ -104,6 +104,7 @@ class OperatorController extends Controller
             return view('operator.login');
         }
 
+        Workspace::pruneAbandonedDaily();
         $undo = $this->activeUndo();
 
         // Reported files, most-reported first. Capped: the queue is worked

@@ -10,6 +10,7 @@ use App\Http\Controllers\WorkspacesController;
 use App\Models\Material;
 use App\Models\Workspace;
 use App\Support\ClientKey;
+use App\Support\VisitTally;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -59,8 +60,10 @@ Route::get('/download/{token}', function (Request $request, string $token) {
     // Downloads are the signal that a board is still doing its job — a past
     // papers archive gets no uploads for a year and is used every exam week.
     // This route sits outside the workspace group, so ResolveWorkspace's
-    // touch never fires here.
-    $material->course->workspace->touchAccess();
+    // touch never fires here. People only, as there.
+    if (! VisitTally::isBot($request)) {
+        $material->course->workspace->touchAccess();
+    }
 
     // ?view=1 serves PDFs/images inline for preview. Only previewable types —
     // serving arbitrary uploads (e.g. HTML) inline would be an XSS vector.

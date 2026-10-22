@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Workspace;
+use App\Support\VisitTally;
 use App\Tenancy\Tenancy;
 use Closure;
 use Illuminate\Http\Request;
@@ -30,8 +31,10 @@ class ResolveWorkspace
         app(Tenancy::class)->set($workspace);
 
         // GET only: a POST is already covered by the page view that preceded
-        // it, and this shouldn't add a write to every upload.
-        if ($request->isMethodSafe()) {
+        // it, and this shouldn't add a write to every upload. People only:
+        // a link-preview fetcher re-reading a link pasted in a group chat
+        // kept dead boards looking opened (and safe from the cleanup).
+        if ($request->isMethodSafe() && ! VisitTally::isBot($request)) {
             $workspace->touchAccess();
         }
 

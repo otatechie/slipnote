@@ -449,6 +449,10 @@
                         @if ($ws->recent_arrivals > 0)
                             · {{ number_format($ws->recent_arrivals) }} {{ Str::plural('visit', $ws->recent_arrivals) }} in 30 days
                         @endif
+                        @if ($ws->materials_count === 0)
+                            @php $daysLeft = max(0, (int) ceil(now()->diffInDays($ws->removalDueAt(), false))); @endphp
+                            · <span title="Empty boards nobody opens for 30 days are removed">{{ $daysLeft > 0 ? 'removed in '.$daysLeft.' '.Str::plural('day', $daysLeft).' if still empty' : 'removed at the next cleanup' }}{{ $ws->abandon_warned_at ? ', owner warned' : '' }}</span>
+                        @endif
                         @if ($ws->reported_count > 0)
                             · <span class="font-semibold text-danger">{{ $ws->reported_count }} reported</span>
                         @endif
@@ -510,7 +514,7 @@
                     class="op-dialog mb-0 mt-auto w-full max-w-none rounded-t-2xl p-0 shadow-2xl sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl">
                 <form method="POST" action="{{ route('operator.boards.note', $ws->id) }}" class="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
                     @csrf
-                    <h2 id="note-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink [overflow-wrap:anywhere]">Note to the owner of “{{ $ws->name }}”</h2>
+                    <h2 id="note-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink wrap-anywhere">Note to the owner of “{{ $ws->name }}”</h2>
                     <p class="mt-1 text-[13px] text-muted">Shown only to them, on their board, until they dismiss it. They reply through the suggestion form; replies land in Suggestions.</p>
                     <label for="note-text-{{ $ws->id }}" class="sr-only">Note</label>
                     {{-- Clipped wrapper: writing-assistant extensions inject a
@@ -557,7 +561,7 @@
             <dialog id="delete-board-{{ $ws->id }}" aria-labelledby="delete-title-{{ $ws->id }}"
                     class="op-dialog mb-0 mt-auto w-full max-w-none rounded-t-2xl p-0 shadow-2xl sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-sm sm:rounded-2xl">
                 <div class="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
-                    <h2 id="delete-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink [overflow-wrap:anywhere]">Delete “{{ $ws->name }}”?</h2>
+                    <h2 id="delete-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink wrap-anywhere">Delete “{{ $ws->name }}”?</h2>
                     <p class="mt-3 text-[13px] leading-relaxed text-ink/80">
                         @if ($ws->materials_count > 0)
                             Its {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} and {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }} ({{ $size }}) go for good, for everyone.

@@ -39,14 +39,25 @@ class VisitTally
         'github' => '/(^|\.)github\.com$/',
     ];
 
+    /**
+     * A crawler, a link-preview fetcher (WhatsApp, Telegram, Slack…), a
+     * script, or no user agent at all. Not a person: it neither counts as an
+     * arrival nor as a board being opened.
+     */
+    public static function isBot(Request $request): bool
+    {
+        $agent = (string) $request->userAgent();
+
+        return $agent === '' || (bool) preg_match(self::BOT_PATTERN, $agent);
+    }
+
     public static function shouldCount(Request $request): bool
     {
         if (! $request->isMethod('GET') || ! in_array($request->route()?->getName(), self::ROUTES, true)) {
             return false;
         }
 
-        $agent = (string) $request->userAgent();
-        if ($agent === '' || preg_match(self::BOT_PATTERN, $agent)) {
+        if (self::isBot($request)) {
             return false;
         }
 

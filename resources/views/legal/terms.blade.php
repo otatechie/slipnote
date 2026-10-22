@@ -24,6 +24,7 @@
                 <li>Don't upload malware, or files designed to harm, deceive, or exploit anyone who downloads them.</li>
                 <li>Don't upload illegal content or anything that could harm other users.</li>
                 <li>The site operator may remove any content or board that violates these terms, without notice.</li>
+                <li>A board with no files that nobody opens for 30 days is removed. Owners with a recovery email are warned a week before; opening the board keeps it.</li>
             </ul>
         </section>
 

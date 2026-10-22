@@ -62,6 +62,7 @@ class WorkspacesController extends Controller
             return back()->withErrors(['name' => 'Use some letters or numbers — "'.$clean.'" can\'t become a link.']);
         }
 
+        Workspace::pruneAbandonedDaily();
         [$workspace, $secret] = Workspace::provision($clean);
         RateLimiter::hit($rlKey, 3600); // count only successful creations
 

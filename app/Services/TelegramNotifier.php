@@ -100,6 +100,25 @@ class TelegramNotifier
      * A message from the "Suggest a feature" form. Already stored in the
      * database, so an unconfigured or failing Telegram only costs the ping.
      */
+    /** The daily cleanup removed empty, unopened boards. */
+    public function notifyAbandonedRemoved(int $count): void
+    {
+        $token = (string) config('noteshare.telegram_bot_token');
+        $chatId = (string) config('noteshare.telegram_chat_id');
+        if ($token === '' || $chatId === '') {
+            return;
+        }
+
+        try {
+            Http::asJson()->timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                'chat_id' => $chatId,
+                'text' => "🧹 {$count} empty ".($count === 1 ? 'board' : 'boards').' removed: no files and not opened for 30 days.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Telegram cleanup notification threw', ['message' => $this->safeMessage($e)]);
+        }
+    }
+
     public function notifySuggestion(Suggestion $suggestion): void
     {
         $token = (string) config('noteshare.telegram_bot_token');

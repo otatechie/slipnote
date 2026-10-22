@@ -2,10 +2,16 @@
 
 namespace App\Models;
 
+use App\Mail\AbandonedBoardWarning;
+use App\Services\TelegramNotifier;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -28,6 +34,7 @@ class Workspace extends Model
         'recovery_email' => 'encrypted',
         'last_accessed_at' => 'datetime',
         'operator_note_at' => 'datetime',
+        'abandon_warned_at' => 'datetime',
         'uploads_owner_only' => 'boolean',
     ];
 
@@ -54,6 +61,94 @@ class Workspace extends Model
         Material::whereIn('course_id', $courseIds)->delete();
         Course::withoutGlobalScopes()->whereIn('id', $courseIds)->delete();
         $this->delete();
+    }
+
+    /** An empty board unopened this long (by a person) is removed. */
+    public const ABANDONED_AFTER_DAYS = 30;
+
+    /** Owners with a recovery email are warned this long before. */
+    public const ABANDON_WARNING_DAYS = 7;
+
+    /** When this board was last opened by a person, or made if never. */
+    public function lastActiveAt(): Carbon
+    {
+        return $this->last_accessed_at ?? $this->created_at;
+    }
+
+    /**
+     * When the cleanup would remove this board if it stays empty and
+     * unopened: 30 days after it was last active, and never sooner than 7
+     * days after its owner was warned.
+     */
+    public function removalDueAt(): Carbon
+    {
+        $due = $this->lastActiveAt()->copy()->addDays(self::ABANDONED_AFTER_DAYS);
+        if ($this->abandon_warned_at) {
+            $due = $due->max($this->abandon_warned_at->copy()->addDays(self::ABANDON_WARNING_DAYS));
+        }
+
+        return $due;
+    }
+
+    /**
+     * Remove boards with no files that nobody has opened for 30 days,
+     * warning owners who set a recovery email a week before. Opening the
+     * board resets the clock and the warning; a board with any file is never
+     * touched. Returns [removed, warned].
+     *
+     * @return array{0:int,1:int}
+     */
+    public static function pruneAbandoned(): array
+    {
+        $mailOn = ! in_array(config('mail.default'), ['log', 'array', null], true);
+        $warnFrom = now()->subDays(self::ABANDONED_AFTER_DAYS - self::ABANDON_WARNING_DAYS);
+        $removed = 0;
+        $warned = 0;
+
+        static::query()
+            ->whereDoesntHave('materials')
+            ->whereRaw('COALESCE(last_accessed_at, created_at) < ?', [$warnFrom])
+            ->each(function (self $board) use ($mailOn, &$removed, &$warned) {
+                // Warn first, once, where there is someone to warn.
+                if ($mailOn && filled($board->recovery_email) && ! $board->abandon_warned_at) {
+                    try {
+                        Mail::to($board->recovery_email)->send(new AbandonedBoardWarning(
+                            $board->name,
+                            route('courses.index', ['workspace' => $board->slug]),
+                            self::ABANDON_WARNING_DAYS,
+                        ));
+                        $board->forceFill(['abandon_warned_at' => now()])->saveQuietly();
+                        $warned++;
+                    } catch (\Throwable $e) {
+                        Log::warning('Abandoned-board warning failed', ['workspace' => $board->id]);
+                    }
+
+                    return;
+                }
+
+                if ($board->removalDueAt()->isPast()) {
+                    $board->purge();
+                    $removed++;
+                }
+            });
+
+        if ($removed > 0) {
+            dispatch(fn () => app(TelegramNotifier::class)->notifyAbandonedRemoved($removed))->afterResponse();
+        }
+
+        return [$removed, $warned];
+    }
+
+    /**
+     * pruneAbandoned at most once a day, from ordinary requests (a board
+     * being made, the operator console), so it runs even where no scheduler
+     * does. The scheduled command runs it too, where one is.
+     */
+    public static function pruneAbandonedDaily(): void
+    {
+        if (Cache::add('prune_abandoned_boards', true, now()->addDay())) {
+            static::pruneAbandoned();
+        }
     }
 
     /**
@@ -164,6 +259,8 @@ class Workspace extends Model
         }
 
         $this->last_accessed_at = now();
+        // Opened again: any "about to be removed" warning no longer applies.
+        $this->abandon_warned_at = null;
 
         // timestamps=false, not just saveQuietly(): saveQuietly suppresses
         // events but still bumps updated_at, which would make every visit
