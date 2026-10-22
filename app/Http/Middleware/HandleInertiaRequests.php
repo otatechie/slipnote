@@ -11,13 +11,9 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
-        // Read flash eagerly — lazy closures resolve AFTER the flash bag
-        // drains, which means no toast ever shows.
         $session = $request->session();
 
         return array_merge(parent::share($request), [
-            // Needed by native <form> POSTs (e.g. the per-row owner delete),
-            // which can't rely on the XSRF cookie header that axios sends.
             'csrf_token' => csrf_token(),
             'ambassadorFormUrl' => config('noteshare.ambassador_form_url'),
             'operatorName' => config('noteshare.operator_name'),

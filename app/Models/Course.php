@@ -11,10 +11,6 @@ class Course extends Model
 {
     use BelongsToWorkspace;
 
-    // workspace_id is intentionally NOT fillable: it is set by the
-    // BelongsToWorkspace trait from the resolved tenant, never from request
-    // input. This prevents a crafted request from planting a course in
-    // another workspace.
     protected $fillable = ['code', 'title', 'slug', 'position'];
 
     public function workspace(): BelongsTo

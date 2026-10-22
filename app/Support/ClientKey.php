@@ -4,11 +4,6 @@ namespace App\Support;
 
 use Illuminate\Http\Request;
 
-/**
- * Who a request comes from, for rate-limit keys. IPv4 as is; IPv6 cut to its
- * /64, which is what one home or phone connection is given: keyed on the full
- * address, one client could rotate through billions of keys.
- */
 class ClientKey
 {
     public static function of(Request $request): string

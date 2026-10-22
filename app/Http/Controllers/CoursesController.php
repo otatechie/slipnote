@@ -26,9 +26,6 @@ class CoursesController extends Controller
         $search = $this->searchInput($request);
         $sort = $request->input('sort', 'manual');
 
-        // Files newer than this browser's last visit to each course. One query:
-        // an OR group per course that has a baseline, and one for the rest,
-        // which count the last week (LastSeen::since), as the course page does.
         $seen = LastSeen::read($request);
         $query = Course::withCount([
             'materials',
@@ -76,8 +73,6 @@ class CoursesController extends Controller
                 'materials_max_created_at' => $c->materials_max_created_at,
             ]),
             'totalCourses' => Course::count(),
-            // A board with courses but no files is still empty to a visitor;
-            // the share nudge keys off this, not the course count.
             'totalFiles' => $workspace->materials()->count(),
             'isOwner' => $isOwner,
             'uploadsOwnerOnly' => (bool) $workspace->uploads_owner_only,
@@ -104,8 +99,6 @@ class CoursesController extends Controller
             return back()->withErrors(['ownerInput' => 'Too many attempts. Try again in a few minutes.']);
         }
 
-        // A string whatever is sent (ownerInput[]=x was a 500), and an empty
-        // submit is not a guess, so it doesn't count against the limit.
         $given = is_string($request->input('ownerInput')) ? trim($request->input('ownerInput')) : '';
         if ($given === '') {
             return back()->withErrors(['ownerInput' => 'Paste your owner link or secret.']);
@@ -131,13 +124,6 @@ class CoursesController extends Controller
         return back()->withErrors(['ownerInput' => "That owner secret or link isn't right for this board — check you copied the whole thing."]);
     }
 
-    /**
-     * Issue a new owner link and kill the old one, for a link pasted into the
-     * class group by mistake. Every other browser that unlocked with the old
-     * link loses owner access on its next request (owner sessions hold a
-     * fingerprint of the secret); this one keeps it. The new link is shown
-     * once, on the same receipt as a new board.
-     */
     public function resetOwnerLink(Request $request)
     {
         $workspace = $this->workspace();
@@ -159,11 +145,6 @@ class CoursesController extends Controller
             ]);
     }
 
-    /**
-     * Delete the board, its courses and every file, at once and for good.
-     * The owner types the board's name to confirm, checked here too, so a
-     * stray request can't do it. Files leave the disk before the rows go.
-     */
     public function destroy(Request $request)
     {
         $workspace = $this->workspace();
@@ -192,8 +173,6 @@ class CoursesController extends Controller
         $data = $request->validate(['ownerOnly' => 'required|boolean']);
         $workspace->forceFill(['uploads_owner_only' => (bool) $data['ownerOnly']])->save();
 
-        // No toast: the setting sits at the foot of the page and the toast at
-        // the top, so the selected choice is the confirmation.
         return back();
     }
 
@@ -237,11 +216,6 @@ class CoursesController extends Controller
         abort_unless($this->isOwner(), 403);
 
         $data = $request->validate([
-            // A course code must contain a letter (e.g. "PHYS 101") — blocks
-            // all-numeric junk like "123456". And it must be unique within
-            // THIS board: Course queries are auto-scoped to the current
-            // workspace (WorkspaceScope), so this rule only looks at this
-            // board — other boards keep their own "PHYS 101".
             'code' => [
                 'required', 'string', 'max:40', 'regex:/[a-zA-Z]/',
                 function ($attr, $value, $fail) {

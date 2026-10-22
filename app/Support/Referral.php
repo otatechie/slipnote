@@ -6,13 +6,6 @@ use App\Models\Ambassador;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 
-/**
- * The ?ref= handshake. A valid ref on any page is kept in a cookie until
- * this browser creates a board, at which point it is written onto that
- * board and the cookie is cleared. First touch wins: an existing cookie is
- * never overwritten, so ambassadors cannot poach each other's recruits by
- * re-sending links.
- */
 class Referral
 {
     private const COOKIE = 'slipnote_ref';

@@ -5,17 +5,6 @@ namespace App\Support;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 
-/**
- * When this browser last opened each course, so the next visit can mark
- * what landed since. Cookie-side and per browser: no accounts, nothing
- * server-side, nothing that identifies anyone. A map of course id => unix
- * timestamp, capped so it never grows past a few hundred bytes.
- *
- * A course with no entry falls back to the last FIRST_LOOK_DAYS: per browser
- * means a phone has no baseline for courses opened on a laptop, and showing
- * nothing as new there hid this week's slides from the device most students
- * use. A week, not everything, so a first visit is never "everything is new".
- */
 class LastSeen
 {
     private const COOKIE = 'slipnote_seen';

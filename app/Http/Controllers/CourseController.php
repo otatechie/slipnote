@@ -30,13 +30,8 @@ class CourseController extends Controller
 
         $course = Course::where('slug', $slug)->firstOrFail();
 
-        // Link previews for a course link name the course, not just the board
-        // (see app.blade.php). Still no counts or filenames.
         view()->share('ogCourse', $course);
 
-        // What landed since this browser last opened this course (or in the
-        // last week, if it never has). Read before the cookie is bumped below,
-        // so today's visit is measured against the previous one.
         $newSince = LastSeen::since($request, $course->id);
         Cookie::queue(LastSeen::mark($request, $course->id));
         if ($this->isOwner() && ($recent = RecentWorkspaces::touch($request, $workspace))) {
@@ -48,16 +43,10 @@ class CourseController extends Controller
 
         $query = $course->materials();
         if ($search) {
-            // Each word must match title or filename, so "past paper" finds
-            // "past_papers_2023.pdf" — separators in filenames shouldn't hide
-            // files from the natural query.
-            // At most 8 words: each adds a clause.
             foreach (array_slice(preg_split('/\s+/', $search), 0, 8) as $term) {
                 $this->whereLikeAny($query, ['title', 'original_filename'], $term);
             }
         }
-        // Pinned files lead their section whatever the sort; the list groups
-        // by section client-side, keeping this order within each.
         $query->orderByRaw('pinned_at IS NULL')->orderByDesc('pinned_at');
         match ($sort) {
             'oldest' => $query->oldest(),
@@ -69,8 +58,6 @@ class CourseController extends Controller
             ->selectRaw('section, count(*) as total')
             ->groupBy('section')
             ->pluck('total', 'section');
-        // From the whole course, not the filtered list, so the pin menu knows
-        // a section is full even while a search hides some of its pins.
         $pinnedCounts = $course->materials()->whereNotNull('pinned_at')
             ->selectRaw('section, count(*) as total')
             ->groupBy('section')
@@ -82,25 +69,16 @@ class CourseController extends Controller
             'displayName' => $m->displayName(),
             'original_filename' => $m->original_filename,
             'fileTypeLabel' => $m->fileTypeLabel(),
-            // Shown in the row: two uploads can share a display name (both
-            // "Lucid_by_WeOrg"), leaving nothing on screen to tell them apart.
-            // Size also answers "is this worth it on mobile data?" before the tap.
             'file_size' => $m->file_size,
             // Names given before the field was dropped still show.
             'uploader_name' => $m->uploader_name,
             'pinned' => $m->pinned_at !== null,
-            // "just now" reads better than "0 seconds ago" for fresh uploads.
-            // Short units ("28m ago") keep the meta line from truncating on phones.
             'created_at_human' => $m->created_at->diffInSeconds() < 45
                 ? 'just now'
                 : $m->created_at->diffForHumans(short: true),
             'is_new' => $m->created_at->getTimestamp() > $newSince,
             'download_url' => $m->downloadUrl(),
             'preview_url' => $m->previewUrl(),
-            // Owner delete goes through the session; the literal 'owner' is
-            // never a valid token. The uploader's manage_url is deliberately
-            // NOT here — it is the delete capability, and this array goes to
-            // every visitor.
             'delete_url' => route('material.destroy', ['material' => $m->id, 'token' => 'owner']),
             'title' => $m->title,
         ]);
@@ -110,8 +88,6 @@ class CourseController extends Controller
             'course' => ['id' => $course->id, 'code' => $course->code, 'title' => $course->title, 'slug' => $course->slug],
             'isOwner' => $this->isOwner(),
             'storageFull' => $workspace->storageFull(),
-            // False when the owner has locked uploads to themselves and this
-            // visitor isn't the owner: no Add file anywhere on the page.
             'canUpload' => ! $workspace->uploads_owner_only || $this->isOwner(),
             'storageUsed' => $storageUsed = $workspace->storageBytes(),
             'storageCap' => $storageCap = (int) config('noteshare.workspace_storage_bytes'),
@@ -128,24 +104,10 @@ class CourseController extends Controller
         ]);
     }
 
-    /**
-     * Stream every file in one section as a zip. Anonymous, like single
-     * downloads — anyone with the board link can grab the whole section
-     * (the real exam-time need: "all the past papers", not twelve clicks).
-     * Built into a temp file then streamed and deleted after send.
-     *
-     * Rate-limited per client and board: each call materialises up to the
-     * whole workspace cap (500 MB) in the temp dir before a byte is sent, and
-     * the free-disk check only guards uploads. Ten a section per ten minutes
-     * is generous for a class and useless for filling the disk.
-     */
     public function downloadSection(Request $request, string $workspaceSlug, string $slug, string $section)
     {
         abort_unless(isset(Material::SECTIONS[$section]), 404);
 
-        // 10 per board per 10 min, and 20 an hour across all boards: each zip
-        // is built on disk, so one client fanning out over many boards could
-        // otherwise fill the temp directory.
         $key = 'section_zip:'.ClientKey::of($request).':'.$this->workspace()->id;
         $anyKey = 'section_zip_any:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($key, 10) || RateLimiter::tooManyAttempts($anyKey, 20)) {
@@ -163,9 +125,6 @@ class CourseController extends Controller
 
         abort_if($materials->isEmpty(), 404);
 
-        // The temp directory is often its own small filesystem, which the
-        // upload free-space check never looks at: leave the build room for
-        // this zip plus 256 MB to spare, or refuse it for now.
         $free = disk_free_space(sys_get_temp_dir());
         $needed = (int) $materials->sum('file_size') + 256 * 1024 * 1024;
         if ($free === false || $free < $needed) {
@@ -176,8 +135,6 @@ class CourseController extends Controller
         $zip = new \ZipArchive;
         $zip->open($zipPath, \ZipArchive::OVERWRITE);
 
-        // De-collide duplicate filenames inside the archive; skip files that
-        // vanished from disk rather than failing the whole download.
         $used = [];
         $added = 0;
         foreach ($materials as $material) {
@@ -236,10 +193,6 @@ class CourseController extends Controller
         return back()->with('notice', $count === 1 ? '1 file removed.' : "{$count} files removed.");
     }
 
-    /**
-     * Pin a file to the top of its section, or unpin it. Owner only, and the
-     * file is resolved through the scoped course, so it must be on this board.
-     */
     public function pin(Request $request, string $workspaceSlug, string $slug, int $material)
     {
         $this->workspace();
@@ -250,9 +203,6 @@ class CourseController extends Controller
 
         $pin = $request->boolean('pinned');
 
-        // A few, or pinning means nothing: pin everything and the top of the
-        // section is just the list again. The menu says so before it gets
-        // here; this catches a stale tab.
         if ($pin && $material->pinned_at === null) {
             $pinnedHere = $course->materials()->where('section', $material->section)->whereNotNull('pinned_at')->count();
             if ($pinnedHere >= Material::MAX_PINNED_PER_SECTION) {
@@ -262,9 +212,6 @@ class CourseController extends Controller
 
         $material->forceFill(['pinned_at' => $pin ? ($material->pinned_at ?? now()) : null])->save();
 
-        // A passing notice, not the upload receipt: the change is already in
-        // the list, and the receipt sits at the top of the page, out of view
-        // from a file pinned further down.
         return back()->with('notice', $pin ? 'Pinned to the top of '.Material::SECTIONS[$material->section] : 'Unpinned');
     }
 
@@ -276,24 +223,12 @@ class CourseController extends Controller
         return back();
     }
 
-    /**
-     * Anonymous abuse report. Anyone viewing a board can flag a file; the
-     * operator is notified (Telegram, or logged) and decides what to do —
-     * we never auto-delete, so a report can't be weaponised to remove a
-     * legit file. The material is resolved through the scoped course, so a
-     * report can only target a file in the board being viewed.
-     */
     public function report(Request $request, string $workspaceSlug, string $slug, int $material)
     {
         $course = Course::where('slug', $slug)->firstOrFail();
 
-        // Material has no workspace global scope, so resolve it THROUGH the
-        // (scoped) course — a report can only target a file in this board.
         $material = $course->materials()->whereKey($material)->firstOrFail();
 
-        // Throttle to blunt spam/notification floods: 5 reports per file and
-        // client per 10 min, and 20 an hour per client across all files (per
-        // file alone, one client could flood the operator's Telegram).
         $key = 'report:'.$material->id.':'.ClientKey::of($request);
         $clientKey = 'report_any:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($clientKey, 20)) {
@@ -321,8 +256,6 @@ class CourseController extends Controller
         $workspace = $this->workspace();
         $course = Course::where('slug', $slug)->firstOrFail();
 
-        // The owner locked uploads to themselves. The page hides Add file, so
-        // this is a stale tab or a hand-made request; say why, don't 403.
         if ($workspace->uploads_owner_only && ! $this->isOwner()) {
             return back()->withErrors(['files' => 'Only the board\'s owner can add files here.']);
         }
@@ -332,14 +265,7 @@ class CourseController extends Controller
             'title' => 'nullable|string|max:120',
             'passphrase' => 'nullable|string',
             'files' => 'required|array|min:1|max:20',
-            // mimes checks the extension; mimetypes checks the real content
-            // type (magic bytes via finfo), so a renamed executable — e.g.
-            // virus.exe → notes.pdf — fails even though its extension passes.
             'files.*' => ['file', 'max:25600', 'mimes:pdf,docx,pptx,png,jpg,jpeg', 'mimetypes:application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/png,image/jpeg',
-                // mimes/mimetypes read the content, not the name, so a PDF
-                // named "slides.hta" passed and kept its name: a script for
-                // whoever opened it. The name's extension must be allowed and
-                // match what's inside.
                 function (string $attribute, mixed $file, \Closure $fail) {
                     $norm = fn (?string $e) => $e === 'jpeg' ? 'jpg' : strtolower((string) $e);
                     $named = $norm($file->getClientOriginalExtension());
@@ -358,25 +284,18 @@ class CourseController extends Controller
             'title.max' => 'That title is too long — keep it under 120 characters.',
         ]);
 
-        // Per-IP upload throttle: blunts automated abuse / mass dumping while
-        // staying generous for a student uploading a semester's notes.
         $rlKey = 'upload:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($rlKey, 30)) {
             return back()->withErrors(['files' => 'Too many uploads in a short time. Please wait a few minutes and try again.']);
         }
         RateLimiter::hit($rlKey, 600);
 
-        // Fail closed: if the free-space probe errors (returns false), treat
-        // it as zero space rather than waving the upload through.
         $free = disk_free_space(storage_path('app/private'));
         if ($free === false || $free < (int) config('noteshare.min_free_disk_bytes')) {
             return back()->withErrors(['files' => 'The site is at capacity — please try again later.']);
         }
 
         if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true) {
-            // 5 attempts per 10 min per board and client, so one client can't
-            // lock a whole class out; 30 per board in all, since a passphrase
-            // is human-chosen and guessable where an owner secret isn't.
             $key = 'upload_passphrase:'.$workspace->id.':'.ClientKey::of($request);
             $boardKey = 'upload_passphrase_board:'.$workspace->id;
             if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($boardKey, 30)) {
@@ -396,31 +315,16 @@ class CourseController extends Controller
 
         $files = $request->file('files');
 
-        // A shared title only makes sense for a single file; with several
-        // files each keeps its own filename.
         $title = count($files) === 1 && isset($data['title']) ? strip_tags($data['title']) : null;
-        // No uploader name: the optional field was left blank on nearly every
-        // file, so rows said "Anonymous" and nothing more. Whether the file
-        // came from whoever runs the board is recorded instead. Not shown on
-        // the row ("Owner" meant nothing to a classmate, and on a locked board
-        // it was on every file; pinning says "this one matters" better), but
-        // kept for the Telegram ping and for filtering later.
         $byOwner = $this->isOwner();
 
-        // Soft per-workspace cap: track headroom across this batch so a single
-        // request never overshoots. The host-disk check above is the hard
-        // safety net; a tiny overshoot under concurrent uploads is acceptable.
         $remaining = $workspace->storageRemaining();
-        // Hard file-count cap alongside the byte cap: a flood of tiny files
-        // shouldn't exhaust inodes or the list UI while under the size limit.
         $filesLeft = $workspace->filesRemaining();
         $created = [];
         $skipped = 0;
         $blocked = 0;
         $duplicate = 0;
         $duplicateName = null;
-        // Hashes already present in this course, plus any added this batch, so
-        // two identical files in one upload also de-dupe against each other.
         $seenHashes = $course->materials()->whereNotNull('content_hash')->pluck('content_hash')->flip();
 
         foreach ($files as $file) {
@@ -433,9 +337,6 @@ class CourseController extends Controller
                 continue;
             }
 
-            // Skip a file already on this board (same bytes). Prevents the
-            // natural entropy of five copies of one past paper under different
-            // names on an anonymous board.
             if ($seenHashes->has($hash)) {
                 $duplicate++;
                 $duplicateName ??= $course->materials()->where('content_hash', $hash)->value('title')
@@ -509,12 +410,6 @@ class CourseController extends Controller
         ]);
     }
 
-    /**
-     * Clean a client-supplied filename before it's stored and later echoed
-     * into a Content-Disposition header on download. Strips directory parts
-     * and control characters (which enable header injection / spoofing),
-     * collapses whitespace, and guarantees a non-empty fallback.
-     */
     private function sanitizeFilename(string $name): string
     {
         // Drop any path components a client may have sent (basename only).

@@ -6,10 +6,6 @@ use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 
-/**
- * Cookie-side list of workspaces this browser has unlocked in owner mode.
- * UX nicety only — real auth goes through ws_owner_{id} session keys.
- */
 class RecentWorkspaces
 {
     private const COOKIE = 'recent_workspaces';
@@ -52,11 +48,6 @@ class RecentWorkspaces
         return self::makeCookie(json_encode($list));
     }
 
-    /**
-     * Move a board its owner just opened to the top, so /start lists boards
-     * by when they were last used rather than when access was last granted.
-     * Null when it's already first: no cookie to write on most page views.
-     */
     public static function touch(Request $request, Workspace $workspace): ?Cookie
     {
         $first = self::read($request)[0]['slug'] ?? null;
@@ -78,9 +69,6 @@ class RecentWorkspaces
             value: $value,
             minutes: self::TTL_MINUTES,
             path: '/',
-            // Follow the app's session-cookie security: HTTPS-only in prod,
-            // relaxed for local http dev. Avoids hardcoding secure=true, which
-            // would silently drop the cookie over http in development.
             secure: (bool) config('session.secure'),
             httpOnly: true,
             sameSite: 'lax',

@@ -15,16 +15,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-/**
- * An isolated board. No accounts: the owner secret (stored only as a bcrypt
- * hash) is the single credential, handed out once as a capability URL.
- */
 class Workspace extends Model
 {
-    // recovery_email is deliberately NOT fillable — set only via
-    // setRecoveryEmail() behind the owner gate, never mass-assigned.
-    // upload_passphrase is fillable for existing setup flows, but is hashed
-    // by the mutator below before it is stored.
     protected $fillable = ['name', 'slug', 'owner_secret_hash', 'upload_passphrase'];
 
     protected $hidden = ['owner_secret_hash', 'recovery_email'];
@@ -48,11 +40,6 @@ class Workspace extends Model
         return $this->hasManyThrough(Material::class, Course::class);
     }
 
-    /**
-     * Delete this board for good: files from disk first, then its rows
-     * (materials, courses, the board). Outside the tenancy scope, so it works
-     * from the operator console as well as the board's own page.
-     */
     public function purge(): void
     {
         $courseIds = Course::withoutGlobalScopes()->where('workspace_id', $this->id)->pluck('id');
@@ -75,11 +62,6 @@ class Workspace extends Model
         return $this->last_accessed_at ?? $this->created_at;
     }
 
-    /**
-     * When the cleanup would remove this board if it stays empty and
-     * unopened: 30 days after it was last active, and never sooner than 7
-     * days after its owner was warned.
-     */
     public function removalDueAt(): Carbon
     {
         $due = $this->lastActiveAt()->copy()->addDays(self::ABANDONED_AFTER_DAYS);
@@ -90,14 +72,6 @@ class Workspace extends Model
         return $due;
     }
 
-    /**
-     * Remove boards with no files that nobody has opened for 30 days,
-     * warning owners who set a recovery email a week before. Opening the
-     * board resets the clock and the warning; a board with any file is never
-     * touched. Returns [removed, warned].
-     *
-     * @return array{0:int,1:int}
-     */
     public static function pruneAbandoned(): array
     {
         $mailOn = ! in_array(config('mail.default'), ['log', 'array', null], true);
@@ -139,11 +113,6 @@ class Workspace extends Model
         return [$removed, $warned];
     }
 
-    /**
-     * pruneAbandoned at most once a day, from ordinary requests (a board
-     * being made, the operator console), so it runs even where no scheduler
-     * does. The scheduled command runs it too, where one is.
-     */
     public static function pruneAbandonedDaily(): void
     {
         if (Cache::add('prune_abandoned_boards', true, now()->addDay())) {
@@ -151,10 +120,6 @@ class Workspace extends Model
         }
     }
 
-    /**
-     * Create a workspace and return [Workspace, plaintextOwnerSecret].
-     * The plaintext is shown to the creator exactly once and never stored.
-     */
     public static function provision(string $name): array
     {
         $secret = Str::random(40);
@@ -205,10 +170,6 @@ class Workspace extends Model
         return false;
     }
 
-    /**
-     * Opt-in recovery email. Stored normalised (trim + lowercase) so the
-     * recovery check is a clean comparison. Empty string clears it.
-     */
     public function setRecoveryEmail(?string $email): void
     {
         $email = $email !== null ? mb_strtolower(trim($email)) : null;
@@ -216,11 +177,6 @@ class Workspace extends Model
         $this->save();
     }
 
-    /**
-     * Constant-time match against the stored recovery email. False when no
-     * recovery email is set — callers MUST NOT branch differently on "no
-     * email" vs "wrong email" (no enumeration; identical response either way).
-     */
     public function recoveryEmailMatches(?string $given): bool
     {
         if (blank($this->recovery_email) || ! is_string($given) || $given === '') {
@@ -230,13 +186,6 @@ class Workspace extends Model
         return hash_equals($this->recovery_email, mb_strtolower(trim($given)));
     }
 
-    /**
-     * Generate a fresh owner secret and its hash without persisting it yet.
-     * Lets the caller avoid retiring the current owner link unless the
-     * replacement link has actually been handed off successfully.
-     *
-     * @return array{0:string,1:string}
-     */
     public function draftOwnerSecretRotation(): array
     {
         $secret = Str::random(40);
@@ -244,14 +193,6 @@ class Workspace extends Model
         return [$secret, Hash::make($secret)];
     }
 
-    /**
-     * Record that someone looked at this board or pulled a file from it.
-     *
-     * Throttled to the hour: the question this answers is "has anyone touched
-     * this board in months", so finer resolution buys nothing and would mean a
-     * write on every page view. Skips the model's timestamps so a visit never
-     * looks like an edit.
-     */
     public function touchAccess(): void
     {
         if ($this->last_accessed_at?->gt(now()->subHour())) {
@@ -262,9 +203,6 @@ class Workspace extends Model
         // Opened again: any "about to be removed" warning no longer applies.
         $this->abandon_warned_at = null;
 
-        // timestamps=false, not just saveQuietly(): saveQuietly suppresses
-        // events but still bumps updated_at, which would make every visit
-        // look like an edit.
         $this->timestamps = false;
         $this->saveQuietly();
         $this->timestamps = true;
@@ -273,10 +211,6 @@ class Workspace extends Model
     /** Slug from the name, with a numeric suffix if it collides. */
     public static function uniqueSlug(string $name): string
     {
-        // The name, then a random code: the link is the only key to a board,
-        // and from the name alone ("econ-level-200") anyone could guess it.
-        // 6 characters from 31 (no 0/o, 1/l/i to misread): about 900 million
-        // per name, with misses rate-limited (see the workspace binding).
         $base = Str::limit(Str::slug($name) ?: 'board', 60, '');
         $alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
         $reserved = static::reservedSlugs();
@@ -291,15 +225,6 @@ class Workspace extends Model
         return $slug;
     }
 
-    /**
-     * Slugs the site's own pages already answer to (/start, /privacy,
-     * /lecturers, /operator…). Those routes are declared before the
-     * /{workspace} catch-all, so a board named "Privacy" would get a link
-     * that opens the privacy page and could never be reached. Read from the
-     * router, so a new page is covered without remembering to list it.
-     *
-     * @return list<string>
-     */
     private static function reservedSlugs(): array
     {
         return collect(app('router')->getRoutes()->getRoutes())
@@ -316,13 +241,6 @@ class Workspace extends Model
         return "ws_owner_{$this->id}";
     }
 
-    /**
-     * What an owner session holds: a fingerprint of the current owner secret's
-     * hash, not a bare true. Rotating the secret (recovery, or Reset owner
-     * link) changes it, so every browser that unlocked with the old link stops
-     * being owner on its next request. With true, a leaked link that had been
-     * used stayed owner for as long as its session lived.
-     */
     public function ownerSessionValue(): string
     {
         return hash('sha256', 'owner|'.$this->owner_secret_hash);
@@ -333,10 +251,6 @@ class Workspace extends Model
     {
         $held = session($this->ownerSessionKey());
 
-        // A session unlocked before fingerprints holds a bare true. Bind it to
-        // the current secret on first sight rather than signing every owner
-        // out on deploy -- some have lost their link. From here on a rotation
-        // revokes it like any other.
         if ($held === true) {
             session([$this->ownerSessionKey() => $this->ownerSessionValue()]);
 
@@ -351,11 +265,6 @@ class Workspace extends Model
         return "ws_upload_ok_{$this->id}";
     }
 
-    /**
-     * Total bytes used by this workspace's materials. Sums file_size across
-     * every material in every course; trusts the column rather than touching
-     * disk per request (the column is set at upload time + backfilled).
-     */
     public function storageBytes(): int
     {
         return (int) Material::query()

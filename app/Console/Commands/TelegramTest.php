@@ -5,11 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
-/**
- * One-shot connectivity check for the Telegram (Notebird) integration:
- * confirms the token + chat id are valid by posting a test message,
- * without needing a real upload.
- */
 class TelegramTest extends Command
 {
     protected $signature = 'noteshare:telegram-test';
@@ -38,8 +33,6 @@ class TelegramTest extends Command
                     'text' => '✅ Notebird is connected. New uploads will post here.',
                 ]);
         } catch (\Throwable $e) {
-            // Http exceptions can embed the full request URL, which carries
-            // the bot token — redact it before printing to the console.
             $this->error('Request failed: '.$this->redact($e->getMessage()));
 
             return self::FAILURE;
@@ -60,13 +53,6 @@ class TelegramTest extends Command
         return self::FAILURE;
     }
 
-    /**
-     * Strip a Telegram bot token from any text before it hits the console.
-     * Tokens appear as "<digits>:<35+ chars>" and inside URLs as
-     * "/bot<token>/". Whoever runs this already has .env access, so this is
-     * defence-in-depth, not a trust boundary — but tokens shouldn't be
-     * casually echoed where they can be shoulder-surfed or copied into logs.
-     */
     private function redact(string $text): string
     {
         return preg_replace('#\d{6,}:[A-Za-z0-9_-]{30,}#', '[REDACTED-TOKEN]', $text);

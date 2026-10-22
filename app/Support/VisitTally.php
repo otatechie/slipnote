@@ -6,16 +6,6 @@ use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Counts arrivals: a page load that came from outside the site. Internal
- * navigation is not counted, so the numbers answer "how many times did
- * someone come here, from where, and how did they find it" rather than
- * measuring clicks.
- *
- * Nothing here identifies anyone. The country comes from the CDN's header
- * (never from an IP lookup), the source is a referring host or a bucket,
- * and all that is stored is a daily count per combination.
- */
 class VisitTally
 {
     /** Pages worth counting: the front door and the boards themselves. */
@@ -39,11 +29,6 @@ class VisitTally
         'github' => '/(^|\.)github\.com$/',
     ];
 
-    /**
-     * A crawler, a link-preview fetcher (WhatsApp, Telegram, Slack…), a
-     * script, or no user agent at all. Not a person: it neither counts as an
-     * arrival nor as a board being opened.
-     */
     public static function isBot(Request $request): bool
     {
         $agent = (string) $request->userAgent();
@@ -84,11 +69,6 @@ class VisitTally
         );
     }
 
-    /**
-     * Cloudflare's CF-IPCountry, believed only when the request really came
-     * through a trusted proxy: from anyone else it is just a header the
-     * client chose. XX is "unknown" and T1 is Tor, both stored as unknown.
-     */
     public static function country(Request $request): string
     {
         if (! $request->isFromTrustedProxy()) {
@@ -109,14 +89,9 @@ class VisitTally
 
         $host = self::referrerHost($request);
         if ($host === null) {
-            // Typed, bookmarked, scanned from a QR code, opened from the
-            // installed app, or tapped in an app that sends no referrer
-            // (WhatsApp usually doesn't).
             return 'direct';
         }
 
-        // A referrer that is a bare IP address is the site reached by its own
-        // IP (a CDN edge, a scanner), not a place anyone found it.
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             return 'other';
         }

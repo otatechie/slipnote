@@ -15,10 +15,6 @@ class WorkspacesController extends Controller
 {
     public function index(Request $request)
     {
-        // The cookie holds only slug + name. Look the boards up so each row can
-        // say where it stands ("1 course · no files yet"), carry its current
-        // name, and drop boards that have since been deleted rather than list
-        // a link that 404s.
         $recent = RecentWorkspaces::read($request);
         $boards = Workspace::whereIn('slug', array_column($recent, 'slug'))
             ->withCount(['courses', 'materials'])
@@ -47,8 +43,6 @@ class WorkspacesController extends Controller
 
     public function store(Request $request)
     {
-        // Per-IP throttle: stops one source from spinning up many boards to
-        // host abuse across them. Generous for genuine use (few boards each).
         $rlKey = 'workspace_create:'.ClientKey::of($request);
         if (RateLimiter::tooManyAttempts($rlKey, 10)) {
             return back()->withErrors(['name' => 'Too many workspaces created from here recently. Try again later.']);
@@ -66,16 +60,10 @@ class WorkspacesController extends Controller
         [$workspace, $secret] = Workspace::provision($clean);
         RateLimiter::hit($rlKey, 3600); // count only successful creations
 
-        // Ambassador attribution, if this browser arrived via ?ref=. Written
-        // once, here, and never again; forceFill because referrer is
-        // deliberately not mass-assignable.
         if (($referrer = Referral::read($request)) !== null) {
             $workspace->forceFill(['referrer' => $referrer])->save();
         }
 
-        // The creator owns it; unlock the owner session immediately so they
-        // don't have to re-paste the secret on the next page. Regenerate the
-        // session ID on every privilege change (anti-fixation).
         session()->regenerate();
         session([$workspace->ownerSessionKey() => $workspace->ownerSessionValue()]);
 
@@ -89,11 +77,6 @@ class WorkspacesController extends Controller
             ]);
     }
 
-    /**
-     * Open a board from its pasted link (or bare address). Not by name: new
-     * links end in a random code, and a name lookup is exactly the guessing
-     * the code prevents. Exact match only, and misses are rate-limited.
-     */
     public function open(Request $request)
     {
         $typed = is_string($request->input('openLink')) ? trim($request->input('openLink')) : '';

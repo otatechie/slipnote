@@ -12,8 +12,6 @@ class SuggestionController extends Controller
 {
     public function store(Request $request)
     {
-        // Hidden field real visitors never see or fill. A bot that fills every
-        // input is told "thanks" and nothing is stored.
         if (filled($request->input('website'))) {
             return back();
         }

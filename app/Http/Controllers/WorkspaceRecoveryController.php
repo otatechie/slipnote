@@ -29,18 +29,9 @@ class WorkspaceRecoveryController extends Controller
         ]);
     }
 
-    /**
-     * Request recovery. Nothing about the board changes here: a matching
-     * email gets a signed, single-use link; the current owner link keeps
-     * working until that link is actually used. Identical response either
-     * way (no enumeration), rate-limited per board.
-     */
     public function store(Request $request)
     {
         $workspace = app(Tenancy::class)->current();
-        // Per board and client (5 per 10 min), so one client can't use up a
-        // board's requests and leave the owner's genuine one unsent; 50 per
-        // board in all.
         $key = 'recovery:'.$workspace->id.':'.ClientKey::of($request);
         $boardKey = 'recovery_board:'.$workspace->id;
 
@@ -52,9 +43,6 @@ class WorkspaceRecoveryController extends Controller
         RateLimiter::hit($key, 600);
         RateLimiter::hit($boardKey, 600);
 
-        // Never "send" through the log or array mailer: the link would be a
-        // working owner takeover written to laravel.log. The board page hides
-        // recovery for these mailers; this holds the line on the route too.
         $mailOn = ! in_array(config('mail.default'), ['log', 'array', null], true);
 
         if ($mailOn && $workspace->recoveryEmailMatches($data['email'])) {
@@ -78,12 +66,6 @@ class WorkspaceRecoveryController extends Controller
         return back()->with('done', true);
     }
 
-    /**
-     * The mailed link. Signature and expiry are checked by the `signed`
-     * middleware; the nonce makes it single-use. Only now is the owner
-     * secret rotated — then this browser is unlocked and sent to the same
-     * "save your owner link" screen a new board gets.
-     */
     public function redeem(Request $request, string $workspaceSlug, string $nonce)
     {
         $workspace = app(Tenancy::class)->current();
