@@ -52,7 +52,7 @@
         <a href="{{ route('operator.dashboard', ['tab' => 'boards']) }}"
            @if ($tab === 'boards') aria-current="page" @endif
            class="op-press">
-            <span class="sm:hidden">Boards</span><span class="hidden sm:inline">Newest boards</span>
+            Boards
         </a>
         <a href="{{ route('operator.dashboard', ['tab' => 'visitors']) }}"
            @if ($tab === 'visitors') aria-current="page" @endif
@@ -383,45 +383,33 @@
     @endif
 
     @if ($tab === 'boards')
-    {{-- Note to one board's owner: shown only in owner mode on that board,
-         answered through the suggestion form. The way to reach a heavy user
-         without accounts or touching the recovery email. --}}
-    @if ($noteBoard)
-        <form method="POST" action="{{ route('operator.boards.note', $noteBoard->id) }}" class="op-card mb-5 px-5 py-4">
-            @csrf
-            <label for="ownerNote" class="block text-[14px] font-semibold text-ink">Note to the owner of “{{ $noteBoard->name }}”</label>
-            <p class="mt-0.5 text-[12px] text-muted">Shown only to them, on their board, until they dismiss it. They reply through the suggestion form; replies land in Suggestions.</p>
-            <textarea id="ownerNote" name="note" rows="3" maxlength="500" required
-                      placeholder="e.g. Hi from the SlipNote team. Your class uses this a lot. Could we ask you two quick questions?"
-                      class="mt-3 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">{{ old('note', $noteBoard->operator_note) }}</textarea>
-            @error('note')
-                <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>
-            @enderror
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-                <button type="submit" class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white sm:min-h-9">
-                    {{ $noteBoard->operator_note ? 'Update note' : 'Leave note' }}
-                </button>
-                <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery])) }}"
-                   class="inline-flex min-h-11 items-center rounded-full px-4 text-[14px] font-semibold text-muted hover:text-ink sm:min-h-9">Cancel</a>
-            </div>
-        </form>
-        @if ($noteBoard->operator_note)
-            <form method="POST" action="{{ route('operator.boards.note', $noteBoard->id) }}" class="-mt-3 mb-5 px-5">
-                @csrf
-                <input type="hidden" name="note" value="">
-                <button type="submit" class="inline-flex min-h-11 cursor-pointer items-center text-[13px] font-semibold text-danger hover:underline sm:min-h-0">Remove note</button>
-                <span class="text-[12px] text-muted">· left {{ $noteBoard->operator_note_at?->diffForHumans() }}</span>
-            </form>
-        @endif
-    @endif
-
-    <form method="GET" action="{{ route('operator.dashboard') }}" class="mb-4 flex gap-2">
+    <form method="GET" action="{{ route('operator.dashboard') }}" class="mb-3 flex gap-2">
         <input type="hidden" name="tab" value="boards">
+        @if ($boardSort !== 'newest')
+            <input type="hidden" name="sort" value="{{ $boardSort }}">
+        @endif
         <input type="search" name="q" value="{{ $boardQuery }}" aria-label="Find a board by name"
                placeholder="Find a board by name…"
                class="w-full min-w-0 flex-1 rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[15px] text-ink shadow-sm placeholder:text-muted">
         <button type="submit" class="op-press inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full border border-muted/50 px-4 text-[14px] font-semibold text-ink hover:bg-sky/30">Find</button>
     </form>
+
+    {{-- Sort: newest (who just signed up), most visited (what classes use,
+         last 30 days), recently opened (alive vs abandoned), largest (storage,
+         where unreported abuse shows). Links, so the sort is in the URL. --}}
+    {{-- One line on a phone: short labels there ("Visited"), full from sm up. --}}
+    @php
+        $shortSort = ['newest' => 'Newest', 'visited' => 'Visited', 'opened' => 'Opened', 'largest' => 'Largest'];
+    @endphp
+    <nav aria-label="Sort boards" class="mb-4 flex items-center gap-0.5 overflow-x-auto text-[13px] sm:gap-1.5">
+        <span class="mr-1 shrink-0 text-muted">Sort</span>
+        @foreach ($boardSorts as $key => $label)
+            <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'sort' => $key === 'newest' ? null : $key])) }}"
+               @if ($boardSort === $key) aria-current="true" @endif
+               aria-label="{{ $label }}"
+               class="op-press inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3 font-semibold sm:min-h-8 sm:px-3.5 {{ $boardSort === $key ? 'bg-sky/70 text-ink' : 'text-muted hover:text-ink' }}"><span class="sm:hidden">{{ $shortSort[$key] }}</span><span class="hidden sm:inline">{{ $label }}</span></a>
+        @endforeach
+    </nav>
 
     <div class="op-card overflow-hidden">
         @forelse ($recent as $ws)
@@ -440,7 +428,7 @@
             <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
                 <div class="min-w-0">
                     <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
-                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="underline decoration-muted/40 underline-offset-4 after:absolute after:inset-0 hover:decoration-ink/40">{{ $ws->name }}</a>
+                        <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-0 hover:underline">{{ $ws->name }}</a>
                     </p>
                     <p class="mt-0.5 text-[12px] text-muted">
                         {{-- "0 courses · 0 files" on eight of ten rows is the same
@@ -455,30 +443,90 @@
                         @endif
                         {{-- Spelled out rather than a bare badge: on a list of
                              boards a lone red number could be any of these counts. --}}
+                        @if ($ws->recent_arrivals > 0)
+                            · {{ number_format($ws->recent_arrivals) }} {{ Str::plural('visit', $ws->recent_arrivals) }} in 30 days
+                        @endif
                         @if ($ws->reported_count > 0)
                             · <span class="font-semibold text-danger">{{ $ws->reported_count }} reported</span>
                         @endif
                     </p>
                 </div>
-                <div class="flex shrink-0 flex-wrap items-center gap-x-2 sm:block sm:text-right">
+                {{-- Phones: one line under the name, parts split by dots and
+                     Note to owner kept to its 44px target without adding height. --}}
+                <div class="flex shrink-0 flex-wrap items-center gap-x-1.5 text-[12px] sm:block sm:text-right">
                     {{-- Both lines are conditional: an empty board's "0 KB" and a
                          never-opened board's blank time are noise repeated down
                          the column, drowning out the rows that do say something. --}}
                     @if ($ws->materials_count > 0)
                         <p class="text-[12px] tabular-nums text-muted">{{ $size }}</p>
                     @endif
+                    @if ($ws->materials_count > 0 && $ws->last_accessed_at)
+                        <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
+                    @endif
                     @if ($ws->last_accessed_at)
                         <p class="text-[12px] tabular-nums text-ink/80" title="Last opened {{ $ws->last_accessed_at }}">
                             opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
                         </p>
                     @endif
-                    {{-- relative z-10: above the row's stretched board link. --}}
-                    <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'note' => $ws->id])) }}"
-                       class="relative z-10 inline-flex min-h-11 items-center text-[12px] font-semibold text-neon hover:underline sm:min-h-0">
+                    {{-- relative z-10: above the row's stretched board link. Opens
+                         the note over the list, where the operator is, instead
+                         of a form at the top of the page that lost their place. --}}
+                    @if ($ws->materials_count > 0 || $ws->last_accessed_at)
+                        <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
+                    @endif
+                    {{-- Quiet until used: on every row in the accent it out-shouted
+                         the board names for a rare action. Blue once a note is left,
+                         since that's worth spotting down the list. --}}
+                    <button type="button" data-dialog-open="note-{{ $ws->id }}"
+                       class="relative z-10 -my-3 inline-flex min-h-11 cursor-pointer items-center text-[12px] font-semibold hover:underline sm:my-0 sm:min-h-0 {{ $ws->operator_note ? 'text-neon' : 'text-muted hover:text-ink' }}">
                         {{ $ws->operator_note ? 'Note left · edit' : 'Note to owner' }}
-                    </a>
+                    </button>
                 </div>
             </div>
+
+            {{-- The note, over the list: a sheet from the bottom on phones, a
+                 dialog in the middle from sm up. Reopened after a validation
+                 error (session noteFor), with what was typed. --}}
+            <dialog id="note-{{ $ws->id }}" aria-labelledby="note-title-{{ $ws->id }}"
+                    @if ((int) session('noteFor') === $ws->id) data-dialog-autoopen @endif
+                    class="op-dialog mb-0 mt-auto w-full max-w-none rounded-t-2xl p-0 shadow-2xl sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl">
+                <form method="POST" action="{{ route('operator.boards.note', $ws->id) }}" class="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
+                    @csrf
+                    <h2 id="note-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink">Note to the owner of “{{ $ws->name }}”</h2>
+                    <p class="mt-1 text-[13px] text-muted">Shown only to them, on their board, until they dismiss it. They reply through the suggestion form; replies land in Suggestions.</p>
+                    <label for="note-text-{{ $ws->id }}" class="sr-only">Note</label>
+                    <textarea id="note-text-{{ $ws->id }}" name="note" rows="4" maxlength="500" required
+                              placeholder="e.g. Hi from the SlipNote team. Your class uses this a lot. Could we ask you two quick questions?"
+                              class="mt-4 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">{{ (int) session('noteFor') === $ws->id ? old('note') : $ws->operator_note }}</textarea>
+                    @if ((int) session('noteFor') === $ws->id)
+                        @error('note')
+                            <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>
+                        @enderror
+                    @endif
+                    <div class="mt-5 flex flex-wrap items-center justify-between gap-2">
+                        @if ($ws->operator_note)
+                            {{-- Same endpoint, empty note: removes it. --}}
+                            <button type="submit" name="note" value="" formnovalidate
+                                    class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-1 text-[13px] font-semibold text-danger hover:underline">
+                                Remove note
+                            </button>
+                        @else
+                            <span></span>
+                        @endif
+                        <div class="flex items-center gap-2">
+                            <button type="button" data-dialog-close
+                                    class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
+                            <button type="submit"
+                                    class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
+                                {{ $ws->operator_note ? 'Update note' : 'Leave note' }}
+                            </button>
+                        </div>
+                    </div>
+                    @if ($ws->operator_note_at)
+                        <p class="mt-3 text-[12px] text-muted">Left {{ $ws->operator_note_at->diffForHumans() }}.</p>
+                    @endif
+                </form>
+            </dialog>
         @empty
             <p class="px-4 py-8 text-center text-[14px] text-muted">{{ $boardQuery !== '' ? 'No board matches “'.$boardQuery.'”.' : 'No boards yet.' }}</p>
         @endforelse
@@ -492,7 +540,7 @@
                 @if ($boardQuery !== '')
                     {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }} {{ Str::plural('board', $recent->total()) }} matching “{{ $boardQuery }}”.
                 @else
-                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}, newest first.
+                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}, {{ ['newest' => 'newest first', 'visited' => 'most visited first (30 days)', 'opened' => 'most recently opened first', 'largest' => 'largest first'][$boardSort] }}.
                 @endif
                 @if ($stats['empty_boards'] > 0)
                     <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>

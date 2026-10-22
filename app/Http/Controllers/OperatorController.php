@@ -76,6 +76,24 @@ class OperatorController extends Controller
         return redirect()->route('operator.dashboard', $params);
     }
 
+    /**
+     * The boards list the request came from, if it was the boards tab on this
+     * site, else the tab's first page. Only the list's own parameters are
+     * kept, so a crafted Referer can't send the redirect anywhere else.
+     */
+    private function boardsListUrl(Request $request): string
+    {
+        parse_str((string) parse_url((string) $request->headers->get('referer'), PHP_URL_QUERY), $from);
+        $page = (int) ($from['page'] ?? 1);
+        $sort = is_string($from['sort'] ?? null) && isset(self::BOARD_SORTS[$from['sort']]) ? $from['sort'] : 'newest';
+
+        return route('operator.dashboard', self::boardParams(
+            is_string($from['q'] ?? null) ? trim($from['q']) : '',
+            $sort,
+            $page > 1 ? ['page' => $page] : [],
+        ));
+    }
+
     /** The dashboard (or the login form when not authenticated). */
     public function dashboard(Request $request)
     {
@@ -123,8 +141,17 @@ class OperatorController extends Controller
         // dead one. Paged, not capped: past the first page sat boards the
         // operator could only reach by guessing a name to search for.
         $boardQuery = trim((string) $request->query('q', ''));
+        $boardSort = self::boardSort($request);
+        $visitsSince = now()->subDays(self::VISITOR_DAYS - 1)->toDateString();
 
         $recent = Workspace::query()
+            ->select('workspaces.*')
+            // Arrivals in the visitor window: "most visited" is the best
+            // measure of a board a class actually uses.
+            ->selectSub(fn ($q) => $q->from('visit_tallies')
+                ->selectRaw('COALESCE(SUM(arrivals), 0)')
+                ->whereColumn('visit_tallies.workspace_id', 'workspaces.id')
+                ->where('day', '>=', $visitsSince), 'recent_arrivals')
             ->when($boardQuery !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$boardQuery}%")
                 ->orWhere('slug', 'like', '%'.Str::slug($boardQuery).'%')))
@@ -140,12 +167,18 @@ class OperatorController extends Controller
             // someone using a board as free file hosting, and three files can be
             // three hundred megabytes.
             ->withSum('materials', 'file_size')
+            // Newest: who just signed up. Most visited: what classes use.
+            // Recently opened: alive vs abandoned. Largest: storage, where
+            // abuse (free file hosting) shows and never gets reported.
+            ->when($boardSort === 'visited', fn ($q) => $q->orderByDesc('recent_arrivals'))
+            ->when($boardSort === 'opened', fn ($q) => $q->orderByRaw('last_accessed_at IS NULL')->orderByDesc('last_accessed_at'))
+            ->when($boardSort === 'largest', fn ($q) => $q->orderByDesc('materials_sum_file_size'))
             ->latest()
             ->latest('id')
-            // Page links keep the tab and the search, not ?note= (the note
+            // Page links keep the tab, search and sort, not ?note= (the note
             // form belongs to the board it was opened from).
             ->paginate(20)
-            ->appends(array_filter(['tab' => 'boards', 'q' => $boardQuery]));
+            ->appends(self::boardParams($boardQuery, $boardSort));
 
         return view('operator.dashboard', [
             'materials' => $materials,
@@ -153,10 +186,8 @@ class OperatorController extends Controller
             'stats' => $stats,
             'recent' => $recent,
             'boardQuery' => $boardQuery,
-            // The board whose note is being written, from ?note={id}.
-            'noteBoard' => $this->tab($request) === 'boards' && $request->query('note')
-                ? Workspace::find((int) $request->query('note'))
-                : null,
+            'boardSort' => $boardSort,
+            'boardSorts' => self::BOARD_SORTS,
             'tab' => $this->tab($request),
             'undo' => $undo,
             'ambassadors' => $ambassadors = Ambassador::query()->orderBy('name')->get(),
@@ -171,6 +202,27 @@ class OperatorController extends Controller
 
     /** The window the Visitors tab covers. Long enough to span a teaching block. */
     private const VISITOR_DAYS = 30;
+
+    /** Boards tab sorts: key => label. The first is the default. */
+    private const BOARD_SORTS = [
+        'newest' => 'Newest',
+        'visited' => 'Most visited',
+        'opened' => 'Recently opened',
+        'largest' => 'Largest',
+    ];
+
+    private static function boardSort(Request $request): string
+    {
+        $sort = $request->query('sort');
+
+        return is_string($sort) && isset(self::BOARD_SORTS[$sort]) ? $sort : 'newest';
+    }
+
+    /** Query string for the boards list: tab, plus search and sort when set. */
+    private static function boardParams(string $q, string $sort, array $extra = []): array
+    {
+        return array_filter(['tab' => 'boards', 'q' => $q, 'sort' => $sort === 'newest' ? null : $sort] + $extra);
+    }
 
     /**
      * Where arrivals came from over the window: by country, by source, and
@@ -479,15 +531,21 @@ class OperatorController extends Controller
     {
         abort_unless($this->enabled() && $this->authed(), 403);
 
-        $data = $request->validate(['note' => 'nullable|string|max:500']);
-        $note = trim(strip_tags((string) ($data['note'] ?? '')));
+        // Back to the same list (page, search, sort), which the note dialog
+        // opened over; on a validation error the page reopens that dialog.
+        $back = $this->boardsListUrl($request);
+        $validator = validator($request->all(), ['note' => 'nullable|string|max:500']);
+        if ($validator->fails()) {
+            return redirect($back)->withErrors($validator)->withInput()->with('noteFor', $board->id);
+        }
+        $note = trim(strip_tags((string) $request->input('note', '')));
 
         $board->forceFill([
             'operator_note' => $note !== '' ? $note : null,
             'operator_note_at' => $note !== '' ? now() : null,
         ])->save();
 
-        return $this->dashboardRedirect($request, 'boards')
+        return redirect($back)
             ->with('done', $note !== '' ? "Note left for the owner of “{$board->name}”." : 'Note removed.');
     }
 

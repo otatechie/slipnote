@@ -7,6 +7,7 @@ use App\Models\Material;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
@@ -113,6 +114,61 @@ class OperatorTest extends TestCase
         $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Paged']))
             ->assertSee('1–20 of 24 boards matching', false)
             ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Paged', 'page' => 2]));
+    }
+
+    public function test_boards_sort_by_newest_most_visited_recently_opened_and_largest(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        [$visited] = Workspace::provision('Visited Board');
+        [$opened] = Workspace::provision('Opened Board');
+        [$large] = Workspace::provision('Large Board');
+        [$newest] = Workspace::provision('Newest Board');
+        $newest->forceFill(['created_at' => now()->addMinute()])->saveQuietly();
+
+        DB::table('visit_tallies')->insert([
+            'day' => now()->toDateString(), 'workspace_id' => $visited->id, 'country' => '', 'source' => 'direct', 'arrivals' => 9,
+        ]);
+        $opened->forceFill(['last_accessed_at' => now()->addMinutes(5)])->saveQuietly();
+        $this->actingInWorkspace($large);
+        Course::create(['code' => 'BIG 1', 'title' => 'Big', 'slug' => 'big-1'])
+            ->materials()->create(['section' => 'notes', 'original_filename' => 'big.pdf',
+                'stored_path' => 'materials/big.pdf', 'download_token' => 'dl-big', 'file_size' => 900_000_000]);
+
+        $first = fn (?string $sort) => $this->withSession($session)
+            ->get(route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $sort])))
+            ->assertOk()->viewData('recent')->first()->name;
+
+        $this->assertSame('Newest Board', $first(null));
+        $this->assertSame('Visited Board', $first('visited'));
+        $this->assertSame('Opened Board', $first('opened'));
+        $this->assertSame('Large Board', $first('largest'));
+        $this->assertSame('Newest Board', $first('nonsense'));
+
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'visited']))
+            ->assertSee('9 visits in 30 days')
+            ->assertSee('most visited first (30 days)');
+    }
+
+    public function test_a_note_returns_to_the_same_list_and_reopens_on_an_error(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $from = route('operator.dashboard', ['tab' => 'boards', 'q' => 'Test', 'sort' => 'largest', 'page' => 2]);
+
+        $this->withSession($session)->withHeader('referer', $from)
+            ->post(route('operator.boards.note', $this->workspace->id), ['note' => 'Hello'])
+            ->assertRedirect($from);
+        $this->assertSame('Hello', $this->workspace->fresh()->operator_note);
+
+        $this->withSession($session)->withHeader('referer', $from)
+            ->post(route('operator.boards.note', $this->workspace->id), ['note' => str_repeat('x', 501)])
+            ->assertRedirect($from)
+            ->assertSessionHasErrors('note')
+            ->assertSessionHas('noteFor', $this->workspace->id);
+
+        // A Referer elsewhere still lands on the boards tab, never off-site.
+        $this->withSession($session)->withHeader('referer', 'https://evil.example/?tab=boards')
+            ->post(route('operator.boards.note', $this->workspace->id), ['note' => 'Hi'])
+            ->assertRedirect(route('operator.dashboard', ['tab' => 'boards']));
     }
 
     public function test_at_a_glance_shows_the_activation_rate_and_empty_boards_say_so(): void

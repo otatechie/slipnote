@@ -89,8 +89,13 @@ if (themeMedia.addEventListener) {
 // be). One delegated listener reads data- attributes instead:
 //   data-dialog-open="id"  opens <dialog id>
 //   data-dialog-close      closes the enclosing <dialog>
+//   data-dialog-autoopen   (on a <dialog>) opens it when the page loads
 //   data-copy="text"       copies text; the button reads "Copied" for 2s
 function initBladeActions() {
+    // A dialog the server wants open on arrival (a form that came back with
+    // errors): data-dialog-autoopen.
+    document.querySelectorAll('dialog[data-dialog-autoopen]').forEach((dialog) => dialog.showModal())
+
     document.addEventListener('click', (event) => {
         const el = event.target.closest('[data-dialog-open], [data-dialog-close], [data-copy]')
         if (!el) return

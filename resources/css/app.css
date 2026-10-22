@@ -71,7 +71,7 @@
 }
 
 /* Cards (.op-card) and pills (.op-pill): a panel with a crisp, translucent
-   1px edge. Dark: a near-black panel, darker than the page, so the card
+   1px edge. Dark: a panel a step darker than the page, so the card
    reads as set into it, with a faint highlight inside the top edge. Light:
    a white panel on the off-white page. The edge is translucent so it sits
    right on whatever is behind it. */
@@ -99,7 +99,7 @@ html[data-theme='system'][data-system-theme='dark'] {
     --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
     --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
     --card-frame: rgba(255, 255, 255, 0.12);
-    --card-well: #0c0d0f;
+    --card-well: #131418;
     --card-inner: rgba(255, 255, 255, 0.06);
     --card-highlight: rgba(255, 255, 255, 0.05);
 }
@@ -123,7 +123,7 @@ html[data-theme='system'][data-system-theme='dark'] {
         --color-muted: #a7b0bd;      /* blue-grey — secondary text, AA-safe even at /70 */
         --color-danger: #f37c72;     /* coral-red — reads as alarm, separated from the blue accent */
         --card-frame: rgba(255, 255, 255, 0.12);
-        --card-well: #0c0d0f;
+        --card-well: #131418;
         --card-inner: rgba(255, 255, 255, 0.06);
         --card-highlight: rgba(255, 255, 255, 0.05);
     }
@@ -477,7 +477,10 @@ select.op-pill option {
 .op-card .op-row:first-child {
     margin-top: 8px;
 }
-.op-card .op-row:last-child {
+/* last-of-type, not last-child: a row can be followed by its own <dialog>
+   (the operator's note), and then the last row lost its spacing and its
+   hover tint ran into the card's edge. */
+.op-card .op-row:last-of-type {
     margin-bottom: 8px;
 }
 @media (max-width: 639px) {
