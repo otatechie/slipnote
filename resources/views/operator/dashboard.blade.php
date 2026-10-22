@@ -145,7 +145,7 @@
             @php
                 $group = $thisGroup;
             @endphp
-            <div class="op-row relative grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_5rem_5.5rem_7.5rem_2.5rem] sm:items-center {{ $thisGroup === 'retired' ? 'opacity-55' : '' }}"
+            <div class="op-row relative grid gap-x-3 gap-y-2 sm:grid-cols-[1fr_5rem_5.5rem_7.5rem_2.5rem] sm:items-center {{ $thisGroup === 'retired' ? 'op-faded' : '' }}"
                  data-ref="{{ $row['slug'] }}" data-boards="{{ $row['boards'] }}" data-seeded="{{ $row['seeded'] }}" data-active="{{ $row['active'] }}" data-due="{{ $row['due'] }}">
                 <div class="min-w-0">
                     @if ($amb)
@@ -365,7 +365,7 @@
                     ? number_format($bytes / 1_048_576, 1).' MB'
                     : number_format($bytes / 1024).' KB';
             @endphp
-            <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
+            <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'op-faded' : '' }}">
                 <div class="min-w-0 sm:flex-1">
                     <p class="truncate pr-10 text-[14px] font-semibold tracking-tight text-ink sm:pr-0">
                         <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-y-0 after:left-0 after:right-14 hover:underline">{{ $ws->name }}</a>
