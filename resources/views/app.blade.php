@@ -5,16 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title inertia>SlipNote</title>
     <meta name="robots" content="noindex,nofollow">
-    {{-- Link-preview card for the chat apps boards are shared in. Rendered
-         server-side on purpose: preview fetchers don't run JS, so the <Head>
-         tags the Vue pages set are invisible to them. Board name only — never
-         courses, files or counts; noindex above still keeps these out of
-         search. --}}
     @if (app(\App\Tenancy\Tenancy::class)->has())
         @php($ogWorkspace = app(\App\Tenancy\Tenancy::class)->current())
-        {{-- A course link pasted into the class group should unfurl as the
-             course ("CS 101 · Computer Science L100"), not just the board:
-             that card is the pitch. Set by CourseController::show. --}}
         @php($ogTitle = isset($ogCourse) ? $ogCourse->code.' · '.$ogWorkspace->name : $ogWorkspace->name)
         @php($ogUrl = isset($ogCourse) ? url('/'.$ogWorkspace->slug.'/c/'.$ogCourse->slug) : url('/'.$ogWorkspace->slug))
         <meta property="og:type" content="website">
@@ -29,9 +21,6 @@
         <meta name="twitter:title" content="{{ $ogTitle }} · SlipNote">
         <meta name="twitter:image" content="{{ url('/og.png') }}">
     @endif
-    {{-- Installable as the board, not as "SlipNote": the manifest carries the
-         board's name and opens on the board. Built from the slug, so an
-         ?owner= on this page never reaches a start_url. --}}
     @if (app(\App\Tenancy\Tenancy::class)->has())
         <link rel="manifest" href="{{ route('workspace.manifest', ['workspace' => $ogWorkspace->slug]) }}">
         <meta name="apple-mobile-web-app-title" content="{{ mb_strimwidth($ogWorkspace->name, 0, 12, '…') }}">
@@ -57,10 +46,6 @@
             document.documentElement.style.colorScheme = resolved
         })()
     </script>
-    {{-- Open Runde is self-hosted (see @font-face in app.css): keeps the prod
-         CSP happy (font-src 'self') and no visitor IPs go to a font CDN.
-         Preload the two most-used weights (body + headings); the other two
-         load on demand. --}}
     <link rel="preload" href="{{ Vite::asset('resources/fonts/OpenRunde-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ Vite::asset('resources/fonts/OpenRunde-Semibold.woff2') }}" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])

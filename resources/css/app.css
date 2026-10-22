@@ -6,12 +6,6 @@
 @source '../**/*.js';
 @source '../**/*.vue';
 
-/* Open Runde, self-hosted (public/fonts). A rounded Inter (OFL) — served from
-   our own origin so the production CSP (font-src 'self') allows it and no
-   visitor IPs leak to a font CDN. Ships as four static weights, not variable.
-   Relative URLs, so Vite serves them: as /fonts/ from public/ they 404'd
-   under the dev server (CSS from :5173 asked :5173 for them) and every local
-   page fell back to the system font. Built, they land hashed in /build. */
 @font-face {
     font-family: 'Open Runde';
     font-style: normal;
@@ -44,12 +38,6 @@
     --font-sans: 'Open Runde', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* SlipNote palette: blue + charcoal on cool off-white, from the logo.
-       Logo blues are royal #3b6ef5 (wordmark/icon) + sky #5bc5f2 (card fill).
-       Token names are kept for stability; values are semantic:
-       teal = headings/links, neon = primary button fill, sky = hairline borders.
-       Blue takes a WHITE button label at AA (unlike the old orange), so the
-       .bg-neon.text-white override below keeps white rather than flipping dark. */
     --color-base: #f3f5fa;       /* page background — cool off-white with a faint blue cast to sit
                                     under the blue accent without a warm clash */
     --color-surface: #ffffff;    /* cards / panels — pure white, lifts cleanly off the page */
@@ -70,11 +58,6 @@
     --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Cards (.op-card) and pills (.op-pill): a panel with a crisp, translucent
-   1px edge. Dark: a panel a step darker than the page, so the card
-   reads as set into it, with a faint highlight inside the top edge. Light:
-   a white panel on the off-white page. The edge is translucent so it sits
-   right on whatever is behind it. */
 :root {
     --card-frame: rgba(16, 24, 40, 0.11);
     --card-well: #ffffff;
@@ -129,10 +112,6 @@ html[data-theme='system'][data-system-theme='dark'] {
     }
 }
 
-/* Inputs use bg-base to pop against cards in light mode. In dark mode
-   bg-base equals the page, so inside a raised card a field needs to read
-   as recessed: drop it a value-step BELOW the card and give it a visible
-   warm border (the Tailwind border-sky/30 is too faint here). */
 html[data-theme='dark'] input.bg-base,
 html[data-theme='dark'] select.bg-base,
 html[data-theme='dark'] textarea.bg-base,
@@ -155,13 +134,6 @@ html[data-theme='system'][data-system-theme='dark'] textarea.bg-base {
     }
 }
 
-/* Primary buttons are royal blue (bg-neon) with white labels. In light mode
-   white on #3b6ef5 is 4.44:1 — on the AA line, so the label stays white.
-   Dark mode is the trap: --color-neon brightens to #5b8bff and white falls to
-   3.19:1, a clear AA failure. A brighter fill gives a white label LESS contrast,
-   not more. The fill is right (it's tuned to sing on charcoal) — the label is
-   wrong, so flip it to the page charcoal there: 5.41:1, vivid blue kept.
-   :not(:disabled) so the disabled state's own muted label still wins. */
 .bg-neon.text-white:not(:disabled) {
     color: #ffffff;
 }
@@ -170,11 +142,6 @@ html[data-theme='system'][data-system-theme='dark'] .bg-neon.text-white:not(:dis
     color: #1a1c20;
 }
 
-/* Destructive button (delete / remove file). ONE red across the app, distinct
-   from the danger *text* token (--color-danger is coral in dark mode, tuned
-   for text — white on it fails). This is a solid fill that keeps a white label
-   AA-legible in both themes: deep red in light, a touch brighter in dark so it
-   still reads as alarm on charcoal without blowing out contrast. */
 .btn-danger {
     background-color: #b91c1c; /* red-700 — 5.9:1 with white */
     color: #fff;
@@ -201,10 +168,6 @@ html[data-theme='system'][data-system-theme='dark'] .btn-danger:hover {
     }
 }
 
-/* text-neon (the blue accent) is routed to the slightly deeper teal(=blue)
-   token as link text, so every link lands on one consistent, safely-AA blue
-   rather than the brighter button-fill blue. The :not() guards keep the fill
-   blue where it's a background, an svg, or the thick marker underline. */
 .text-neon:not(.bg-neon):not(svg):not(.marker) {
     color: var(--color-teal);
 }
@@ -218,18 +181,11 @@ html[data-theme='system'][data-system-theme='dark'] .text-neon:not(.bg-neon):not
         color: #7aa5ff;
     }
 }
-/* Teal used as an *accent* (link text, success text) rather than as a heading.
-   In dark mode --color-teal is near-white because it doubles as the heading
-   colour, so these would render identical to body text and lose their meaning —
-   a link that no longer looks like one. Retint to neon, which is AA as text on
-   the dark page (5.5:1). Scoped by class so real headings keep the near-white. */
 html[data-theme='dark'] .teal-accent,
 html[data-theme='system'][data-system-theme='dark'] .teal-accent {
     color: var(--color-neon);
 }
 
-/* Static warning text (amber) — lift to a brighter tint so it passes on dark.
-   (Red error/danger text now uses the theme-aware --color-danger token.) */
 html[data-theme='dark'] .text-amber-600,
 html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     color: #fcc56b;
@@ -250,9 +206,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     }
 }
 
-/* iOS Safari force-zooms the page when a focused form control is under 16px.
-   Inputs are 13–15px by design on desktop; bump them to 16px on phones only,
-   which disables the zoom without changing the desktop look. */
 @media (max-width: 639px) {
     input,
     select,
@@ -261,23 +214,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     }
 }
 
-/* Keyboard focus: one style for every control (buttons, links, pills,
-   fields, selects, menus, radio options), Bootstrap's soft glow made softer:
-   a 3px halo of the accent at 16%, with a crisp 1px accent line at its
-   inner edge. The halo alone (Bootstrap's 25%) measures well under the
-   3:1 a focus indicator needs on the dark page; the line carries that, the
-   halo the softness. A box-shadow, so it follows the radius and takes no
-   room. At the end of the file (.op-focus-ring below) so it outranks the
-   box-shadows on pills and cards while focused. Text fields count as
-   focus-visible on click too, which is right: the active field is ringed. */
-
-/* ---------------------------------------------------------------------------
-   Shared surface vocabulary — started on the operator console, now also used
-   by the board page. A quiet surface: glass chrome, tight display type,
-   hairline-separated rows in one card rather than floating cards. Motion
-   follows Emil Kowalski: transform + opacity only, custom --ease-out, press
-   scale, no scale(0). Any page using .op-* must set .op for its tokens.
---------------------------------------------------------------------------- */
 .op {
     --op-radius: 18px;
     --op-hairline: color-mix(in srgb, var(--color-sky) 80%, transparent);
@@ -299,9 +235,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     line-height: 1.05;
 }
 
-/* A clipped title (truncate or line-clamp) hides its overflow, and at 1.05
-   the tails of g, y and p hang below the line box and get cut off. Clipped
-   titles get just enough line height to keep them. */
 .op-title:is(.truncate, .line-clamp-2) {
     line-height: 1.22;
 }
@@ -320,14 +253,10 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     padding: 0.7rem 0.85rem;
     background: color-mix(in srgb, var(--color-surface) 92%, transparent);
 }
-/* Five tiles in two columns leaves the last cell empty, and an empty cell shows
-   the grid's hairline background as a solid block. Let the odd one out span. */
 .op-metric:last-child {
     grid-column: 1 / -1;
 }
 
-/* Full-width on phones: two auto-width pills plus their badges overflow the
-   viewport below ~340px, and an inline-flex bar has nothing to shrink. */
 .op-seg {
     display: flex;
     width: 100%;
@@ -335,9 +264,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     border-radius: 999px;
     background: color-mix(in srgb, var(--color-sky) 70%, var(--color-base));
     box-shadow: 0 1px 0 color-mix(in srgb, black 6%, transparent) inset;
-    /* Four cells with badges can outgrow a 320px phone. Scroll sideways
-       rather than squeeze: cells keep their natural width (flex-shrink 0)
-       and still share any spare room. */
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -351,11 +277,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     justify-content: center;
     gap: 0.4rem;
     border-radius: 999px;
-    /* Tighter on phones: five cells share ~350px. Never wrap -- a label
-       breaking to two lines inside a pill leaves its count badge floating
-       between them. Below sm the labels are also shortened in the markup. */
-    /* Height set, not grown from padding: the selected pill sits inset
-       evenly inside the track instead of filling it edge to edge. */
     min-height: 2.5rem;
     padding: 0 0.35rem;
     font-size: 13px;
@@ -367,9 +288,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
         background-color 180ms ease;
 }
 
-/* Five tabs at 13px need ~300px: fine from 360 up. Below that (320px
-   phones) a step smaller, so the last tab isn't left half off the edge of
-   a strip that gives no sign it scrolls. */
 @media (max-width: 359px) {
     .op-seg a {
         padding: 0 0.25rem;
@@ -403,29 +321,17 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     box-shadow: 0 1px 2px color-mix(in srgb, black 12%, transparent);
 }
 
-/* Cards: the panel with a double edge, inside the card: the brighter 1px
-   border, 4px of the panel's own colour, then a fainter 1px line. Drawn as
-   two inset shadows (the panel-coloured 4px band painted over a 5px line
-   band), so it takes no layout room and follows the radius. The gap is
-   the panel, never the page: an outline gap showing the page read as two
-   loose dividers. Tokens above (--card-frame, --card-well, --card-inner). */
 .op-card {
     border-radius: var(--op-radius);
     background: var(--card-well);
     border: 1px solid var(--card-frame);
     box-shadow: inset 0 0 0 4px var(--card-well), inset 0 0 0 5px var(--card-inner);
 }
-/* Messages (upload receipt, recovery ask, operator note, feedback ask):
-   fully clear, edge only, so a passing note never outweighs the lists. */
 .op-card.op-card-quiet {
     background: transparent;
     box-shadow: none;
 }
 
-/* Pills and fields beside the cards (Share board, QR, search, sort,
-   Download) in the same language: clear panel, translucent hairline.
-   Unlayered, so it outranks the utilities on the element; hover restated.
-   Focus is the shared outline (see :focus-visible). */
 .op-pill {
     background-color: var(--card-well);
     border: 1px solid var(--card-frame);
@@ -434,41 +340,25 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
 .op-pill:hover {
     background-color: color-mix(in srgb, var(--card-frame) 50%, transparent);
 }
-/* A native select draws its open list on the select's own background. With
-   the pill's near-clear fill that list came out unreadable in dark mode, so
-   the options get a solid surface and ink. The closed select keeps the
-   pill look; color-scheme (set per theme) styles the list chrome. */
 select.op-pill option {
     background-color: var(--color-surface);
     color: var(--color-ink);
 }
-/* Messages (upload receipt, recovery ask, operator note, feedback ask) are
-   lighter than the lists: the same panel with a hairline, so a passing note
-   never outweighs the content it sits above. */
 .op-card.op-card-quiet {
     border-width: 1px;
     border-color: var(--color-sky);
     box-shadow: none;
 }
 
-/* No dividers between rows: inside the framed well, spacing and the hover
-   tint separate them, and the lines read as clutter. Phones (no hover) get
-   more vertical room below. The operator console tightens rows (.op-compact). */
 .op-row {
     padding: 0.95rem 1.1rem;
     transition: background-color 160ms ease;
 }
-/* Phones: a file row spends its width on a checkbox and two icon buttons before
-   the filename gets any, so the row's own gutter is worth 8px back. */
 @media (max-width: 639px) {
     .op-row {
         padding: 1.1rem 0.85rem;
     }
 }
-/* Inside a card, rows sit 8px in from each edge (padding trimmed to match,
-   so text doesn't move), clear of the card's inner line: an edge-to-edge
-   hover tint covered that line beside the hovered row. The tint becomes a
-   rounded highlight inside the frame. */
 .op-card .op-row {
     margin-inline: 8px;
     padding-inline: calc(1.1rem - 8px);
@@ -477,9 +367,6 @@ select.op-pill option {
 .op-card .op-row:first-child {
     margin-top: 8px;
 }
-/* last-of-type, not last-child: a row can be followed by its own <dialog>
-   (the operator's note), and then the last row lost its spacing and its
-   hover tint ran into the card's edge. */
 .op-card .op-row:last-of-type {
     margin-bottom: 8px;
 }
@@ -489,23 +376,15 @@ select.op-pill option {
     }
 }
 
-/* The operator console's tables: denser rows, since it's scanned for
-   numbers and names, not read on a phone in a lecture hall. */
 .op-compact .op-row {
     padding-top: 0.55rem;
     padding-bottom: 0.55rem;
 }
 
-/* Row overflow menu: <details> for a no-JS toggle under the nonce-only CSP.
-   No position here on purpose -- an unlayered rule outranks every Tailwind
-   utility, and it silently overrode the responsive absolute/relative switch
-   in the markup. Only the marker is hidden. */
 .op-menu > summary::-webkit-details-marker {
     display: none;
 }
 @media (hover: hover) and (pointer: fine) {
-    /* The rim colour, so the tint matches the card in both themes; at the
-       old sky/22% it was all but invisible on the dark well. */
     .op-row:hover {
         background-color: color-mix(in srgb, var(--card-frame) 60%, transparent);
     }
@@ -554,11 +433,6 @@ select.op-pill option {
     }
 }
 
-/* While any dialog or sheet is open, the page behind it stays put: a modal
-   <dialog> leaves the document scrollable, so the wheel or a swipe moved
-   the list under the note being written. Covers the Blade <dialog>s and
-   the Vue sheets (role=dialog, aria-modal). The scrollbar's gutter is
-   always reserved, so locking it doesn't shift the layout sideways. */
 html {
     scrollbar-gutter: stable;
 }
@@ -567,9 +441,6 @@ html:has(dialog[open], [role='dialog'][aria-modal='true']) {
 }
 
 .op-dialog {
-    /* Never sideways: something injected past the edge (a writing-assistant
-       extension's button on the textarea) gave the note dialog a horizontal
-       scrollbar. Vertical scrolling stays for short windows. */
     overflow-x: hidden;
     overscroll-behavior: contain;
     transform-origin: center;
@@ -594,8 +465,6 @@ html:has(dialog[open], [role='dialog'][aria-modal='true']) {
     }
 }
 .op-dialog::backdrop {
-    /* Black, not --color-ink: ink is near-white in dark mode, which turned the
-       scrim into a mid-grey brighter than the dialog on top of it. */
     background: color-mix(in srgb, black 38%, transparent);
     backdrop-filter: blur(6px);
     opacity: 0;
@@ -642,10 +511,6 @@ html:has(dialog[open], [role='dialog'][aria-modal='true']) {
     }
 }
 
-/* Landing closing panel: ruled notebook paper. Faint horizontal rules every
-   32px and a red margin line; the content is padded to sit right of the
-   margin, as writing does. Rules use the accent and the margin a muted red,
-   both mixed toward transparent so the same values work in dark mode. */
 .lp-close {
     --lp-margin: 28px;
     padding-left: calc(var(--lp-margin) + 22px);
@@ -666,15 +531,9 @@ html:has(dialog[open], [role='dialog'][aria-modal='true']) {
     }
 }
 
-/* Landing hero chat. The stage is a soft tint of the page; your own message
-   is a light accent tint with dark text. Sender names get one colour each,
-   as group chats do, with lighter values in dark mode so they stay legible. */
 .lp-stage {
     background: color-mix(in srgb, var(--color-sky) 45%, var(--color-base));
 }
-/* In dark the tinted stage lands on the same value as the panel's surface,
-   and a shadow can't separate them on charcoal. Keep the stage nearer the
-   page so the lighter panel lifts off it. */
 html[data-theme='dark'] .lp-stage,
 html[data-theme='system'][data-system-theme='dark'] .lp-stage {
     background: color-mix(in srgb, var(--color-surface) 45%, var(--color-base));
@@ -702,14 +561,10 @@ html[data-theme='system'][data-system-theme='dark'] .lp-name-3 { color: #6fd3a8;
     html:not([data-theme]) .lp-name-3 { color: #6fd3a8; }
 }
 
-/* The landing page separates sections with space, not rules; the shared
-   footer drops its top line there too. Other pages keep it. */
 body:has(.lp) footer {
     border-top-color: transparent;
 }
 
-/* Focus ring (see the note at "Keyboard focus" above). Last in the file so
-   it wins over the unlayered .op-pill/.op-card box-shadows. */
 :focus-visible,
 label:has(> input:focus-visible) {
     outline: none;
@@ -717,8 +572,6 @@ label:has(> input:focus-visible) {
         0 0 0 1px color-mix(in srgb, var(--color-neon) 85%, transparent),
         0 0 0 3px color-mix(in srgb, var(--color-neon) 16%, transparent);
 }
-/* Filled accent and danger buttons: the accent line vanished into an accent
-   fill, so a 2px gap in the page colour separates ring from button. */
 .bg-neon:focus-visible,
 .btn-danger:focus-visible {
     box-shadow:

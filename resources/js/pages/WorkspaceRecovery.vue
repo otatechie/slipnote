@@ -26,10 +26,6 @@ function requestRecovery() {
     <AppLayout>
         <div class="op mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 sm:px-5 sm:py-12">
             <header class="mb-7 text-center">
-                <!-- Linked, like /start: AppLayout has no nav, and someone who lands
-                     here has lost their way into a board already — a dead end is the
-                     last thing this page should be. alt="" because the adjacent text
-                     already names it. -->
                 <a href="/"
                    class="mb-3 inline-flex items-center gap-2 py-1 text-[16px] font-bold tracking-[-0.01em] text-teal transition hover:opacity-80">
                     <img src="/logo-mark.png" alt="" class="size-7 shrink-0">
@@ -43,7 +39,6 @@ function requestRecovery() {
                 </p>
             </header>
 
-            <!-- Success state (identical response to prevent enumeration) -->
             <div v-if="flash.done" class="rounded-3xl border border-sky/30 bg-surface p-6 shadow-sm sm:p-7">
                 <div class="flex items-center gap-3">
                     <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal/10 text-teal">
@@ -74,7 +69,6 @@ function requestRecovery() {
                 </div>
             </div>
 
-            <!-- Request form -->
             <form v-else @submit.prevent="requestRecovery"
                   class="rounded-2xl border border-sky/30 bg-surface p-5 shadow-sm sm:p-6">
                 <label for="email" class="mb-1.5 block text-[13px] font-semibold text-ink">

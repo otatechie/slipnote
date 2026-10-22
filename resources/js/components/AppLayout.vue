@@ -2,23 +2,16 @@
 import SuggestDialog from './SuggestDialog.vue'
 import { openSuggest } from './suggest'
 
-// A page with a floating button on phones (Add file, New course) reserves room
-// under the footer, so at the bottom of the scroll the button sits in empty
-// space instead of over the footer's links.
 defineProps({ fabSpace: { type: Boolean, default: false } })
 </script>
 
 <template>
     <div class="flex min-h-screen flex-col">
         <slot />
-        <!-- Two rows, not four. Every line here was its own centred row, stacking
-             into ~200px of chrome under pages whose whole job is one short form.
-             The tagline is decoration, so it rides along with the copyright. -->
         <footer class="mt-auto border-t border-sky/60 py-6" :class="fabSpace ? 'pb-24 sm:pb-6' : ''">
             <div class="mx-auto flex max-w-3xl flex-col items-center gap-2.5 px-5 text-center">
                 <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[13px] text-muted">
                 <nav aria-label="Footer" class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-                    <!-- Same order as the Blade footer. -->
                     <a href="/lecturers" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">For lecturers</a>
                     <span aria-hidden="true" class="text-muted/50">&middot;</span>
                     <a href="/privacy" class="inline-flex min-h-11 items-center hover:text-neon sm:min-h-0 sm:py-1.5">Privacy</a>
@@ -33,8 +26,6 @@ defineProps({ fabSpace: { type: Boolean, default: false } })
                         </svg>
                         <span class="sr-only">(opens in a new tab)</span>
                     </a>
-                    <!-- Phones wrap here, and a dot left at the end of a line reads
-                         as a stray mark; the line break separates them instead. -->
                     <span aria-hidden="true" class="hidden text-muted/50 sm:inline">&middot;</span>
                     <button type="button" @click="openSuggest()" class="inline-flex min-h-11 cursor-pointer items-center hover:text-neon sm:min-h-0 sm:py-1.5">Suggest a feature</button>
                     <template v-if="$page.props.ambassadorFormUrl">
@@ -47,8 +38,6 @@ defineProps({ fabSpace: { type: Boolean, default: false } })
                     </template>
                 </nav>
                 <span aria-hidden="true" class="hidden text-muted/50 sm:inline">&middot;</span>
-                <!-- All three modes visible, so nothing is hidden behind a cycle. applyTheme()
-                     in app.js sets aria-pressed on the current one, which drives its fill. -->
                 <div data-theme-switch role="group" aria-label="Theme" class="inline-flex items-center rounded-full border border-sky bg-surface p-px">
                     <button type="button" data-theme-set="system" aria-pressed="false" title="System theme"
                             class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
@@ -67,13 +56,7 @@ defineProps({ fabSpace: { type: Boolean, default: false } })
                     </button>
                 </div>
                 </div>
-                <!-- Full-strength muted: at /70 this measured 2.96:1 on the light
-                     page, under AA. The token is only "AA-safe at /70" in dark. -->
                 <p class="flex flex-wrap items-center justify-center gap-x-1.5 text-[12px] text-muted">
-                    <!-- No copyright or licence line: neither is required, the
-                         legal position lives on the Terms page, and the GitHub
-                         link beside this leads to LICENSE. Kept identical to the
-                         Blade footer in components/layouts/app.blade.php. -->
                     <span class="inline-flex items-center gap-1.5">
                         Made with <svg aria-hidden="true" class="size-3.5 fill-none stroke-current text-teal" viewBox="0 0 20 20" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17.25C10 17.25 2 12 2 6.5A4.5 4.5 0 0 1 10 3.914 4.5 4.5 0 0 1 18 6.5C18 12 10 17.25 10 17.25Z"/></svg> for students<template v-if="$page.props.operatorName"> by {{ $page.props.operatorName }}</template>
                     </span>

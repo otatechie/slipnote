@@ -2,8 +2,6 @@ import { createApp, h } from 'vue'
 import { createInertiaApp, router } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 
-// The fonts go through Vite (see @font-face in app.css); listing them here puts
-// them in the build manifest, so Blade can preload them with Vite::asset().
 import.meta.glob(['../fonts/**'])
 
 const THEME_KEY = 'slipnote-theme'
@@ -84,16 +82,7 @@ if (themeMedia.addEventListener) {
     themeMedia.addListener(() => applyTheme(storedTheme()))
 }
 
-// Blade pages can't use inline onclick= under the production CSP (script-src
-// is 'self' plus a nonce; there is no 'unsafe-inline' and there must not
-// be). One delegated listener reads data- attributes instead:
-//   data-dialog-open="id"  opens <dialog id>
-//   data-dialog-close      closes the enclosing <dialog>
-//   data-dialog-autoopen   (on a <dialog>) opens it when the page loads
-//   data-copy="text"       copies text; the button reads "Copied" for 2s
 function initBladeActions() {
-    // A dialog the server wants open on arrival (a form that came back with
-    // errors): data-dialog-autoopen.
     document.querySelectorAll('dialog[data-dialog-autoopen]').forEach((dialog) => dialog.showModal())
 
     document.addEventListener('click', (event) => {
@@ -116,8 +105,6 @@ function initBladeActions() {
     })
 }
 
-// A <details> menu stays open until something closes it; a real menu closes
-// when you click away or press Escape.
 function initMenuDismiss() {
     document.addEventListener('click', (event) => {
         document.querySelectorAll('details.op-menu[open]').forEach((menu) => {
@@ -142,15 +129,10 @@ if (document.readyState === 'loading') {
     initBladeUi()
 }
 
-// Makes the site installable (see public/sw.js). Registered on every page:
-// which manifest the install uses is the page's own <link rel="manifest">.
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {})
 }
 
-// Plain blade pages (welcome, operator, legal) have no Inertia root — only the
-// app pages render one. Mounting Inertia without it throws (null el). Guard on
-// the root's presence so this script is a no-op on blade pages.
 if (document.getElementById('app')) {
     createInertiaApp({
         title: title => title ? `${title} · SlipNote` : 'SlipNote',
@@ -162,8 +144,6 @@ if (document.getElementById('app')) {
 
             initThemeToggle()
 
-            // Re-wire the toggle after every Inertia navigation — the SPA swaps
-            // the DOM so the new footer button needs a fresh listener.
             router.on('navigate', () => initThemeToggle())
         },
     })

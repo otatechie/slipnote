@@ -1,7 +1,4 @@
 <x-layouts.operator title="Operator">
-{{-- Same shape as /start: a centred column with the mark above the heading and
-     the form in a card. Left-aligned at the top of a wide page, it read as a
-     fragment of some other screen rather than a page of its own. --}}
 <div class="op mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12 sm:px-5">
     <header class="mb-7 text-center">
         <a href="/"
@@ -16,11 +13,7 @@
     <form method="POST" action="{{ route('operator.login') }}" class="op-card flex flex-col gap-4 p-5 sm:p-6">
         @csrf
         <div>
-            {{-- A real label. The placeholder was this field's only name, and a
-                 placeholder disappears on the first keystroke. --}}
             <label for="secret" class="mb-1.5 block text-[13px] font-semibold text-ink">Operator secret</label>
-            {{-- bg-base inside the bg-surface card: an input has to contrast with
-                 whatever is directly behind it. --}}
             <input id="secret" type="password" name="secret" autocomplete="off" autofocus
                    @error('secret') aria-invalid="true" @enderror
                    class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner">

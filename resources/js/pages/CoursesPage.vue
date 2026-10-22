@@ -53,14 +53,8 @@ watch(localSort, (val) => {
 // Workspace share URL (never the ?owner= one)
 const workspaceUrl = computed(() => window.location.origin + '/' + props.workspace.slug)
 const shareCopied = ref(false)
-// The link goes into the class WhatsApp group. Pre-written so the rep does
-// not have to compose the pitch; the "no account" line is what gets a
-// classmate to tap.
 const shareText = computed(() =>
     `${props.workspace.name} — notes, slides and past papers for the class. No account needed:`)
-// On a phone, the system share sheet: WhatsApp is in it, alongside whatever
-// else the class uses, so it replaces a separate WhatsApp button. Desktop
-// share sheets are patchy (and rarely hold WhatsApp), so there it copies.
 function share() {
     const touch = window.matchMedia?.('(pointer: coarse)').matches
     if (touch && navigator.share) {
@@ -74,19 +68,10 @@ function share() {
     }).catch(() => { })
 }
 
-// "Tell us how you use it". Asked only where there is use to tell about (a
-// board with files), and once dismissed it stays gone in this browser. Storage
-// can throw in private windows, so a failure just means it shows again.
 const FEEDBACK_KEY = 'slipnote_feedback_dismissed'
 const feedbackDismissed = ref(false)
 try { feedbackDismissed.value = window.localStorage.getItem(FEEDBACK_KEY) === '1' } catch { }
-// Owners only, and once the board has real use (5+ files): they know what the
-// class does with it. A classmate looking for notes has nothing to tell us, and
-// "Suggest a feature" in the footer is there for anyone who does.
 const showFeedback = computed(() => props.isOwner && props.totalFiles >= 5 && !feedbackDismissed.value)
-// A note from the operator to this board's owner. Dismissed per browser,
-// keyed by when it was left, so a new note shows even after an old one was
-// closed. Storage can throw in private windows; then it simply shows again.
 const NOTE_KEY = 'slipnote_note_seen_' + props.workspace.slug
 const noteSeen = ref('')
 try { noteSeen.value = window.localStorage.getItem(NOTE_KEY) ?? '' } catch { }
@@ -99,10 +84,6 @@ function replyToNote() {
     openSuggest(`Reply about "${props.workspace.name}": `)
 }
 
-// The recovery email, asked for once the board holds files: that's when losing
-// the owner link starts to cost something. Not on day one, when there's nothing
-// to lose and the owner is busy making courses. "Not now" hides it on this
-// browser for 30 days, then it comes back: a board without one can strand.
 const RECOVERY_LATER_KEY = 'slipnote_recovery_later_' + props.workspace.slug
 const RECOVERY_LATER_MS = 30 * 24 * 60 * 60 * 1000
 const recoveryLater = ref(0)
@@ -124,8 +105,6 @@ function saveRecoveryFromAsk() {
 
 // Who can add files. Saved on tap: two choices, nothing to confirm.
 const uploadAccessSaving = ref(false)
-// Busy, not disabled, while saving: a button that turns disabled drops keyboard
-// focus to the page body, so the owner would lose their place in the sheet.
 function setUploadAccess(ownerOnly) {
     if (uploadAccessSaving.value || ownerOnly === props.uploadsOwnerOnly) return
     uploadAccessSaving.value = true
@@ -143,16 +122,11 @@ function dismissFeedback() {
     try { window.localStorage.setItem(FEEDBACK_KEY, '1') } catch { }
 }
 
-// QR code — for the "get the notes here" moment in a room. Generated lazily
-// (dynamic import keeps the qrcode lib out of the initial bundle).
 const qrDataUrl = ref('')
 const qrOpen = ref(false)
 const qrError = ref(false)
 async function toggleQr() {
     if (qrOpen.value) { qrOpen.value = false; return }
-    // Open first, generate second. Awaiting the lazy chunk before showing
-    // anything meant the first click looked dead on a slow connection — the
-    // exact moment (a full lecture hall) this button exists for.
     qrOpen.value = true
     if (qrDataUrl.value) return
     qrError.value = false
@@ -170,8 +144,6 @@ function downloadQr() {
     a.click()
 }
 
-// Course create / edit sheet. editing holds the course being edited, or
-// null when the sheet is creating a new course.
 const sheet = ref(false)
 const editing = ref(null)
 const codeField = ref(null)
@@ -183,16 +155,11 @@ watch(sheet, (v) => {
 
 const courseForm = useForm({ code: '', title: '' })
 
-// Soft nudge: a course code is normally letters + numbers (PHYS 101). An
-// all-digit entry like "123456" is usually a mistake. We warn, never block —
-// the controller still accepts it if the user means it.
 const codeLooksOff = computed(() => {
     const c = courseForm.code.trim()
     return c !== '' && !/[a-zA-Z]/.test(c)
 })
 
-// Soft mirror of the server's per-board uniqueness rule: warn (don't block) if
-// the typed code already exists in this board. Ignores the course being edited.
 const codeDuplicate = computed(() => {
     const c = courseForm.code.trim().toLowerCase()
     if (c === '') return false
@@ -208,9 +175,6 @@ function openCreate() {
     sheet.value = true
 }
 
-// An owner on an empty board has exactly one thing to do, so the sheet opens
-// on arrival. Course creation redirects into the new course, so this is
-// receipt → course → upload with no list page in between.
 onMounted(() => {
     if (props.isOwner && props.totalCourses === 0) openCreate()
 })
@@ -235,21 +199,10 @@ function submitCourse() {
     }
 }
 
-// Recovery email form. The nudge collapses to one row once courses exist
-// (so it can't out-weigh the course list); it starts open on an empty board
-// and whenever there's feedback to show (save confirmation / error).
-// Board settings sheet: who can add files, and the recovery email. Opens
-// itself when there's feedback for the recovery form (save confirmation or
-// an error), so the owner sees the result of what they just did.
 const settingsOpen = ref(
     !!page.props.flash?.recoverySaved
     || !!page.props.errors?.recoveryEmail,
 )
-// On a phone the sheet rises from the bottom, so the on-screen keyboard (for
-// the recovery email) would cover it: neither iOS nor Android Chrome shrinks
-// the layout viewport for the keyboard, only the visual one. While it's open,
-// lift the sheet by the keyboard's height and cap it to what's still visible.
-// Phones only; from sm up it's a full-height drawer and needs none of this.
 const settingsLift = ref(null)
 function measureSettingsLift() {
     const vv = window.visualViewport
@@ -283,10 +236,6 @@ function saveRecoveryEmail() {
     })
 }
 
-// Owner unlock form. The panel is nothing but a form, so opening it moves focus
-// into the field — same as the course sheet. The recovery panel deliberately
-// doesn't: it leads with status ("Recovery email is set"), and jumping to the
-// input would skip the sentence explaining what the input is for.
 const unlockOpen = ref(!!(errors.value?.ownerInput))
 const unlockForm = useForm({ ownerInput: '' })
 const ownerField = ref(null)
@@ -294,9 +243,6 @@ watch(unlockOpen, (v) => {
     if (v) setTimeout(() => ownerField.value?.focus(), 50)
 })
 
-// Escape closes the topmost dismissible thing, innermost first. Centralised so
-// the two disclosures can be backed out of like the sheet and the QR overlay —
-// they were the only things here a keyboard couldn't dismiss.
 function onEscape() {
     if (confirmingDelete.value) { confirmingDelete.value = false; return }
     if (confirmingReset.value) { confirmingReset.value = false; return }
@@ -313,13 +259,8 @@ function unlockOwner() {
     })
 }
 
-// Leave owner mode on this device (useful on shared computers). Confirmed first:
-// the only way back in is the owner link, and a board owner who never saved it is
-// locked out of their own board by one click on a button the width of a word.
 const confirmingExit = ref(false)
 
-// Reset owner link: for a link pasted somewhere by mistake. Confirmed first,
-// because it signs out every other device that used the old link.
 const confirmingReset = ref(false)
 const resetting = ref(false)
 function resetOwnerLink() {
@@ -329,8 +270,6 @@ function resetOwnerLink() {
     })
 }
 
-// Delete the board. Typed name to confirm, as the server also checks: the
-// one action here that can't be undone and takes every classmate's files.
 const confirmingDelete = ref(false)
 const deleteForm = useForm({ confirmName: '' })
 const deleteNameMatches = computed(() =>
@@ -386,9 +325,6 @@ function recoveryUrl() {
     return '/' + props.workspace.slug + '/recover'
 }
 
-// Drag-to-reorder (owner only, manual sort only when not searching/filtering).
-// Behind a "Reorder" toggle: always-on arrows put a control column on every
-// row for something done once a semester, and needed a hint line to explain.
 const canReorder = computed(() => props.isOwner && !localSearch.value && localSort.value === 'manual' && props.courses.length > 1)
 const reordering = ref(false)
 const draggable = computed(() => canReorder.value && reordering.value)
@@ -418,8 +354,6 @@ function onDrop() {
     persistOrder()
 }
 
-// Touch- and keyboard-accessible reorder: move a course up or down one slot.
-// Drag is a desktop-only enhancement; these buttons work everywhere.
 function moveCourse(index, dir) {
     const target = index + dir
     if (target < 0 || target >= dragList.value.length) return
@@ -430,8 +364,6 @@ function moveCourse(index, dir) {
     persistOrder()
 }
 
-// Persist the current order. On failure, revert to the server's order so the
-// UI never shows an order that wasn't saved (no silent data divergence).
 function persistOrder() {
     router.post('/' + props.workspace.slug + '/courses/reorder', {
         ids: dragList.value.map(c => c.id),
@@ -448,13 +380,7 @@ function persistOrder() {
     <AppLayout :fab-space="isOwner && totalCourses > 0">
         <div class="op mx-auto w-full max-w-3xl flex-1 px-5 pb-10" @keydown.escape.window="onEscape">
 
-            <!-- Where you are, and as whom. Scrolls away; only the title row
-                 below pins, and only from sm up. Owner status sits here as a
-                 state of the session rather than a pill in the share row. -->
             <div class="flex min-h-11 items-center justify-between gap-3 pt-4 sm:pt-6">
-                <!-- Owners only: /start lists the boards this browser manages.
-                     A classmate who opened a shared link has none, so they get
-                     the wordmark, which is their way to the rest of SlipNote. -->
                 <a v-if="isOwner" href="/start"
                     class="op-kicker group inline-flex h-11 items-center gap-1.5 text-[11px] font-semibold uppercase text-muted transition hover:text-neon">
                     <svg aria-hidden="true"
@@ -471,11 +397,6 @@ function persistOrder() {
                     <img src="/logo-mark.png" alt="" class="size-4">
                     SlipNote
                 </a>
-                <!-- "Owner" opens the Board settings sheet: everything owner-only in
-                     one place, one tap away. Exit lives at the foot of that sheet,
-                     out of a stray thumb's way. "Exit", not "Lock": beside a board,
-                     "Lock" reads as "make this board locked", the misread that
-                     costs you your own access. -->
                 <button v-if="isOwner" type="button" @click="settingsOpen = true"
                     aria-haspopup="dialog" aria-label="Owner: board settings"
                     class="op-pill op-press inline-flex h-11 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold text-ink transition sm:h-9">
@@ -484,12 +405,7 @@ function persistOrder() {
                 </button>
             </div>
 
-            <!-- Pinned from sm up with "New course" beside it. On a phone a
-                 two-line title pinned under the thumb costs a sixth of the
-                 screen, and "New course" is the floating button instead. -->
             <header class="mb-2.5 flex items-center justify-between gap-4 pt-1 sm:sticky sm:top-0 sm:z-10 sm:bg-base/70 sm:py-3 sm:backdrop-blur-xl">
-                <!-- Two lines on a phone, one from sm up: most board names lost
-                     the word that tells you which board you're in at one line. -->
                 <h1 class="op-title line-clamp-2 min-w-0 wrap-break-word text-[1.6rem] font-bold text-ink sm:line-clamp-1 sm:text-[1.85rem]">{{ workspace.name }}</h1>
                 <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
                     class="op-press hidden h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex">
@@ -497,8 +413,6 @@ function persistOrder() {
                 </button>
             </header>
 
-            <!-- The operator's note, for the owner only: first thing under the
-                 title, because it's addressed to them and rarely sent. -->
             <aside v-if="showNote" aria-label="A note from the SlipNote team"
                 class="op-card op-card-quiet mb-4 flex items-start gap-3 px-4 py-3.5">
                 <div class="min-w-0 flex-1">
@@ -515,8 +429,6 @@ function persistOrder() {
                 </button>
             </aside>
 
-            <!-- The recovery email, asked for in place once there are files to
-                 lose: one field, not a trip to Board settings, where it also lives. -->
             <aside v-if="showRecoveryAsk" aria-labelledby="recoveryAskTitle"
                 class="op-card op-card-quiet mb-4 px-4 py-3.5">
                 <p v-if="recoveryAskSaved" role="status"
@@ -552,15 +464,6 @@ function persistOrder() {
                 </template>
             </aside>
 
-            <!-- Says what a board holds, and where adding actually happens. The old
-                 line invited you to "add what you have" on a page with nothing to add
-                 it to — uploads live one level down, inside a course. It also stated
-                 the product model only in the empty state, which a visitor to a
-                 populated board never sees. -->
-            <!-- An owner with courses but no files gets the activation nudge here,
-                 in place of the description, rather than as a second grey line
-                 under the share buttons: a board shared before it has a file is
-                 a board a classmate opens once. -->
             <p class="mb-5 text-[13px] text-muted">
                 <template v-if="isOwner && totalCourses > 0 && totalFiles === 0">Open a course to add the first file — a board that opens empty rarely gets opened twice.</template>
                 <template v-else-if="totalCourses > 0 && uploadsOwnerOnly && !isOwner">Notes, slides and past papers for this class. Open a course to read or download them.</template>
@@ -568,8 +471,6 @@ function persistOrder() {
                 <template v-else>Your board's courses live here — add one to get started.</template>
             </p>
 
-            <!-- Share and QR are occasional, so they scroll away. Share leads
-                 nowhere on an empty board: it appears once there's a course. -->
             <div v-if="totalCourses > 0" class="mb-7 flex items-center gap-2">
                 <button type="button" @click="share"
                     class="op-pill op-press inline-flex h-11 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-ink transition sm:h-9 sm:flex-none">
@@ -582,7 +483,6 @@ function persistOrder() {
                     <span v-if="!shareCopied">Share board</span>
                     <span v-else>Link copied ✓</span>
                 </button>
-                <!-- QR for the "get the notes here" moment in a lecture hall. -->
                 <button type="button" @click="toggleQr"
                     :aria-expanded="qrOpen" aria-label="Show QR code for this board" title="QR code"
                     class="op-pill op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-ink transition sm:size-9">
@@ -593,12 +493,10 @@ function persistOrder() {
             </div>
             <div v-else class="mb-7"></div>
 
-            <!-- Flash: course updated (edit redirects here) -->
             <div v-if="flash.created" class="op-toast mb-5 text-sm font-medium text-ink">
                 <p>{{ flash.created }}</p>
             </div>
 
-            <!-- Empty state -->
             <template v-if="totalCourses === 0">
                 <div class="op-card mt-8 px-6 py-16 text-center sm:mt-12">
                     <p class="text-[16px] font-semibold tracking-tight text-ink">No courses yet</p>
@@ -624,9 +522,6 @@ function persistOrder() {
             </template>
 
             <template v-else>
-                <!-- Near full: said above the list, in words, because uploads are
-                     about to start failing. The meter at the foot of the page is
-                     too quiet for that, and was centred under a left-aligned page. -->
                 <div v-if="storagePct >= 90" role="status"
                     class="mb-6 rounded-2xl border border-danger/30 bg-danger/10 px-4 py-3 text-[13px] text-ink">
                     <p class="font-semibold">This board is almost full</p>
@@ -637,10 +532,7 @@ function persistOrder() {
                     </p>
                 </div>
 
-                <!-- Search + sort -->
                 <div class="mb-2 flex min-h-11 items-center justify-between gap-3 sm:min-h-8">
-                    <!-- Same as the course page's section headings: body-size ink
-                         with its count. -->
                     <h2 class="text-[14px] font-semibold text-ink">
                         Courses <span class="font-normal tabular-nums text-muted">· {{ totalCourses }}</span>
                     </h2>
@@ -651,8 +543,6 @@ function persistOrder() {
                         {{ reordering ? 'Done' : 'Reorder' }}
                     </button>
                 </div>
-                <!-- From 7 courses, about a screen on a phone: below that the list
-                     is its own search. Same threshold as files on the course page. -->
                 <div v-if="totalCourses > 6" class="mb-4 flex flex-col gap-2 sm:flex-row">
                     <input type="search" v-model="localSearch" :placeholder="`Search ${totalCourses} courses…`"
                         aria-label="Search courses"
@@ -671,15 +561,10 @@ function persistOrder() {
                     </div>
                 </div>
 
-                <!-- No results -->
                 <p v-if="courses.length === 0" class="op-card px-6 py-8 text-center text-[14px] text-muted">
                     No courses match "<span class="font-semibold text-ink">{{ localSearch }}</span>".
                 </p>
 
-                <!-- Course list -->
-                <!-- One card with hairline-separated rows, not a stack of floating
-                     cards: less chrome per item, and the list scans as one column.
-                     Hover tint comes from .op-row, so no per-card lift or shadow. -->
                 <div v-else class="op-card overflow-hidden">
                     <div v-for="(course, idx) in ((draggable && courses.length > 1) ? dragList : courses)"
                         :key="course.id" :draggable="draggable && courses.length > 1"
@@ -688,9 +573,6 @@ function persistOrder() {
                         @drop="draggable && courses.length > 1 && onDrop()"
                         class="op-row group flex items-start gap-3 sm:gap-4">
 
-                        <!-- Reorder controls (owner + manual sort + 2+ courses).
-                             Up/down buttons work on touch & keyboard; the drag
-                             handle is a desktop-only enhancement on top. -->
                         <div v-if="draggable && courses.length > 1" class="-my-1 flex shrink-0 flex-col items-center">
                             <button type="button" @click.stop.prevent="moveCourse(idx, -1)" :disabled="idx === 0"
                                 :aria-label="`Move ${course.code} up`"
@@ -730,12 +612,6 @@ function persistOrder() {
                                         <path d="M8 6l4 4-4 4" />
                                     </svg>
                                 </p>
-                                <!-- Sits next to the code, not flung right: the count
-                                     belongs to the course, and across a wide row
-                                     ml-auto left a dead gap between the two. Form
-                                     matches the operator's count badge; the hue does
-                                     not — red there means "needs attention", and a
-                                     file count is neutral news. -->
                                 <span v-if="course.new_count > 0"
                                     class="shrink-0 rounded-full bg-neon/10 px-2 py-0.5 text-[11px] font-semibold text-neon"
                                     :title="`${course.new_count} added since you last opened this course`">
@@ -747,17 +623,12 @@ function persistOrder() {
                                 </span>
                             </div>
                             <p class="mt-0.5 text-[13px] text-muted">{{ course.title }}</p>
-                            <!-- The owner's next step, on the thing they tap. A span,
-                                 not a link: the whole row already is one, and this
-                                 sends it to the course with the upload form open. -->
                             <span v-if="isOwner && course.materials_count === 0"
                                 @click.stop.prevent="router.visit(courseUrl(course.slug) + '#add-file')"
                                 class="mt-2 inline-flex h-11 items-center gap-1.5 rounded-full bg-neon/15 pl-3 pr-3.5 text-[13px] font-semibold text-neon sm:h-8">
                                 <svg aria-hidden="true" class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
                                 Add the first file
                             </span>
-                            <!-- Count and freshness as one quiet line, not a blue chip:
-                                 blue on this page means something you can tap. -->
                             <p v-if="course.materials_count > 0" class="mt-1 text-[12px] tabular-nums text-muted">
                                 {{ plural(course.materials_count, 'file') }}<template v-if="course.materials_max_created_at"> · updated {{ timeAgo(course.materials_max_created_at) }}</template>
                             </p>
@@ -779,11 +650,6 @@ function persistOrder() {
                     Use the arrows (or drag) to reorder — saved automatically.
                 </p>
 
-                <!-- With the site bar gone this is how a classmate learns they can
-                     make their own. After the list, so it never competes with it.
-                     And the lecturer who was forwarded this board, likely wanting
-                     to know what happens to their slides, gets the answer here
-                     rather than in the footer. -->
                 <div v-if="!isOwner" class="mt-6 flex flex-wrap gap-x-5 text-[12px] text-muted">
                     <p>
                         Run a class of your own?
@@ -795,15 +661,11 @@ function persistOrder() {
                     </p>
                 </div>
 
-                <!-- Below the list, never above it: the board is for finding notes,
-                     and this is a favour asked of the people who already do. -->
                 <aside v-if="showFeedback" aria-label="Feedback"
                     class="op-card op-card-quiet mt-6 flex items-start gap-3 px-4 py-3.5">
                     <div class="min-w-0 flex-1">
                         <p class="text-[14px] font-semibold tracking-tight text-ink">Using SlipNote a lot? Tell us how 👋</p>
                         <p class="mt-0.5 text-[13px] text-muted">One line helps: what your class uses it for, and what's missing.</p>
-                        <!-- Opens the same form as the footer's "Suggest a feature",
-                             with the sentence started so there's less to type. -->
                         <button type="button" @click="tellUs"
                             class="op-pill op-press mt-2.5 inline-flex h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold text-ink transition sm:h-9">
                             Tell us
@@ -816,23 +678,15 @@ function persistOrder() {
                 </aside>
             </template>
 
-            <!-- Phones: "New course" floats in the thumb zone, the same labelled
-                 button the course page uses for "Add file". The page reserves
-                 room under the footer (AppLayout fab-space) so it never covers
-                 the last row or a footer link. -->
             <button v-if="isOwner && totalCourses > 0 && !sheet" type="button" @click="openCreate"
                 class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
                 <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
                 New course
             </button>
 
-            <!-- Owner: create-course slide-in panel -->
             <template v-if="isOwner">
                 <div v-if="sheet" v-modal-focus class="fixed inset-0 z-40" role="dialog" aria-modal="true"
                     :aria-label="editing ? 'Edit course' : 'New course'">
-                    <!-- Black, not ink: --color-ink is near-white in dark mode, so an
-                         ink scrim brightened the page to a mid-grey lighter than the
-                         dialog itself. A scrim must always darken. -->
                     <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="sheet = false"></div>
                     <div class="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-surface px-5 py-6 shadow-xl
                                 transition-transform duration-200 sm:px-6" style="transform: translateX(0)">
@@ -886,12 +740,8 @@ function persistOrder() {
                     </div>
                 </div>
 
-                <!-- Board settings sheet. Same panel as New course. -->
                 <div v-if="settingsOpen" v-modal-focus class="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Board settings">
                     <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="settingsOpen = false"></div>
-                    <!-- Phone: a bottom sheet as tall as its content, like every other
-                         sheet here, with the board still visible above it. From sm up:
-                         the right-hand drawer. -->
                     <div :style="settingsLift"
                         class="absolute inset-x-0 bottom-0 flex max-h-[90vh] flex-col overflow-y-auto overscroll-contain rounded-t-2xl bg-surface px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl
                                sm:inset-x-auto sm:right-0 sm:top-0 sm:h-full sm:max-h-none sm:w-full sm:max-w-md sm:rounded-none sm:px-6 sm:py-6">
@@ -907,21 +757,12 @@ function persistOrder() {
                             </button>
                         </div>
 
-                        <!-- Who can add files, phrased positively so the label alone says
-                             it, and as "anyone with the link" rather than "classmates":
-                             that's who it really is, and a lecturer's students aren't
-                             their classmates: on (the default) suits a class rep's board; off is what
-                             lets a lecturer run a board for their course. The label
-                             never changes with the state. Saved on tap. Stored as
-                             uploads_owner_only, so the switch shows its inverse. -->
                         <section>
                             <div class="flex items-center justify-between gap-4">
                                 <p id="uploadAccessLabel" class="text-[14px] font-semibold text-ink">Anyone with the link can add files</p>
                                 <button type="button" role="switch" :aria-checked="!uploadsOwnerOnly" aria-labelledby="uploadAccessLabel"
                                     :aria-busy="uploadAccessSaving" @click="setUploadAccess(!uploadsOwnerOnly)"
                                     class="relative inline-flex h-11 w-14 shrink-0 cursor-pointer items-center justify-center aria-busy:opacity-60">
-                                    <!-- Off track at /70: at /40 it measured ~2.3:1 against
-                                         the card, under the 3:1 a control needs to be seen. -->
                                     <span aria-hidden="true" class="h-7 w-12 rounded-full transition-colors duration-200"
                                         :class="!uploadsOwnerOnly ? 'bg-neon' : 'bg-muted/70'"></span>
                                     <span aria-hidden="true" class="absolute left-2 top-1/2 size-5 -translate-y-1/2 rounded-full bg-white shadow transition-transform duration-200"
@@ -971,12 +812,9 @@ function persistOrder() {
                                 </button>
                             </form>
                             <span v-if="errors.recoveryEmail" role="alert" class="mt-2 block text-[12px] text-danger">{{ errors.recoveryEmail[0] }}</span>
-                            <!-- Standing text, not a placeholder: the way to remove the
-                                 address must not vanish on the first keystroke. -->
                             <p v-if="!needsRecoveryEmail" class="mt-2 text-[11px] text-muted">Saving an empty field removes the current recovery email.</p>
                         </section>
 
-                        <!-- For a link pasted into the class group by mistake. -->
                         <section class="mt-7 border-t border-sky pt-6">
                             <h3 class="text-[14px] font-semibold text-ink">Owner link</h3>
                             <p class="mt-1 text-[12px] text-muted">
@@ -988,8 +826,6 @@ function persistOrder() {
                             </button>
                         </section>
 
-                        <!-- Real deletion, for a lecturer who must be able to end what
-                             they start. Confirmed by typing the board's name. -->
                         <section class="mt-7 border-t border-sky pt-6">
                             <h3 class="text-[14px] font-semibold text-ink">Delete board</h3>
                             <p class="mt-1 text-[12px] text-muted">
@@ -1001,8 +837,6 @@ function persistOrder() {
                             </button>
                         </section>
 
-                        <!-- Last, and quiet: rare, and it only affects this browser.
-                             The confirm explains what you'll need to get back in. -->
                         <section class="mt-7 border-t border-sky pt-5 sm:mt-auto">
                             <button type="button" @click="confirmingExit = true"
                                 class="inline-flex min-h-11 cursor-pointer items-center gap-2 text-[13px] font-semibold text-muted transition hover:text-ink">
@@ -1019,14 +853,6 @@ function persistOrder() {
                 </div>
             </template>
 
-            <!-- QR overlay — scan-to-open for a room full of students. Lives outside
-                 the owner block on purpose: the button that opens it is shown to
-                 everyone with a course to share, so gating the dialog on isOwner
-                 made the button silently do nothing for visitors. -->
-            <!-- Exit owner mode confirm. The action is one click, instant, and the
-                 only way back is the owner link — which the /start receipt screen
-                 exists precisely because people lose. So the dialog's job is not
-                 "are you sure" but "here is what you'll need to get back in". -->
             <div v-if="confirmingExit" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
                  role="dialog" aria-modal="true" aria-labelledby="exitTitle" aria-describedby="exitDesc">
                 <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingExit = false"></div>
@@ -1054,9 +880,6 @@ function persistOrder() {
                 </div>
             </div>
 
-            <!-- Reset owner link confirm. Says who loses access (everyone on the
-                 old link, including the owner's other devices) and that the new
-                 link is shown once. -->
             <div v-if="confirmingDelete" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
                  role="dialog" aria-modal="true" aria-labelledby="deleteTitle" aria-describedby="deleteDesc">
                 <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="confirmingDelete = false"></div>
@@ -1125,9 +948,6 @@ function persistOrder() {
                         </svg>
                     </button>
                     <img v-if="qrDataUrl" :src="qrDataUrl" alt="QR code for this board" class="size-52 rounded-xl bg-white p-2 shadow-sm" />
-                    <!-- Same footprint as the image so the dialog doesn't jump when
-                         it lands. On failure the link below still works, so the modal
-                         degrades to "share this" rather than leaving a dead square. -->
                     <div v-else role="status"
                         class="flex size-52 items-center justify-center rounded-xl border border-sky/50 bg-base px-4 text-center text-[12px] text-muted">
                         {{ qrError ? 'Could not build the QR code.' : 'Building QR code…' }}
@@ -1143,7 +963,6 @@ function persistOrder() {
                 </div>
             </div>
 
-            <!-- Non-owner: unlock panel -->
             <template v-if="!isOwner">
                 <div class="op-card mt-10 overflow-hidden">
                     <h2>
@@ -1179,17 +998,11 @@ function persistOrder() {
                                 {{ unlockForm.processing ? 'Unlocking…' : 'Unlock' }}
                             </button>
                         </form>
-                        <!-- The server's own message: this key carries both "wrong
-                             secret" and "rate limited", and a hardcoded string told
-                             a throttled user their secret was wrong — so they'd
-                             retry, and stay throttled. -->
                         <p v-if="errors.ownerInput" role="alert"
                            class="mt-2 text-[12px] font-medium text-danger">{{ errors.ownerInput[0] }}</p>
                         <p id="ownerInputNote" class="mt-2 text-[11px] text-muted">
                             Goes only to this board · SlipNote never asks for it by email.
                         </p>
-                        <!-- Here, not only on /start: an owner who lost their link
-                             most likely got back to the board through its share link. -->
                         <Link v-if="recoveryAvailable" :href="recoveryUrl()"
                             class="mt-1 inline-flex min-h-11 items-center text-[12px] font-semibold text-neon hover:underline sm:min-h-0">
                             Lost your owner link? Recover it
@@ -1198,12 +1011,6 @@ function persistOrder() {
                 </div>
             </template>
 
-            <!-- Capacity is the owner's responsibility, so they always see it.
-                 Anyone else only once it's close enough to bite — uploads are open
-                 to any visitor, and a near-full board is why theirs would fail.
-                 Below that, "0.2 of 500 MB" is chrome that looks like a signal. -->
-            <!-- From 90% the notice above the list carries the numbers, so this
-                 steps aside rather than say the same thing twice. -->
             <div v-if="storageUsed > 0 && storagePct < 90 && (isOwner || storagePct >= 75)"
                 class="mt-8 flex items-center gap-2">
                 <div class="h-1 w-32 overflow-hidden rounded-full bg-ink/15">

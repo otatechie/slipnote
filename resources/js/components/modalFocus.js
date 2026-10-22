@@ -1,13 +1,3 @@
-// v-modal-focus: what a native <dialog> gives for free, for our plain-div
-// dialogs. On open, focus moves into the dialog; Tab wraps at both ends so it
-// can't wander the page behind the scrim; on close, focus goes back to whatever
-// opened it. Per element, so a confirm opened from inside a sheet traps on its
-// own and hands focus back to the sheet's button when it closes.
-//
-// Put it on the element that carries v-if and role="dialog". First focus goes
-// to [data-autofocus] if there is one, else the first visible control. Code that
-// focuses a field itself after open (the course sheet, Suggest) still wins:
-// this runs on mount, before their nextTick/timeout.
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 function focusables(root) {
@@ -41,8 +31,6 @@ export const vModalFocus = {
     beforeUnmount(el) {
         el.removeEventListener('keydown', el._modalTrap)
         const back = el._modalReturn
-        // Not if the opener went with a page change, or if focus has already
-        // moved on to something outside this dialog.
         const inside = el.contains(document.activeElement) || document.activeElement === document.body
         if (back?.isConnected && inside) {
             // After this element leaves the DOM, or focus is lost with it.

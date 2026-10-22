@@ -4,9 +4,6 @@ import { useForm } from '@inertiajs/vue3'
 import { suggestOpen, suggestPrefill } from './suggest'
 import { vModalFocus } from './modalFocus'
 
-// A form, not a mailto: link. Most students have no mail app set up on their
-// phone, so "Email us" opened nothing at all. This posts to the server, which
-// keeps the message and pings the operator on Telegram.
 const form = useForm({ message: '', reply_to: '', page: '', website: '' })
 const sent = ref(false)
 const messageField = ref(null)
@@ -18,9 +15,6 @@ watch(suggestOpen, (open) => {
     if (!form.message) form.message = suggestPrefill.value
     nextTick(() => messageField.value?.focus())
 })
-
-// The app shares validation errors as arrays (see HandleInertiaRequests), so
-// the template shows the first message rather than the raw list.
 
 function close() {
     suggestOpen.value = false
@@ -84,7 +78,6 @@ function submit() {
                        placeholder="Only if you'd like a reply"
                        class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
 
-                <!-- Spam trap: hidden from people and screen readers, filled by bots. -->
                 <div aria-hidden="true" class="absolute -left-[9999px] size-px overflow-hidden">
                     <label for="suggestWebsite">Website</label>
                     <input id="suggestWebsite" type="text" v-model="form.website" tabindex="-1" autocomplete="off">

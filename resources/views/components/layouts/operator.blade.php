@@ -30,8 +30,6 @@
 
         <div class="mt-auto px-5 py-6">
             <div class="mx-auto flex max-w-5xl justify-end">
-                {{-- All three modes visible, so nothing is hidden behind a cycle. applyTheme()
-                     in app.js sets aria-pressed on the current one, which drives its fill. --}}
                 <div data-theme-switch role="group" aria-label="Theme" class="inline-flex items-center rounded-full border border-sky/50 bg-surface/80 backdrop-blur-md p-px">
                     <button type="button" data-theme-set="system" aria-pressed="false" title="System theme"
                             class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">

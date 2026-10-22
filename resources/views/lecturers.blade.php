@@ -1,22 +1,12 @@
 <x-layouts.app title="For lecturers" :indexable="true">
-{{-- For the lecturer who has heard their slides are "on SlipNote". Most will
-     arrive assuming it's another Course Hero and wanting one answer: how to
-     get something removed. So that answer is the card on the page, and the
-     rest is short enough to read standing up. Privacy and Terms are in the
-     footer, so the page doesn't repeat them. --}}
 <div class="op mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-8 sm:px-5 sm:pt-10">
     <header class="mb-6">
-        {{-- The mark, not a back arrow: most visitors arrive here from a search
-             or a forwarded link, never having seen SlipNote, so "back" points
-             nowhere they've been and the name is what they need. --}}
         <a href="{{ route('welcome') }}"
            class="-my-2.5 inline-flex min-h-11 items-center gap-2 text-[15px] font-bold text-ink transition hover:opacity-80">
             <img src="/logo-mark.png" alt="" class="size-6 shrink-0">
             SlipNote
         </a>
         <h1 class="op-title mt-3 text-[2.15rem] font-bold text-ink">For lecturers</h1>
-        {{-- A sentence per line from sm up: balanced, the pair squeezed into
-             half the column; unbroken, it left "down." alone on line two. --}}
         <p class="mt-2 text-[16px] leading-relaxed text-muted">
             One private page per class, not a public library.<br class="hidden sm:inline">
             Anything of yours can be taken down.
@@ -38,7 +28,6 @@
         </li>
     </ul>
 
-    {{-- The task most visitors came for, set apart so it's found at a glance. --}}
     <section class="op-card mt-7 px-5 py-5 sm:px-6">
         <h2 class="text-[17px] font-semibold text-ink">To have your material removed</h2>
         <ol class="mt-3 space-y-2 text-[15px] text-ink">
@@ -66,8 +55,6 @@
         </a>
     </section>
 
-    {{-- A face behind the site: "some site a rep found" is how it gets
-         described otherwise. Shown when the deployment names its operator. --}}
     @if (filled(config('noteshare.operator_name')))
         <section class="mt-8">
             <h2 class="text-[17px] font-semibold text-ink">Who runs SlipNote</h2>

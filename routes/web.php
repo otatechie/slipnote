@@ -16,9 +16,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
-// Resolve {workspace} by slug, not id (implicit binding would 404 every slug).
-// Misses are counted per client (60 per 10 min): a board's link is its only
-// key, so walking through addresses to find boards gets cut off.
+// Unknown addresses are rate-limited per client, so boards can't be found by trying slugs.
 Route::bind('workspace', function ($slug) {
     $workspace = Workspace::where('slug', $slug)->first();
     if ($workspace) {
@@ -40,33 +38,22 @@ Route::post('/workspaces/open', [WorkspacesController::class, 'open'])->name('wo
 Route::post('/workspaces/forget', [WorkspacesController::class, 'forget'])->name('workspaces.forget');
 Route::post('/suggestions', [SuggestionController::class, 'store'])->name('suggestions.store');
 
-// Static routes below are declared BEFORE the /{workspace} catch-all so their
-// paths (privacy, terms, download, operator, …) aren't read as workspace slugs.
 Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::get('/manifest.webmanifest', [ManifestController::class, 'site'])->name('manifest');
 Route::view('/terms', 'legal.terms')->name('terms');
 Route::view('/lecturers', 'lecturers')->name('lecturers');
 
-// Material download. Anonymous by design — but addressed by the file's
-// random download_token, not a sequential id, so files can't be enumerated
-// across workspaces by guessing /download/1, /download/2, … This is the
-// ADDRESS token only: it must never be accepted by the delete route below,
-// which takes the separate, uploader-private manage_token.
+// By the random download_token, never the id, so files can't be enumerated.
 Route::get('/download/{token}', function (Request $request, string $token) {
     $material = Material::where('download_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
     abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
 
-    // Downloads are the signal that a board is still doing its job — a past
-    // papers archive gets no uploads for a year and is used every exam week.
-    // This route sits outside the workspace group, so ResolveWorkspace's
-    // touch never fires here. People only, as there.
     if (! VisitTally::isBot($request)) {
         $material->course->workspace->touchAccess();
     }
 
-    // ?view=1 serves PDFs/images inline for preview. Only previewable types —
-    // serving arbitrary uploads (e.g. HTML) inline would be an XSS vector.
+    // Inline only for previewable types: serving any upload inline would be an XSS vector.
     if ($request->boolean('view') && $material->isPreviewable()) {
         return Storage::disk('local')->response(
             $material->stored_path,
@@ -80,8 +67,7 @@ Route::get('/download/{token}', function (Request $request, string $token) {
     );
 })->name('material.download');
 
-// Uploader-or-owner delete. Owner path is scoped to the material's OWN
-// workspace session — owning workspace A grants nothing over a file in B.
+// The uploader's private manage_token, or owner mode on the file's own board.
 Route::delete('/materials/{material}/{token}', function (Material $material, string $token) {
     abort_unless($material->course()->exists(), 404);
 
@@ -117,8 +103,6 @@ Route::post('/operator/boards/{board}/delete', [OperatorController::class, 'dele
 Route::post('/operator/ambassadors', [OperatorController::class, 'storeAmbassador'])->name('operator.ambassadors.store');
 Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::class, 'retireAmbassador'])->name('operator.ambassadors.retire');
 
-// Workspace-scoped routes. The catch-all /{workspace} lives here, so this
-// group is declared last (static routes above win).
 Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}', [CoursesController::class, 'index'])->name('courses.index');
     Route::get('/{workspace}/manifest.webmanifest', [ManifestController::class, 'board'])->name('workspace.manifest');
@@ -143,10 +127,6 @@ Route::middleware('workspace')->group(function () {
 
     Route::get('/{workspace}/recover', [WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
     Route::post('/{workspace}/recover', [WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');
-    // The link that was mailed. Signed (tamper-proof, 1h expiry) and backed by
-    // a single-use nonce; rotating the owner secret happens HERE, not when the
-    // request is made, so a stranger who knows the recovery address can't
-    // revoke the owner's link by asking.
     Route::get('/{workspace}/recover/{nonce}', [WorkspaceRecoveryController::class, 'redeem'])
         ->middleware('signed')
         ->name('workspace.recover.redeem');

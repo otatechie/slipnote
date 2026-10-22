@@ -14,9 +14,6 @@ const page = usePage()
 const flash = computed(() => page.props.flash)
 const errors = computed(() => page.props.errors)
 
-// Two pages in one. A browser that already manages a board is coming back
-// to it ("All boards" on a board links here), so it gets the list first and
-// the create form behind "New board". A first visit gets the form.
 const returning = computed(() => props.recent.length > 0)
 
 // Create form
@@ -45,16 +42,12 @@ function create() {
     createForm.post('/workspaces', { preserveScroll: true })
 }
 
-// Open form: the board's link, not its name. New links end in a random code
-// so they can't be guessed, and a name lookup would undo that.
 const openForm = useForm({ openLink: '' })
 
 function open() {
     openForm.post('/workspaces/open', { preserveScroll: true })
 }
 
-// "https://slipnote.co/econ-200-k7q2m9/c/x", "slipnote.co/econ-200-k7q2m9"
-// or "econ-200-k7q2m9" → "econ-200-k7q2m9" (the server parses it the same way).
 function boardSlug(input) {
     let t = input.trim()
     if (!t) return ''
@@ -72,8 +65,6 @@ function recoveryUrl() {
 }
 
 const openLinkRef = ref(null)
-// Opening by link is the rare path, so its field stays folded into a line of
-// links until asked for.
 const finding = ref(!!errors.value?.openLink)
 
 function startFinding() {
@@ -83,9 +74,6 @@ function startFinding() {
 
 function recover() {
     const url = recoveryUrl()
-    // Nothing pasted yet: the recovery URL is built from the board's link, so
-    // open the link field and put the cursor there. Disabling the control
-    // instead meant explaining, in more text, how to un-disable it.
     if (!url) {
         startFinding()
         return
@@ -135,9 +123,6 @@ function proceed() {
     router.visit(flash.value.createdUrl)
 }
 
-// Removing a recent board only clears the local shortcut, but if the user
-// hasn't saved its link elsewhere this is their only way back, so confirm
-// in a styled dialog (matches the report/QR modals elsewhere in the app).
 const forgetTarget = ref(null)
 
 function forget(ws) {
@@ -158,17 +143,8 @@ function confirmForget() {
     <AppLayout>
         <div class="op mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 sm:px-5 sm:py-12">
             <header class="mb-7 text-center">
-                <!-- A link, not a label. AppLayout carries no nav, so this page had
-                     no route back to the homepage at all — browser Back was it. The
-                     mark + wordmark matches the welcome header; alt="" because the
-                     adjacent text already names it, and alt="SlipNote logo" there
-                     makes a screen reader say the name twice. -->
                 <a href="/"
                    class="mb-3 inline-flex items-center gap-2 py-1 text-[16px] font-bold tracking-[-0.01em] text-teal transition hover:opacity-80">
-                    <!-- 28px, between this page's old 24 and the welcome header's 32.
-                         The welcome mark sits in a nav bar among other elements; alone
-                         above a 34px H1, a 32px square out-weighs the heading's ~24px
-                         cap height and the logo beats the page's actual message. -->
                     <img src="/logo-mark.png" alt="" class="size-7 shrink-0">
                     SlipNote
                 </a>
@@ -190,20 +166,12 @@ function confirmForget() {
                 </template>
             </header>
 
-            <!-- Owner receipt card -->
             <template v-if="flash.ownerUrl">
-                <!-- Neutral card, not a tinted one. This is the only card on the
-                     screen, so the tint distinguished it from nothing — it just
-                     washed the page blue and competed with the red block, which is
-                     the one thing here that genuinely needs to be noticed. -->
                 <div class="op-card p-5 sm:p-6">
                     <p v-if="flash.recovered" class="text-[15px] font-bold text-teal">Owner access to "{{ flash.createdName }}" is restored</p>
                     <p v-else-if="flash.ownerReset" class="text-[15px] font-bold text-teal">New owner link for "{{ flash.createdName }}". The old one no longer works.</p>
                     <p v-else class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
 
-                    <!-- One red thing: the label. The box, the label and a third red
-                         warning line made the whole top half shout, so the box is
-                         only faintly tinted and the consequence line is muted. -->
                     <div class="mt-4">
                         <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-danger">
                             <svg aria-hidden="true" class="size-3.5 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -216,10 +184,6 @@ function confirmForget() {
                            @click="$event.target.select?.() || window.getSelection().selectAllChildren($event.target)">{{ flash.ownerUrl }}</p>
                         <p class="mt-1.5 text-[12px] text-muted">Anyone with this link can control or delete the board.</p>
 
-                        <!-- "Copy owner link", not "Copy link": the share link below
-                             has its own Copy, and mixing the two up is the one
-                             mistake on this screen with no way back. Download is a
-                             plain text button so the card has one filled control. -->
                         <div class="mt-3 flex items-center gap-2">
                             <button type="button" @click="copyOwnerLink"
                                     class="op-press min-h-11 flex-1 cursor-pointer rounded-full bg-neon text-[13px] font-semibold text-white sm:min-h-9">
@@ -235,9 +199,6 @@ function confirmForget() {
                     </div>
 
                     <div class="mt-5">
-                        <!-- Labelled "once it has files": an empty board shared
-                             into a group chat converts nobody and doesn't get a
-                             second look. Save the link now, share it later. -->
                         <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-muted">
                             <svg aria-hidden="true" class="size-3.5 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M8.5 11.5a3 3 0 0 0 4.24 0l2.12-2.12a3 3 0 0 0-4.24-4.24l-.7.7" />
@@ -245,12 +206,6 @@ function confirmForget() {
                             </svg>
                             Share link · once it has files
                         </p>
-                        <!-- Not a live link on purpose: navigating away here would
-                             discard the owner link, which is shown only once. Copy
-                             sits inside the box rather than as a pill beside or
-                             under it, so it's one quiet row instead of a fourth
-                             outlined button; the URL truncates since Copy is how
-                             it leaves the page. -->
                         <div class="flex items-stretch overflow-hidden rounded-lg border border-sky bg-base">
                             <span class="min-w-0 flex-1 cursor-text select-all truncate px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink">{{ flash.createdUrl }}</span>
                             <button type="button" @click="copyShareLink"
@@ -267,11 +222,6 @@ function confirmForget() {
                         <span>I've saved the owner link; I won't see it again.</span>
                     </label>
 
-                    <!-- Disabled is a flat muted fill, not a dashed outline with
-                         instructions in it: the checkbox directly above already
-                         says what unlocks it. A new board has no courses, and files
-                         live inside a course, so the label names the step the next
-                         page actually opens on. -->
                     <button type="button" @click="proceed" :disabled="!saved"
                             class="op-press mt-3 min-h-11 w-full rounded-full text-[15px] font-semibold transition
                                    enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:shadow-sm
@@ -287,8 +237,6 @@ function confirmForget() {
                    class="op-toast mb-5 text-center text-sm font-medium text-ink">
                     "{{ flash.boardDeleted }}" is deleted, with every course and file on it.
                 </p>
-                <!-- Boards this browser manages: added on create, owner unlock and
-                     recovery, never on a plain visit, so every row is one you own. -->
                 <template v-if="returning">
                     <ul class="op-card">
                         <li v-for="ws in props.recent" :key="ws.slug"
@@ -297,10 +245,6 @@ function confirmForget() {
                                 <span class="block truncate text-[15px] font-semibold text-ink group-hover:text-neon">{{ ws.name }}</span>
                                 <span class="block text-[12px] text-muted">{{ boardSummary(ws) }}</span>
                             </a>
-                            <!-- In a menu, not a "Remove" on every row: repeated down
-                                 the list it was the loudest word on the page, for the
-                                 action people take least. Labelled in full inside so it
-                                 can't read as "delete the board". -->
                             <details class="op-menu relative shrink-0">
                                 <summary :aria-label="`More for ${ws.name}`" title="More"
                                          class="flex size-11 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:size-9">
@@ -317,8 +261,6 @@ function confirmForget() {
                         </li>
                     </ul>
 
-                    <!-- Outlined, not filled: on this page the boards are the point,
-                         and a second board is the occasional case. -->
                     <button v-if="!creating" type="button" @click="startCreating"
                             class="op-press mt-3.5 inline-flex min-h-12 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full border border-muted/50 text-[15px] font-semibold text-ink transition hover:bg-sky/30">
                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
@@ -326,11 +268,7 @@ function confirmForget() {
                     </button>
                 </template>
 
-                <!-- Create form -->
                 <form v-if="creating" @submit.prevent="create" class="op-card p-5 sm:p-6" :class="returning ? 'mt-3.5' : ''">
-                    <!-- "Your class", not "Board name": asked for a board name, people
-                         typed a single subject ("IT for Business") and then had
-                         nowhere sensible to put the courses the next page asks for. -->
                     <label for="name" class="block text-[13px] font-semibold text-ink">Your class</label>
                     <p class="mb-2 mt-0.5 text-[12px] text-muted">One board for the whole class. You'll add each course inside it.</p>
                     <input id="name" ref="nameField" type="text" v-model="createForm.name"
@@ -339,7 +277,6 @@ function confirmForget() {
 
                     <div class="mt-2 text-[12px]">
                         <span v-if="errors.name" role="alert" class="text-danger">{{ errors.name[0] }}</span>
-                        <!-- The code is made on the server; the dots stand for it. -->
                         <span v-else-if="slugPreview" class="text-muted">
                             Your link: <span class="font-semibold text-ink">/{{ slugPreview }}-······</span>
                             · ends in a code, so it can't be guessed
@@ -358,8 +295,6 @@ function confirmForget() {
                     </p>
                 </form>
 
-                <!-- Find and recover: rare paths, so one line of links rather than
-                     a card with its own field. The field opens in place. -->
                 <div class="mt-7 text-center text-[13px] leading-relaxed text-muted">
                     <p>
                         {{ returning ? 'Looking for another board?' : 'Already made one?' }}
@@ -392,8 +327,6 @@ function confirmForget() {
             </template>
         </div>
 
-        <!-- Remove-from-list confirm. Matches the report/QR modals: backdrop
-             click + Escape close, danger-styled confirm. -->
         <div v-if="forgetTarget" v-modal-focus class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
              role="dialog" aria-modal="true" aria-label="Remove board from list"
              @keydown.escape.window="forgetTarget = null">

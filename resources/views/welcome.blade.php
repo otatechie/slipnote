@@ -37,15 +37,7 @@
         </script>
     </x-slot:head>
 
-    {{-- Built to Nielsen Norman Group guidance: say what the product is in
-         the first line, one primary action per screen, headings that are
-         statements a scanner can read on their own, conventional patterns
-         (a table is a table, a list is a list), and nothing decorative that
-         carries no information. Tokens only, so dark mode is the same page. --}}
     <div class="lp flex-1">
-        {{-- A floating, rounded bar: inset from the edges, a soft shadow
-             instead of a rule, and it stays put while the page scrolls. The
-             outer header is transparent so content shows around the bar. --}}
         <header class="sticky top-0 z-30 px-3 pt-3 sm:px-6 sm:pt-4">
             <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 rounded-full bg-surface/90 pl-4 pr-2 shadow-[0_1px_2px_rgba(16,24,40,0.06),0_10px_30px_-12px_rgba(16,24,40,0.18)] ring-1 ring-sky/60 backdrop-blur-md sm:h-16 sm:pl-6 sm:pr-3">
                 <a href="{{ route('welcome') }}" class="inline-flex items-center gap-1.5 text-[16px] font-bold text-ink">
@@ -64,13 +56,6 @@
         </header>
 
         <main>
-            {{-- What it is, who it is for, and what to do next, beside the moment
-                 every class knows: the group chat asking for the notes. The chat
-                 is a picture (role="img" with a label), not content to tab
-                 through. Neutral colours, no brand styling, so it reads as any
-                 class group rather than an imitation of one app. --}}
-            {{-- Example address in the illustrations: fixed, not the running host,
-                 so a local or staging copy never shows its own domain. --}}
             @php $heroHost = 'slipnote.co'; @endphp
             <section class="px-4 pb-12 pt-8 sm:px-6 sm:pb-20 sm:pt-16">
                 <div class="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
@@ -91,18 +76,10 @@
                         </div>
                     </div>
 
-                    {{-- The chat sits on a soft tinted stage instead of in a bordered
-                         box: a phone-like panel with a gentle shadow, a faded second
-                         panel behind it for depth, borderless bubbles, and a message
-                         bar so it reads as a chat at a glance. Sender names are
-                         coloured per person, as group chats do. Your own message is
-                         a light tint with dark text, right-hand, no name, with
-                         ticks. The link preview says what the link opens. --}}
                     <figure role="img" aria-label="Your class group chat. A classmate asks who has the ECON 201 slides, another says it was sent last week, scroll up. You post the SlipNote board link, with 6 courses and 48 files, and a classmate replies: finally."
                             class="lp-stage relative mx-auto w-full max-w-md overflow-hidden rounded-[24px] px-3 pb-5 pt-10 sm:rounded-[28px] sm:px-8 sm:pb-8 sm:pt-12 lg:max-w-none">
                         <figcaption aria-hidden="true" class="absolute left-4 top-3.5 text-[12px] font-medium text-muted sm:left-8 sm:top-4">In your class group chat</figcaption>
 
-                        {{-- Depth: a second panel peeking out behind. --}}
                         <div aria-hidden="true" class="absolute bottom-10 left-1/2 top-16 hidden w-[300px] -translate-x-[62%] -rotate-3 rounded-[28px] bg-surface/50 sm:block"></div>
 
                         <div aria-hidden="true" class="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[28px] bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_24px_60px_-24px_rgba(16,24,40,0.35)]">
@@ -148,7 +125,6 @@
                                 </div>
                             </div>
 
-                            {{-- Message bar; hidden on phones, where it is a row the eye skips. --}}
                             <div class="hidden px-3 pb-3 sm:block">
                                 <div class="flex items-center gap-2 rounded-full bg-base py-1.5 pl-3 pr-1.5">
                                     <svg class="size-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -163,13 +139,6 @@
                 </div>
             </section>
 
-            {{-- The process, as a numbered list a reader can follow. --}}
-            {{-- How it works, to NNG guidance: three short steps, each a verb
-                 and one or two lines a scanner will actually read. Step 1 shows
-                 the link the name turns into instead of describing it. Steps run
-                 top to bottom with a line through the numbers: a vertical list
-                 scans faster than three columns, and reads the same on phones.
-                 An ordered list, so screen readers announce "1 of 3". --}}
             @php $howHost = $heroHost; @endphp
             <section id="how" class="scroll-mt-24 px-4 py-12 sm:px-6 sm:py-20">
                 <div class="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
@@ -185,7 +154,6 @@
                             ['share', 'Share the link', 'Post it in your WhatsApp group or show its QR code in a lecture. Classmates can read, download and add files.'],
                         ] as $i => [$kind, $title, $body])
                             <li class="relative flex gap-5 {{ $loop->last ? '' : 'pb-10' }}">
-                                {{-- A neutral hairline from under this number to the next. --}}
                                 @unless ($loop->last)
                                     <span aria-hidden="true" class="absolute bottom-1 left-[17.5px] top-12 w-px bg-sky"></span>
                                 @endunless
@@ -194,8 +162,6 @@
                                     <h3 class="text-[17px] font-semibold text-ink">{{ $title }}</h3>
                                     <p class="mt-1.5 max-w-md text-[15px] leading-6 text-muted">{{ $body }}</p>
 
-                                    {{-- A small piece of the real thing per step. Decoration
-                                         for sighted readers; the sentence above says it. --}}
                                     <div aria-hidden="true" class="mt-3">
                                         @if ($kind === 'link')
                                             <p class="inline-flex max-w-full items-center gap-1.5 text-[14px] text-muted">
@@ -236,28 +202,6 @@
                 </div>
             </section>
 
-            {{-- What the product does, as facts. --}}
-            {{-- Three ways a class shares files, as one table, matched to how a
-                 student already thinks about the choice:
-                 - Rows are things a student wants to do, in their words, each a
-                   yes/no question. No system jargon, no row that breaks the pattern.
-                 - Every cell answers with the same three outline marks: a circle
-                   check is yes, a faint circle cross is no, a darker circle minus
-                   is "partly" and always carries a short note. The minus is kept
-                   darker than the cross so "partly" never reads as a faint "no".
-                 - Columns use the names students say (WhatsApp group, Google
-                   Drive), and every row starts with a verb, matching the header.
-                   Yes is the same colour in every column, so a mark means the same
-                   thing wherever it appears; SlipNote stands out by its raised
-                   panel, not by different marks.
-                 - No row dividers: spacing and the centred marks carry the rows.
-                   Cells are top-aligned so the marks in a row share one line even
-                   when a cell carries a note under its mark.
-                 Phones: the task name moves to its own full-width row above its
-                 three marks, column names shorten to one line so they align,
-                 and the raised panel is dropped (the task rows would cut it);
-                 the blue column name marks SlipNote. Marks look identical in
-                 every column, so a check never reads as a different kind of yes. --}}
             @php
                 $columns = [
                     ['name' => 'WhatsApp group', 'short' => 'WhatsApp', 'pick' => false],
@@ -303,8 +247,6 @@
                         <tbody>
                             @foreach ($rows as $r => [$task, $cells])
                                 @php $last = $r === count($rows) - 1; @endphp
-                                {{-- Exactly one of the two task headers is displayed at
-                                     any width, so screen readers always get one. --}}
                                 <tr class="sm:hidden">
                                     <th scope="colgroup" colspan="3" class="px-0 pb-1 pt-5 text-left text-[15px] font-medium leading-6 text-ink">{{ $task }}</th>
                                 </tr>
@@ -326,20 +268,6 @@
                 </div>
             </section>
 
-            {{-- FAQ, to Nielsen Norman Group guidance:
-                 - Real questions in the words students use, ordered by what most
-                   often stops someone sharing the link (cost, sign-up, privacy),
-                   not by what is easy to explain.
-                 - Every answer leads with the direct answer ("Yes.", "No.",
-                   "Anyone with the link."), then one or two plain sentences.
-                 - No accordion. Every answer is a sentence or two and a reader
-                   skimming wants most of them; hiding them costs a click each and
-                   hides the answer a reader didn't know to look for. Shown openly
-                   in two columns, the whole list is one scan.
-                 - A way out for anything not answered, after the last answer,
-                   where a reader who didn't find it ends up.
-                 Limits come from config, so the page never states a number the
-                 app does not enforce. --}}
             @php
                 $capMb = (int) round(config('noteshare.workspace_storage_bytes') / 1_048_576);
                 $faqs = [
@@ -370,8 +298,6 @@
                         @endforeach
                     </dl>
 
-                    {{-- The way out, where a reader lands after the last answer:
-                         one line, plain links, no box competing with the answers. --}}
                     @php $faqLink = 'font-medium text-ink underline decoration-muted/50 underline-offset-4 hover:decoration-ink'; @endphp
                     <p class="mt-10 text-[15px] leading-6 text-muted">
                         Didn’t find your answer?
@@ -387,10 +313,6 @@
                 </div>
             </section>
 
-            {{-- Close. One action, the same one as the top of the page, on a
-                 sheet of ruled notebook paper: faint rules and a red margin line,
-                 with the words written to the right of the margin. The paper is
-                 background only; nothing on it competes with the button. --}}
             <section class="px-4 pb-16 pt-6 sm:px-6 sm:pb-24 sm:pt-10">
                 <div class="lp-close mx-auto flex max-w-5xl flex-col items-start gap-5 overflow-hidden rounded-2xl py-8 pr-6 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_16px_40px_-24px_rgba(16,24,40,0.3)] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:py-10 sm:pr-10">
                     <div>

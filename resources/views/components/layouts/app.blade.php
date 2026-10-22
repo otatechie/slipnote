@@ -14,8 +14,6 @@
     @if ($description ?? null)
         <meta name="description" content="{{ $description }}">
     @endif
-    {{-- Workspace pages are capability URLs — keep them out of search.
-         The marketing page (/) and legal pages opt in to indexing. --}}
     @if ($indexable ?? false)
         <meta name="robots" content="index,follow">
     @else
@@ -35,8 +33,6 @@
         })()
     </script>
     {{ $head ?? '' }}
-    {{-- Open Runde is self-hosted (see @font-face in app.css): keeps the prod
-         CSP happy (font-src 'self') and no visitor IPs go to a font CDN. --}}
     <link rel="preload" href="{{ Vite::asset('resources/fonts/OpenRunde-Regular.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ Vite::asset('resources/fonts/OpenRunde-Semibold.woff2') }}" as="font" type="font/woff2" crossorigin>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -70,17 +66,12 @@
                     @if ($ambassadorForm = config('noteshare.ambassador_form_url'))
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>
                         <a href="{{ $ambassadorForm }}" class="inline-flex min-h-11 items-center gap-1 hover:text-neon sm:min-h-0 sm:py-1.5" target="_blank" rel="noopener noreferrer">
-                            {{-- Verb-led and specific, not "Campus ambassador?": a question
-                                 doesn't say whether it asks, invites or explains. Same arrow
-                                 as GitHub: both leave the site in a new tab. --}}
                             Become a campus ambassador
                             <svg aria-hidden="true" class="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
                             <span class="sr-only">(opens in a new tab)</span>
                         </a>
                     @endif
                     <span aria-hidden="true" class="hidden text-muted/50 sm:inline">&middot;</span>
-                    {{-- All three modes visible, so nothing is hidden behind a cycle. applyTheme()
-                         in app.js sets aria-pressed on the current one, which drives its fill. --}}
                     <div data-theme-switch role="group" aria-label="Theme" class="inline-flex items-center rounded-full border border-sky bg-surface p-px">
                         <button type="button" data-theme-set="system" aria-pressed="false" title="System theme"
                                 class="inline-flex size-9 cursor-pointer items-center justify-center rounded-full sm:size-5 text-muted transition hover:text-ink aria-pressed:bg-sky aria-pressed:text-ink">
@@ -100,9 +91,6 @@
                     </div>
                 </div>
                 <p class="flex flex-wrap items-center justify-center gap-x-1.5 text-[12px] text-muted">
-                    {{-- No copyright or licence line: neither is required, the
-                         legal position lives on the Terms page, and the GitHub
-                         link beside this leads to LICENSE for anyone who cares. --}}
                     <span class="inline-flex items-center gap-1.5">
                         Made with <svg aria-hidden="true" class="size-3.5 fill-none stroke-current text-teal" viewBox="0 0 20 20" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17.25C10 17.25 2 12 2 6.5A4.5 4.5 0 0 1 10 3.914 4.5 4.5 0 0 1 18 6.5C18 12 10 17.25 10 17.25Z"/></svg> for students{{ filled(config('noteshare.operator_name')) ? ' by '.config('noteshare.operator_name') : '' }}
                     </span>

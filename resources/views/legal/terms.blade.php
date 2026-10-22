@@ -1,9 +1,6 @@
 <x-layouts.app title="Terms" :indexable="true">
 <div class="op mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-8 sm:px-5 sm:pt-10">
     <header class="mb-7">
-        {{-- The mark, not a back arrow: these pages are reached from search and
-             shared links as often as from the site, and the name is what a
-             first-time visitor needs. Same header as /lecturers. --}}
         <a href="{{ route('welcome') }}"
            class="-my-2.5 inline-flex min-h-11 items-center gap-2 text-[15px] font-bold text-ink transition hover:opacity-80">
             <img src="/logo-mark.png" alt="" class="size-6 shrink-0">
