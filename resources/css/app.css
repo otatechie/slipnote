@@ -384,7 +384,7 @@ select.op-pill option {
 .op-menu > summary::-webkit-details-marker {
     display: none;
 }
-.op-menu[open] {
+.op-row:has(.op-menu[open]) {
     z-index: 30;
 }
 @media (hover: hover) and (pointer: fine) {
