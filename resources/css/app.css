@@ -384,6 +384,9 @@ select.op-pill option {
 .op-menu > summary::-webkit-details-marker {
     display: none;
 }
+.op-menu[open] {
+    z-index: 30;
+}
 @media (hover: hover) and (pointer: fine) {
     .op-row:hover {
         background-color: color-mix(in srgb, var(--card-frame) 60%, transparent);
