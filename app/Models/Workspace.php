@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -38,6 +39,21 @@ class Workspace extends Model
     public function materials(): HasManyThrough
     {
         return $this->hasManyThrough(Material::class, Course::class);
+    }
+
+    /**
+     * Delete this board for good: files from disk first, then its rows
+     * (materials, courses, the board). Outside the tenancy scope, so it works
+     * from the operator console as well as the board's own page.
+     */
+    public function purge(): void
+    {
+        $courseIds = Course::withoutGlobalScopes()->where('workspace_id', $this->id)->pluck('id');
+        Material::whereIn('course_id', $courseIds)->pluck('stored_path')
+            ->each(fn ($path) => Storage::disk('local')->delete($path));
+        Material::whereIn('course_id', $courseIds)->delete();
+        Course::withoutGlobalScopes()->whereIn('id', $courseIds)->delete();
+        $this->delete();
     }
 
     /**

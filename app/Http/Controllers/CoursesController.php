@@ -3,13 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\Material;
 use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -176,15 +174,9 @@ class CoursesController extends Controller
             return back()->withErrors(['confirmName' => 'Type the board\'s name exactly as it appears to delete it.']);
         }
 
-        $courseIds = Course::pluck('id');
-        Material::whereIn('course_id', $courseIds)->pluck('stored_path')
-            ->each(fn ($path) => Storage::disk('local')->delete($path));
-        Material::whereIn('course_id', $courseIds)->delete();
-        Course::query()->delete();
-
         $name = $workspace->name;
         session()->forget($workspace->ownerSessionKey());
-        $workspace->delete();
+        $workspace->purge();
 
         return redirect()->route('start')
             ->with('boardDeleted', $name)

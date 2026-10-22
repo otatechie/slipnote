@@ -48,6 +48,6 @@ return [
     'feedback_email' => env('FEEDBACK_EMAIL', env('CONTACT_EMAIL')),
 
     // Shown atop Privacy and Terms; bump when the wording materially changes.
-    'legal_updated' => '2026-10-19',
+    'legal_updated' => '2026-10-22',
 
 ];

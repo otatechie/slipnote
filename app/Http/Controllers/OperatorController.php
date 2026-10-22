@@ -557,6 +557,23 @@ class OperatorController extends Controller
             ->with('done', $note !== '' ? "Note left for the owner of “{$board->name}”." : 'Note removed.');
     }
 
+    /**
+     * Delete a board for good (abuse, or a board its owner asked to have
+     * removed): files from disk, then its rows. Confirmed in a dialog that
+     * states what goes. Back to the same list.
+     */
+    public function deleteBoard(Request $request, Workspace $board)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $back = $this->boardsListUrl($request);
+        $name = $board->name;
+        $files = $board->materials()->count();
+        $board->purge();
+
+        return redirect($back)->with('done', "Deleted “{$name}”".($files > 0 ? ' and its '.$files.' '.Str::plural('file', $files) : '').'.');
+    }
+
     /** Delete a suggestion: read and dealt with, or its sender asked for it gone. */
     public function deleteSuggestion(Request $request, Suggestion $suggestion)
     {

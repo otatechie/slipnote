@@ -414,7 +414,7 @@
         @endforeach
     </nav>
 
-    <div class="op-card overflow-hidden">
+    <div class="op-card">
         @forelse ($recent as $ws)
             {{-- A board with no files is an unused shell — fade it so the boards
                  that actually hold content stand out when scanning. --}}
@@ -429,8 +429,8 @@
             {{-- The whole row opens the board (the link stretches over it): the
                  name alone was a 19px-tall target on a phone. --}}
             <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'opacity-55' : '' }}">
-                <div class="min-w-0">
-                    <p class="truncate text-[14px] font-semibold tracking-tight text-ink">
+                <div class="min-w-0 sm:flex-1">
+                    <p class="truncate pr-10 text-[14px] font-semibold tracking-tight text-ink sm:pr-0">
                         <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-0 hover:underline">{{ $ws->name }}</a>
                     </p>
                     <p class="mt-0.5 text-[12px] text-muted">
@@ -471,20 +471,35 @@
                             opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
                         </p>
                     @endif
-                    {{-- relative z-10: above the row's stretched board link. Opens
-                         the note over the list, where the operator is, instead
-                         of a form at the top of the page that lost their place. --}}
-                    @if ($ws->materials_count > 0 || $ws->last_accessed_at)
-                        <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
+                    {{-- A note waiting for the owner is worth spotting down the list. --}}
+                    @if ($ws->operator_note)
+                        @if ($ws->materials_count > 0 || $ws->last_accessed_at)
+                            <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
+                        @endif
+                        <p class="text-[12px] font-semibold text-neon">Note left</p>
                     @endif
-                    {{-- Quiet until used: on every row in the accent it out-shouted
-                         the board names for a rare action. Blue once a note is left,
-                         since that's worth spotting down the list. --}}
-                    <button type="button" data-dialog-open="note-{{ $ws->id }}"
-                       class="relative z-10 -my-3 inline-flex min-h-11 cursor-pointer items-center text-[12px] font-semibold hover:underline sm:my-0 sm:min-h-0 {{ $ws->operator_note ? 'text-neon' : 'text-muted hover:text-ink' }}">
-                        {{ $ws->operator_note ? 'Note left · edit' : 'Note to owner' }}
-                    </button>
                 </div>
+                {{-- Actions in a ⋯ menu, as on the course page: two rare ones
+                     (a note, deleting the board) that, written out on every row,
+                     out-shouted the board names. Top-right on phones. z-10:
+                     above the row's stretched board link. --}}
+                <details class="op-menu absolute right-1.5 top-1.5 z-10 sm:relative sm:right-auto sm:top-auto sm:shrink-0">
+                    <summary aria-label="Actions for {{ $ws->name }}" title="More"
+                             class="op-press flex size-11 cursor-pointer list-none items-center justify-center rounded-full text-muted marker:hidden hover:bg-sky/40 hover:text-ink sm:size-9">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
+                    </summary>
+                    <div class="absolute right-0 top-full z-20 mt-1 w-48 rounded-xl border border-sky bg-surface p-1 text-left shadow-xl">
+                        <button type="button" data-dialog-open="note-{{ $ws->id }}"
+                                class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-sky/30 sm:min-h-0">
+                            {{ $ws->operator_note ? 'Edit note to owner' : 'Note to owner' }}
+                        </button>
+                        <span class="my-1 block h-px bg-sky/60"></span>
+                        <button type="button" data-dialog-open="delete-board-{{ $ws->id }}"
+                                class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10 sm:min-h-0">
+                            Delete board…
+                        </button>
+                    </div>
+                </details>
             </div>
 
             {{-- The note, over the list: a sheet from the bottom on phones, a
@@ -535,6 +550,34 @@
                         <p class="mt-3 text-[12px] text-muted">Left {{ $ws->operator_note_at->diffForHumans() }}.</p>
                     @endif
                 </form>
+            </dialog>
+
+            {{-- Delete, confirmed with what goes: for abuse, or an owner who
+                 asked to have their board removed. --}}
+            <dialog id="delete-board-{{ $ws->id }}" aria-labelledby="delete-title-{{ $ws->id }}"
+                    class="op-dialog mb-0 mt-auto w-full max-w-none rounded-t-2xl p-0 shadow-2xl sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-sm sm:rounded-2xl">
+                <div class="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
+                    <h2 id="delete-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink [overflow-wrap:anywhere]">Delete “{{ $ws->name }}”?</h2>
+                    <p class="mt-3 text-[13px] leading-relaxed text-ink/80">
+                        @if ($ws->materials_count > 0)
+                            Its {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} and {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }} ({{ $size }}) go for good, for everyone.
+                        @else
+                            It has no files{{ $ws->courses_count > 0 ? ', and its '.$ws->courses_count.' '.Str::plural('course', $ws->courses_count).' go with it' : '' }}.
+                        @endif
+                        The board's link and its owner link stop working. This can't be undone.
+                    </p>
+                    <div class="mt-5 flex items-center justify-end gap-2">
+                        <button type="button" data-dialog-close
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
+                        <form method="POST" action="{{ route('operator.boards.delete', $ws->id) }}">
+                            @csrf
+                            <button type="submit"
+                                    class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 text-[14px] font-semibold">
+                                Delete board
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </dialog>
         @empty
             <p class="px-4 py-8 text-center text-[14px] text-muted">{{ $boardQuery !== '' ? 'No board matches “'.$boardQuery.'”.' : 'No boards yet.' }}</p>

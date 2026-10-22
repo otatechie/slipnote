@@ -52,7 +52,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">How long we keep it</h2>
-            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, boards, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files or the whole board, or the operator removing content. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
+            <p class="text-[14px] text-ink">SlipNote does not auto-delete your content. Files, boards, and course details are kept until someone removes them — an uploader deleting their own file, the owner deleting files or the whole board, or the operator removing content or a whole board. A board that is never touched stays indefinitely. Report details, including the reporter's IP address, are retained only for as long as needed to review the report and are not used for anything else. Daily visit counts are kept as totals and hold nothing personal. Suggestions are kept so the operator can read them, and you can ask the operator to delete yours. The two things that do expire on their own are session records and the IP rate-limit counters, both of which are short-lived and discarded automatically.</p>
         </section>
 
         <section>
@@ -86,7 +86,7 @@
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">Deleting your data</h2>
-            <p class="text-[14px] text-ink">An uploader can remove their own file via the one-time delete link shown after upload. The board owner can delete any file on their board, and can add, change, or remove the board's recovery email. The owner can also delete the whole board from Board settings: the board, its courses and every file on it are deleted at once and can't be restored.</p>
+            <p class="text-[14px] text-ink">An uploader can remove their own file via the one-time delete link shown after upload. The board owner can delete any file on their board, and can add, change, or remove the board's recovery email. The owner can also delete the whole board from Board settings: the board, its courses and every file on it are deleted at once and can't be restored. The site operator can delete a board too, for example one that breaks the Terms or whose owner asks for it to be removed.</p>
         </section>
 
         <section>

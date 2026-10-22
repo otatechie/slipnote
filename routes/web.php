@@ -110,6 +110,7 @@ Route::post('/operator/material/{material}/dismiss', [OperatorController::class,
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');
 Route::post('/operator/suggestions/{suggestion}/delete', [OperatorController::class, 'deleteSuggestion'])->name('operator.suggestions.delete');
 Route::post('/operator/boards/{board}/note', [OperatorController::class, 'saveNote'])->name('operator.boards.note');
+Route::post('/operator/boards/{board}/delete', [OperatorController::class, 'deleteBoard'])->name('operator.boards.delete');
 Route::post('/operator/ambassadors', [OperatorController::class, 'storeAmbassador'])->name('operator.ambassadors.store');
 Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::class, 'retireAmbassador'])->name('operator.ambassadors.retire');
 

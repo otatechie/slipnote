@@ -171,6 +171,31 @@ class OperatorTest extends TestCase
             ->assertRedirect(route('operator.dashboard', ['tab' => 'boards']));
     }
 
+    public function test_the_operator_deletes_a_board_and_its_files_from_the_list(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $from = route('operator.dashboard', ['tab' => 'boards', 'sort' => 'largest']);
+        $path = $this->material->stored_path;
+        [$other] = Workspace::provision('Keep Me');
+
+        $this->withSession($session)->withHeader('referer', $from)
+            ->post(route('operator.boards.delete', $this->workspace->id))
+            ->assertRedirect($from)
+            ->assertSessionHas('done', 'Deleted “Test Workspace” and its 1 file.');
+
+        $this->assertNull(Workspace::find($this->workspace->id));
+        $this->assertSame(0, Course::withoutGlobalScopes()->where('workspace_id', $this->workspace->id)->count());
+        $this->assertNull(\App\Models\Material::find($this->material->id));
+        Storage::disk('local')->assertMissing($path);
+        $this->assertNotNull(Workspace::find($other->id));
+    }
+
+    public function test_only_the_operator_can_delete_a_board(): void
+    {
+        $this->post(route('operator.boards.delete', $this->workspace->id))->assertForbidden();
+        $this->assertNotNull(Workspace::find($this->workspace->id));
+    }
+
     public function test_at_a_glance_shows_the_activation_rate_and_empty_boards_say_so(): void
     {
         // setUp's workspace holds one file; this one holds nothing at all.
