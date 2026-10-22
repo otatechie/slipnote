@@ -492,12 +492,18 @@
                     class="op-dialog mb-0 mt-auto w-full max-w-none rounded-t-2xl p-0 shadow-2xl sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-lg sm:rounded-2xl">
                 <form method="POST" action="{{ route('operator.boards.note', $ws->id) }}" class="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
                     @csrf
-                    <h2 id="note-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink">Note to the owner of “{{ $ws->name }}”</h2>
+                    <h2 id="note-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink [overflow-wrap:anywhere]">Note to the owner of “{{ $ws->name }}”</h2>
                     <p class="mt-1 text-[13px] text-muted">Shown only to them, on their board, until they dismiss it. They reply through the suggestion form; replies land in Suggestions.</p>
                     <label for="note-text-{{ $ws->id }}" class="sr-only">Note</label>
-                    <textarea id="note-text-{{ $ws->id }}" name="note" rows="4" maxlength="500" required
-                              placeholder="e.g. Hi from the SlipNote team. Your class uses this a lot. Could we ask you two quick questions?"
-                              class="mt-4 w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">{{ (int) session('noteFor') === $ws->id ? old('note') : $ws->operator_note }}</textarea>
+                    {{-- Clipped wrapper: writing-assistant extensions inject a
+                         button (and a larger invisible box) beside a textarea,
+                         which overflowed and gave the dialog a scrollbar. --}}
+                    {{-- p-1/-m-1: 4px inside the clip for the focus ring. --}}
+                    <div class="relative -mx-1 mt-3 overflow-clip p-1">
+                        <textarea id="note-text-{{ $ws->id }}" name="note" rows="4" maxlength="500" required
+                                  placeholder="e.g. Hi from the SlipNote team. Your class uses this a lot. Could we ask you two quick questions?"
+                                  class="block w-full resize-y rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">{{ (int) session('noteFor') === $ws->id ? old('note') : $ws->operator_note }}</textarea>
+                    </div>
                     @if ((int) session('noteFor') === $ws->id)
                         @error('note')
                             <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>

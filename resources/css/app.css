@@ -554,7 +554,24 @@ select.op-pill option {
     }
 }
 
+/* While any dialog or sheet is open, the page behind it stays put: a modal
+   <dialog> leaves the document scrollable, so the wheel or a swipe moved
+   the list under the note being written. Covers the Blade <dialog>s and
+   the Vue sheets (role=dialog, aria-modal). The scrollbar's gutter is
+   always reserved, so locking it doesn't shift the layout sideways. */
+html {
+    scrollbar-gutter: stable;
+}
+html:has(dialog[open], [role='dialog'][aria-modal='true']) {
+    overflow: hidden;
+}
+
 .op-dialog {
+    /* Never sideways: something injected past the edge (a writing-assistant
+       extension's button on the textarea) gave the note dialog a horizontal
+       scrollbar. Vertical scrolling stays for short windows. */
+    overflow-x: hidden;
+    overscroll-behavior: contain;
     transform-origin: center;
     border: 1px solid var(--op-hairline);
     background: var(--color-surface);
