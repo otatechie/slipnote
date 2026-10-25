@@ -132,6 +132,84 @@ class OwnerMarksTest extends TestCase
                 ->where('maxPinned', 3));
     }
 
+    // --- Editing a file's name and section ---
+
+    private function edit(Material $m, array $data)
+    {
+        return $this->patch(route('material.update', $this->wsParams(['slug' => 'bio-101', 'material' => $m->id])), $data);
+    }
+
+    public function test_the_owner_can_rename_a_file_and_move_it_to_another_section(): void
+    {
+        $m = $this->addFile('scan_0042.pdf');
+        $this->unlockOwnerSession();
+
+        $this->edit($m, ['name' => '  Week 3 <b>past</b> paper ', 'section' => 'past_papers'])
+            ->assertRedirect()
+            ->assertSessionHas('notice', 'Moved to Past papers');
+
+        $m->refresh();
+        $this->assertSame(['Week 3 past paper', 'past_papers'], [$m->title, $m->section]);
+        $this->assertSame('Week 3 past paper', $m->displayName());
+
+        $this->edit($m, ['name' => 'Week 3 paper', 'section' => 'past_papers'])->assertSessionHas('notice', 'Saved');
+        $this->assertSame('Week 3 paper', $m->fresh()->title);
+    }
+
+    public function test_an_empty_name_goes_back_to_the_original_filename(): void
+    {
+        $m = $this->addFile('lecture-7.pdf');
+        $m->forceFill(['title' => 'Something wrong'])->save();
+        $this->unlockOwnerSession();
+
+        $this->edit($m, ['name' => '   ', 'section' => 'notes'])->assertSessionHasNoErrors();
+
+        $this->assertNull($m->fresh()->title);
+        $this->assertSame('lecture-7', $m->fresh()->displayName());
+    }
+
+    public function test_moving_a_pinned_file_into_a_full_section_unpins_it(): void
+    {
+        $this->unlockOwnerSession();
+        foreach (range(1, 3) as $i) {
+            $this->addFile("p{$i}.pdf")->forceFill(['section' => 'slides', 'pinned_at' => now()])->save();
+        }
+        $pinned = $this->addFile('mine.pdf');
+        $pinned->forceFill(['pinned_at' => now()])->save();
+
+        $this->edit($pinned, ['name' => 'mine', 'section' => 'slides'])
+            ->assertSessionHas('notice', 'Moved to Slides and unpinned. Slides already has 3 pinned.');
+        $this->assertNull($pinned->fresh()->pinned_at);
+
+        $kept = $this->addFile('kept.pdf');
+        $kept->forceFill(['pinned_at' => now()])->save();
+        $this->edit($kept, ['name' => 'kept', 'section' => 'past_papers'])->assertSessionHas('notice', 'Moved to Past papers');
+        $this->assertNotNull($kept->fresh()->pinned_at);
+    }
+
+    public function test_only_the_owner_can_edit_a_file_and_only_on_their_board(): void
+    {
+        $m = $this->addFile('a.pdf');
+
+        $this->edit($m, ['name' => 'Hacked', 'section' => 'slides'])->assertForbidden();
+        $this->assertSame([null, 'notes'], [$m->fresh()->title, $m->fresh()->section]);
+
+        $this->unlockOwnerSession();
+        $this->edit($m, ['name' => 'x', 'section' => 'homework'])->assertSessionHasErrors('section');
+        $this->edit($m, ['name' => str_repeat('a', 121), 'section' => 'notes'])->assertSessionHasErrors('name');
+
+        $other = Workspace::create(['name' => 'Other', 'slug' => 'other-board', 'owner_secret_hash' => 'x']);
+        app(\App\Tenancy\Tenancy::class)->set($other);
+        $theirs = Course::create(['code' => 'X 1', 'title' => 'X', 'slug' => 'bio-101']);
+        $foreign = $theirs->materials()->create([
+            'section' => 'notes', 'original_filename' => 'f.pdf', 'stored_path' => 'materials/f.pdf', 'download_token' => 'dl-f', 'file_size' => 1,
+        ]);
+        app(\App\Tenancy\Tenancy::class)->set($this->workspace);
+
+        $this->edit($foreign, ['name' => 'Hacked', 'section' => 'notes'])->assertNotFound();
+        $this->assertNull($foreign->fresh()->title);
+    }
+
     public function test_only_the_owner_can_pin(): void
     {
         $m = $this->addFile('a.pdf');

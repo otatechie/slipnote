@@ -124,6 +124,7 @@ Route::middleware('workspace')->group(function () {
 
     Route::post('/{workspace}/c/{slug}/report/{material}', [CourseController::class, 'report'])->name('material.report');
     Route::post('/{workspace}/c/{slug}/pin/{material}', [CourseController::class, 'pin'])->name('material.pin');
+    Route::patch('/{workspace}/c/{slug}/materials/{material}', [CourseController::class, 'update'])->name('material.update');
 
     Route::get('/{workspace}/recover', [WorkspaceRecoveryController::class, 'show'])->name('workspace.recover');
     Route::post('/{workspace}/recover', [WorkspaceRecoveryController::class, 'store'])->name('workspace.recover.store');

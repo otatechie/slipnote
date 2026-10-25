@@ -215,6 +215,42 @@ class CourseController extends Controller
         return back()->with('notice', $pin ? 'Pinned to the top of '.Material::SECTIONS[$material->section] : 'Unpinned');
     }
 
+    public function update(Request $request, string $workspaceSlug, string $slug, int $material)
+    {
+        $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+        $material = $course->materials()->whereKey($material)->firstOrFail();
+
+        $data = $request->validate([
+            'name' => 'nullable|string|max:120',
+            'section' => 'required|in:'.implode(',', array_keys(Material::SECTIONS)),
+        ], [
+            'name.max' => 'That name is too long. Keep it under 120 characters.',
+        ]);
+
+        $name = trim(preg_replace('/\s+/u', ' ', strip_tags((string) ($data['name'] ?? ''))));
+        $material->title = $name === '' || $name === pathinfo($material->original_filename, PATHINFO_FILENAME) ? null : $name;
+
+        $moved = $data['section'] !== $material->section;
+        $unpinned = $moved && $material->pinned_at !== null
+            && $course->materials()->where('section', $data['section'])->whereNotNull('pinned_at')->count() >= Material::MAX_PINNED_PER_SECTION;
+        $material->section = $data['section'];
+        if ($unpinned) {
+            $material->pinned_at = null;
+        }
+        $material->save();
+
+        $to = Material::SECTIONS[$material->section];
+
+        return back()->with('notice', match (true) {
+            $unpinned => "Moved to {$to} and unpinned. {$to} already has ".Material::MAX_PINNED_PER_SECTION.' pinned.',
+            $moved => "Moved to {$to}",
+            default => 'Saved',
+        });
+    }
+
     public function exitOwner(Request $request)
     {
         $workspace = $this->workspace();

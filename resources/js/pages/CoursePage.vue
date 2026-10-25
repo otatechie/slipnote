@@ -230,6 +230,35 @@ function togglePin(material) {
     )
 }
 
+const editTarget = ref(null)
+const editName = ref('')
+const editSection = ref('')
+const editSaving = ref(false)
+
+function openEdit(material) {
+    editTarget.value = material
+    editName.value = material.displayName
+    editSection.value = material.section
+}
+const editChanged = computed(() => !!editTarget.value
+    && (editName.value.trim() !== editTarget.value.displayName || editSection.value !== editTarget.value.section))
+const editUnpins = computed(() => !!editTarget.value?.pinned
+    && editSection.value !== editTarget.value.section && sectionPinsFull(editSection.value))
+
+function submitEdit() {
+    if (!editChanged.value || editSaving.value) return
+    editSaving.value = true
+    router.patch(
+        '/' + props.workspace.slug + '/c/' + props.course.slug + '/materials/' + editTarget.value.id,
+        { name: editName.value, section: editSection.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => { editTarget.value = null },
+            onFinish: () => { editSaving.value = false },
+        },
+    )
+}
+
 function askDeleteFile(e) {
     e.preventDefault()
     const form = e.target.closest('form')
@@ -279,7 +308,7 @@ function trapTab(e) {
 }
 
 const anyModalOpen = computed(() =>
-    !!reportTarget.value || confirmingUndo.value || !!deleteTarget.value)
+    !!reportTarget.value || !!editTarget.value || confirmingUndo.value || !!deleteTarget.value)
 
 watch(anyModalOpen, (open) => {
     if (open) {
@@ -602,6 +631,11 @@ watch(() => props.materials, () => { selected.value = [] })
                                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
                                     </summary>
                                     <div class="absolute right-full top-1/2 z-20 mr-1 w-48 -translate-y-1/2 rounded-xl bg-surface p-1 text-left shadow-xl ring-1 ring-sky">
+                                        <button type="button"
+                                                @click="$event.target.closest('details')?.removeAttribute('open'); openEdit(material)"
+                                                class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-sky/40 sm:min-h-0">
+                                            Edit name or section
+                                        </button>
                                         <button v-if="!material.pinned && sectionPinsFull(material.section)" type="button"
                                                 aria-disabled="true" :aria-describedby="`pinfull-${material.id}`"
                                                 class="block min-h-11 w-full cursor-not-allowed rounded-lg px-3 py-2 text-left sm:min-h-0">
@@ -834,6 +868,50 @@ watch(() => props.materials, () => { selected.value = [] })
                     </p>
                     <p class="mt-3 text-[11px] text-muted">Goes to the site operator for review. Files aren't removed automatically.</p>
                 </div>
+            </div>
+
+            <div v-if="editTarget" ref="modalRef" tabindex="-1" @keydown="trapTab"
+                 class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+                 role="dialog" aria-modal="true" aria-labelledby="editTitle"
+                 @keydown.escape.window="editTarget = null">
+                <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="editTarget = null"></div>
+                <form @submit.prevent="submitEdit"
+                      class="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
+                    <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
+                    <h2 id="editTitle" class="text-[15px] font-bold text-ink">Edit file</h2>
+
+                    <label for="editName" class="mt-4 mb-1.5 block text-[13px] font-semibold text-ink">Name</label>
+                    <input id="editName" type="text" v-model="editName" maxlength="120"
+                           :placeholder="editTarget.original_filename"
+                           :aria-invalid="!!errors.name" aria-describedby="editNameHint"
+                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
+                    <span v-if="errors.name" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.name[0] }}</span>
+                    <p id="editNameHint" class="mt-1.5 wrap-break-word text-[12px] text-muted">Leave it empty to use the original name, {{ editTarget.original_filename }}.</p>
+
+                    <fieldset class="mt-4">
+                        <legend class="mb-1.5 text-[13px] font-semibold text-ink">Section</legend>
+                        <div class="flex flex-wrap gap-1.5">
+                            <label v-for="(label, key) in sections" :key="key"
+                                   class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold transition sm:min-h-9"
+                                   :class="editSection === key ? 'bg-neon text-white' : 'bg-base text-muted hover:text-ink'">
+                                <input type="radio" name="esection" :value="key" v-model="editSection" class="sr-only">
+                                {{ label }}
+                            </label>
+                        </div>
+                    </fieldset>
+                    <p v-if="editUnpins" class="mt-2 text-[12px] text-muted">
+                        {{ sections[editSection] }} already has {{ maxPinned }} pinned, so this file will be unpinned.
+                    </p>
+
+                    <div class="mt-5 flex items-center justify-end gap-2">
+                        <button type="button" @click="editTarget = null"
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted transition hover:bg-sky/30 hover:text-ink">Cancel</button>
+                        <button type="submit" :disabled="!editChanged || editSaving"
+                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                            {{ editSaving ? 'Saving…' : 'Save' }}
+                        </button>
+                    </div>
+                </form>
             </div>
 
             <div v-if="confirmingUndo" ref="modalRef" tabindex="-1" @keydown="trapTab"
