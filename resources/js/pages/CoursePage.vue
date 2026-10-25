@@ -317,7 +317,7 @@ watch(anyModalOpen, (open) => {
             const root = modalRef.value
             if (!root) return
             const items = focusables(root)
-            ;(items[0] ?? root).focus()
+            ;(items.find(el => el.matches('input[type=radio]:checked')) ?? items[0] ?? root).focus()
         })
     } else {
         lastFocused?.focus?.()
@@ -880,14 +880,6 @@ watch(() => props.materials, () => { selected.value = [] })
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
                     <h2 id="editTitle" class="text-[15px] font-bold text-ink">Edit file</h2>
 
-                    <label for="editName" class="mt-4 mb-1.5 block text-[13px] font-semibold text-ink">Name</label>
-                    <input id="editName" type="text" v-model="editName" maxlength="120"
-                           :placeholder="editTarget.original_filename"
-                           :aria-invalid="!!errors.name" aria-describedby="editNameHint"
-                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
-                    <span v-if="errors.name" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.name[0] }}</span>
-                    <p id="editNameHint" class="mt-1.5 wrap-break-word text-[12px] text-muted">Leave it empty to use the original name, {{ editTarget.original_filename }}.</p>
-
                     <fieldset class="mt-4">
                         <legend class="mb-1.5 text-[13px] font-semibold text-ink">Section</legend>
                         <div class="flex flex-wrap gap-1.5">
@@ -902,6 +894,14 @@ watch(() => props.materials, () => { selected.value = [] })
                     <p v-if="editUnpins" class="mt-2 text-[12px] text-muted">
                         {{ sections[editSection] }} already has {{ maxPinned }} pinned, so this file will be unpinned.
                     </p>
+
+                    <label for="editName" class="mt-4 mb-1.5 block text-[13px] font-semibold text-ink">Name</label>
+                    <input id="editName" type="text" v-model="editName" maxlength="120"
+                           :placeholder="editTarget.original_filename"
+                           :aria-invalid="!!errors.name" aria-describedby="editNameHint"
+                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
+                    <span v-if="errors.name" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.name[0] }}</span>
+                    <p id="editNameHint" class="mt-1.5 wrap-break-word text-[12px] text-muted">Leave it empty to use the original name, {{ editTarget.original_filename }}.</p>
 
                     <div class="mt-5 flex items-center justify-end gap-2">
                         <button type="button" @click="editTarget = null"
