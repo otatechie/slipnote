@@ -88,6 +88,23 @@ class SuggestionTest extends TestCase
         $this->assertSame(0, Suggestion::count());
     }
 
+    public function test_a_deleted_suggestion_can_be_undone(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        $s = Suggestion::create(['message' => 'Dark mode please', 'reply_to' => '0241234567', 'page' => '/start']);
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+
+        $this->withSession($session)->post(route('operator.suggestions.delete', $s->id));
+        $this->get(route('operator.dashboard', ['tab' => 'suggestions']))->assertSee('Undo');
+
+        $this->post(route('operator.undo'))
+            ->assertRedirect(route('operator.dashboard', ['tab' => 'suggestions']));
+
+        $back = Suggestion::sole();
+        $this->assertSame([$s->id, 'Dark mode please', '0241234567', '/start'], [$back->id, $back->message, $back->reply_to, $back->page]);
+        $this->assertEquals($s->created_at, $back->created_at);
+    }
+
     public function test_only_the_operator_can_delete_a_suggestion(): void
     {
         config(['noteshare.operator_secret' => 'op-secret']);

@@ -463,6 +463,13 @@ class OperatorController extends Controller
     {
         abort_unless($this->enabled() && $this->authed(), 403);
 
+        $this->commitUndo();
+        $this->stashUndo([
+            'action' => 'suggestion',
+            'label' => Str::limit($suggestion->message, 30),
+            'suggestion' => $suggestion->getAttributes(),
+        ]);
+
         $suggestion->delete();
 
         return $this->dashboardRedirect($request, 'suggestions')->with('done', 'Suggestion deleted.');
@@ -483,11 +490,13 @@ class OperatorController extends Controller
             $this->restoreDismiss($undo);
         } elseif ($undo['action'] === 'remove') {
             $this->restoreRemove($undo);
+        } elseif ($undo['action'] === 'suggestion') {
+            $this->restoreSuggestion($undo);
         }
 
         session()->forget(self::UNDO_SESSION);
 
-        return $this->dashboardRedirect($request)->with('done', 'Undone.');
+        return $this->dashboardRedirect($request, $undo['action'] === 'suggestion' ? 'suggestions' : null)->with('done', 'Undone.');
     }
 
     private function snapshotReports(Material $material): array
@@ -543,6 +552,17 @@ class OperatorController extends Controller
         }
 
         $this->restoreReports($material, $undo['reports'] ?? []);
+    }
+
+    /** @param  array<string, mixed>  $undo */
+    private function restoreSuggestion(array $undo): void
+    {
+        $attrs = $undo['suggestion'] ?? null;
+        if (! is_array($attrs) || ! isset($attrs['id']) || Suggestion::query()->whereKey($attrs['id'])->exists()) {
+            return;
+        }
+
+        Suggestion::query()->insert($attrs);
     }
 
     /** @param  array<string, mixed>  $undo */
