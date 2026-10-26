@@ -57,7 +57,7 @@
 
         <main>
             @php $heroHost = 'slipnote.co'; @endphp
-            <section class="px-4 pb-12 pt-8 sm:px-6 sm:pb-20 sm:pt-16">
+            <section class="px-4 pb-10 pt-8 sm:px-6 sm:pb-14 sm:pt-12">
                 <div class="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
                     <div>
                         <h1 class="text-[30px] font-bold leading-[1.15] tracking-[-0.02em] text-ink sm:text-balance sm:text-[46px]">
@@ -140,11 +140,39 @@
             </section>
 
             @php $howHost = $heroHost; @endphp
-            <section id="how" class="scroll-mt-24 px-4 py-12 sm:px-6 sm:py-20">
+            <section id="how" class="scroll-mt-24 px-4 py-10 sm:px-6 sm:py-14">
                 <div class="mx-auto grid max-w-5xl gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
                     <div>
                         <h2 class="text-[26px] font-bold tracking-[-0.02em] text-ink sm:text-[32px]">How it works</h2>
                         <p class="mt-2 max-w-sm text-[16px] leading-7 text-muted">One person sets the board up. Everyone else only needs the link.</p>
+
+                        {{-- What a course looks like once the class has used it for a few weeks. --}}
+                        <figure role="img" aria-label="A course page on a board: ECON 201 Microeconomics, with files under Past papers, Slides and Notes."
+                                class="mt-6 w-full max-w-sm overflow-hidden rounded-2xl bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_12px_32px_-20px_rgba(16,24,40,0.35)] ring-1 ring-sky/70">
+                            <div class="flex items-center justify-between gap-3 px-4 pb-2.5 pt-3.5">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-semibold text-muted">ECON Level 200</p>
+                                    <p class="truncate text-[15px] font-bold tracking-tight text-ink">ECON 201 <span class="font-medium text-muted">Microeconomics</span></p>
+                                </div>
+                                <span class="shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-semibold text-teal">14 files</span>
+                            </div>
+                            @foreach ([
+                                ['Past papers', [['2024 end of semester', 'PDF · 1.2 MB'], ['2023 end of semester', 'PDF · 980 KB']]],
+                                ['Slides', [['Week 3 — Elasticity', 'PPTX · 4.1 MB'], ['Week 2 — Supply and demand', 'PPTX · 3.6 MB']]],
+                                ['Notes', [['Ama’s notes, weeks 1–3', 'PDF · 640 KB']]],
+                            ] as [$section, $files])
+                                <div class="border-t border-sky/70">
+                                    <p class="px-4 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">{{ $section }}</p>
+                                    @foreach ($files as [$name, $meta])
+                                        <div class="flex items-center gap-2.5 px-4 py-1.5">
+                                            <svg aria-hidden="true" class="size-4 shrink-0 text-neon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15"/></svg>
+                                            <p class="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">{{ $name }}</p>
+                                            <p class="shrink-0 text-[10.5px] tabular-nums text-muted">{{ $meta }}</p>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </figure>
                     </div>
 
                     <ol>
@@ -185,13 +213,10 @@
                                                 @endforeach
                                             </div>
                                         @else
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="flex -space-x-2">
-                                                    @foreach ([['A', 'bg-[color-mix(in_srgb,var(--color-neon)_16%,var(--color-surface))] text-neon'], ['K', 'bg-[color-mix(in_srgb,var(--color-ink)_9%,var(--color-surface))] text-ink'], ['Y', 'bg-[color-mix(in_srgb,var(--color-teal)_12%,var(--color-surface))] text-teal'], ['E', 'bg-sky text-muted']] as [$who, $tint])
-                                                        <span class="flex size-7 items-center justify-center rounded-full text-[11px] font-semibold ring-2 ring-base {{ $tint }}">{{ $who }}</span>
-                                                    @endforeach
-                                                </div>
-                                                <span class="text-[13px] text-muted">+40 classmates</span>
+                                            <div class="inline-flex max-w-full items-center gap-3 rounded-xl bg-surface py-2 pl-3 pr-2 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
+                                                <span class="truncate text-[13px] text-muted">{{ $howHost }}/<span class="font-medium text-ink">econ-level-200</span></span>
+                                                <span class="shrink-0 rounded-full bg-neon px-2.5 py-1 text-[11px] font-semibold text-white">Copy link</span>
+                                                <svg class="size-8 shrink-0 text-ink" viewBox="0 0 21 21" fill="currentColor"><path d="M0 0h7v7H0zM2 2v3h3V2zM14 0h7v7h-7zm2 2v3h3V2zM0 14h7v7H0zm2 2v3h3v-3zM9 0h2v2H9zm0 3h3v3H9zm4 5h3v2h-3zm-4 1h2v3H9zm0 4h3v2H9zm5 1h2v2h-2zm3-1h4v2h-4zM9 17h2v4H9zm3 0h2v2h-2zm3 2h6v2h-6zm0-4h2v2h-2zM0 9h2v3H0zm3 0h3v2H3zm15 0h3v3h-3z"/></svg>
                                             </div>
                                         @endif
                                     </div>
@@ -224,14 +249,14 @@
                 ];
                 $pickCell = 'sm:bg-surface';
             @endphp
-            <section id="features" class="scroll-mt-24 px-4 py-12 sm:px-6 sm:py-20">
+            <section id="features" class="scroll-mt-24 px-4 py-10 sm:px-6 sm:py-14">
                 <div class="mx-auto max-w-5xl">
                     <div class="max-w-2xl sm:mx-auto sm:text-center">
                         <h2 class="text-[26px] font-bold leading-[1.15] tracking-[-0.02em] text-ink sm:text-[40px]">Compare the three ways to share class files</h2>
                         <p class="mt-2 text-[16px] leading-7 text-muted sm:mt-4 sm:text-[18px]">Keep the WhatsApp group for talking. Put the board’s link in it.</p>
                     </div>
 
-                    <table class="mt-8 w-full table-fixed border-separate border-spacing-0 text-left sm:mt-16">
+                    <table class="mt-8 w-full table-fixed border-separate border-spacing-0 text-left sm:mt-10">
                         <thead>
                             <tr>
                                 <th scope="col" class="hidden pb-5 align-bottom text-[13px] font-medium text-muted sm:table-cell sm:w-[40%]">What you want to do</th>
@@ -255,10 +280,7 @@
                                     @foreach ($cells as $i => [$state, $note])
                                         @php $pick = $columns[$i]['pick']; @endphp
                                         <td class="px-2 pb-3 pt-2 text-center align-top sm:px-5 sm:py-3.5 {{ $pick ? $pickCell.($last ? ' sm:rounded-b-2xl sm:pb-7' : '') : '' }}">
-                                            <span class="inline-flex p-1.5 sm:p-0">{!! $marks[$state] !!}</span>
-                                            @if ($note)
-                                                <span class="mt-1 block text-[12px] leading-4 text-muted">{{ $note }}</span>
-                                            @endif
+                                            <span class="inline-flex flex-wrap items-center justify-center gap-x-1.5 p-1.5 sm:p-0">{!! $marks[$state] !!}@if ($note)<span class="text-[12px] leading-4 text-muted">{{ $note }}</span>@endif</span>
                                         </td>
                                     @endforeach
                                 </tr>
@@ -284,7 +306,7 @@
                 $askEmail = config('noteshare.feedback_email');
                 $askEmail = is_string($askEmail) && filter_var($askEmail, FILTER_VALIDATE_EMAIL) ? $askEmail : null;
             @endphp
-            <section id="faq" class="scroll-mt-24 px-4 py-12 sm:px-6 sm:py-20">
+            <section id="faq" class="scroll-mt-24 px-4 py-10 sm:px-6 sm:py-14">
                 <div class="mx-auto max-w-5xl">
                     <h2 class="text-[26px] font-bold tracking-[-0.02em] text-ink sm:text-[32px]">Questions</h2>
 
@@ -314,7 +336,7 @@
                 </div>
             </section>
 
-            <section class="px-4 pb-16 pt-6 sm:px-6 sm:pb-24 sm:pt-10">
+            <section class="px-4 pb-12 pt-4 sm:px-6 sm:pb-16 sm:pt-6">
                 <div class="lp-close mx-auto flex max-w-5xl flex-col items-start gap-5 overflow-hidden rounded-2xl py-8 pr-6 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_16px_40px_-24px_rgba(16,24,40,0.3)] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:py-10 sm:pr-10">
                     <div>
                         <h2 class="max-w-xl text-balance text-[22px] font-bold leading-8 tracking-[-0.02em] text-ink sm:text-[26px]">

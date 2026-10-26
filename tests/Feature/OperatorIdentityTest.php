@@ -27,7 +27,7 @@ class OperatorIdentityTest extends TestCase
             ->assertSee('Who runs SlipNote')
             ->assertSee('Kinetics Worth, independently')
             ->assertSee('hello@example.com')
-            ->assertSee('for students by Kinetics Worth', false);
+            ->assertSee('for classes by Kinetics Worth', false);
     }
 
     public function test_no_name_is_shown_when_none_is_set(): void
@@ -36,6 +36,6 @@ class OperatorIdentityTest extends TestCase
 
         $this->get('/lecturers')->assertOk()
             ->assertDontSee('Who runs SlipNote')
-            ->assertDontSee('for students by', false);
+            ->assertDontSee('for classes by', false);
     }
 }
