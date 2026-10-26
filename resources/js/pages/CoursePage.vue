@@ -708,7 +708,7 @@ watch(() => props.materials, () => { selected.value = [] })
                     <div v-if="uploadOpen"
                          class="op-card px-4 py-5 sm:px-6">
                         <div class="mb-3.5 flex items-center justify-between">
-                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Add a file</h2>
+                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Add files</h2>
                             <button type="button" @click="uploadOpen = false"
                                     aria-label="Close"
                                     class="op-press -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
@@ -731,7 +731,7 @@ watch(() => props.materials, () => { selected.value = [] })
 
                             <div>
                                 <span class="mb-1.5 block text-[13px] font-semibold text-ink">
-                                    Files <span class="text-danger" aria-hidden="true">*</span>
+                                    Files
                                 </span>
                                 <input id="ufile" type="file" multiple @change="onFileChange"
                                        accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg"

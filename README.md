@@ -16,7 +16,7 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
 
 ## Features
 
-- **Anonymous upload** — pick a section, optional title and your name, attach
+- **Anonymous upload** — pick a section, give it a name if you like, attach
   one or several files at once. PDF / Word / PowerPoint / image, up to 25 MB
   each. Files that would exceed the workspace cap are skipped while the rest
   save. Identical files already on the board (matched by content hash) are
