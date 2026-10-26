@@ -33,9 +33,10 @@
                 <li>If you <strong>report a file</strong>: the report reason and your IP address, used only to review the report.</li>
                 <li>If you <strong>suggest a feature</strong>: your message, the page you sent it from, and a reply address only if you choose to give one. No IP address is stored with it.</li>
                 <li>Your <strong>IP address as a rate-limit counter</strong> when you create a board, upload a file, report a file, send a suggestion, or try the operator login. These counters live in a short-lived cache and exist to blunt automated abuse, not to identify you.</li>
-                <li>When a board was <strong>last opened</strong>. One timestamp per board, overwritten each visit &mdash; it tells the operator which boards are still in use. It records no visitor details and keeps no history.</li>
+                <li>When a board was <strong>last opened</strong>. One timestamp per board, overwritten each visit &mdash; it tells the operator which boards are still in use. It records no visitor details.</li>
+                <li>The <strong>days a board was opened by someone other than its owner</strong>. One row per board per day, nothing about who, kept for 90 days. It tells the operator whether a class is using a board, as against its owner alone. Your browser's session remembers that it has been counted today, so you are counted once a day.</li>
                 <li>The board's <strong>owner secret</strong>, and an <strong>upload passphrase</strong> if the owner sets one — both stored only as one-way hashes, so we can't read them back.</li>
-                <li>A <strong>note from the operator</strong> to a board's owner, if one has been left. It is shown only in owner mode on that board, and the operator can remove it.</li>
+                <li>A <strong>note from the operator</strong> to a board's owner, if one has been left, and when the owner first opened the board after it was left. It is shown only in owner mode on that board, and the operator can remove it.</li>
                 <li>An optional <strong>recovery email</strong> if the owner opts in. It is stored encrypted at rest and used only to send a fresh owner link when requested.</li>
                 <li><strong>Daily visit counts</strong>. When someone opens the site or a board from outside it, a counter goes up by one for that day, that board, the visitor's country, and where the visit came from (for example "google", "direct", or the referring website's address). Only the number is stored: no IP address, no browser details, no cookie, and nothing that tells one visitor from another. The country comes from our network provider's routing, not from looking you up.</li>
                 <li>Standard <strong>server logs</strong> (IP address, request path, timestamp), used for security and debugging, not analytics.</li>
@@ -65,7 +66,7 @@
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">What we don't do</h2>
             <ul class="ml-5 list-disc space-y-1.5 text-[14px] text-ink">
-                <li>No analytics product, no advertising, no profile building, and no tracking of you across boards or visits. The usage figures kept are a "last opened" timestamp per board and the daily visit counts above, neither of which records anything about who visited.</li>
+                <li>No analytics product, no advertising, no profile building, and no tracking of you across boards or visits. The usage figures kept are a "last opened" timestamp per board, the days a board was opened by someone other than its owner, and the daily visit counts above, none of which records anything about who visited.</li>
                 <li>No selling or sharing of data with third parties.</li>
                 <li>No account, password, or email is required to browse, create a board, or upload files.</li>
             </ul>
