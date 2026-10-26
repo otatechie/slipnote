@@ -83,6 +83,54 @@ class BoardActivityTest extends TestCase
         $this->assertTrue($before->equalTo($this->workspace->fresh()->updated_at));
     }
 
+    public function test_a_classmate_visit_is_noted_once_a_day(): void
+    {
+        $this->get('/'.$this->workspace->slug)->assertOk();
+        $this->get('/'.$this->workspace->slug)->assertOk();
+
+        $this->assertSame(1, $this->visitorDays());
+
+        $this->travel(1)->days();
+        $this->get('/'.$this->workspace->slug)->assertOk();
+
+        $this->assertSame(2, $this->visitorDays());
+    }
+
+    public function test_the_owners_visits_keep_the_board_but_are_not_classmate_visits(): void
+    {
+        $this->unlockOwnerSession();
+
+        $this->get('/'.$this->workspace->slug)->assertOk();
+
+        $this->assertNotNull($this->workspace->fresh()->last_accessed_at);
+        $this->assertSame(0, $this->visitorDays());
+    }
+
+    public function test_a_classmate_download_is_a_visit(): void
+    {
+        $this->unlockOwnerSession();
+        $material = $this->uploadOne();
+        $this->flushSession();
+
+        $this->get(route('material.download', ['token' => $material->download_token]))->assertOk();
+
+        $this->assertSame(1, $this->visitorDays());
+    }
+
+    public function test_purging_a_board_removes_its_visitor_days(): void
+    {
+        $this->get('/'.$this->workspace->slug)->assertOk();
+
+        $this->workspace->fresh()->purge();
+
+        $this->assertSame(0, \DB::table('board_visit_days')->count());
+    }
+
+    private function visitorDays(): int
+    {
+        return \DB::table('board_visit_days')->where('workspace_id', $this->workspace->id)->count();
+    }
+
     public function test_access_is_scoped_to_the_board_that_was_visited(): void
     {
         [$other] = \App\Models\Workspace::provision('Other Board');

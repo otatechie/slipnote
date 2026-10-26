@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -47,6 +48,7 @@ class Workspace extends Model
             ->each(fn ($path) => Storage::disk('local')->delete($path));
         Material::whereIn('course_id', $courseIds)->delete();
         Course::withoutGlobalScopes()->whereIn('id', $courseIds)->delete();
+        DB::table('board_visit_days')->where('workspace_id', $this->id)->delete();
         $this->delete();
     }
 
@@ -117,6 +119,9 @@ class Workspace extends Model
     {
         if (Cache::add('prune_abandoned_boards', true, now()->addDay())) {
             static::pruneAbandoned();
+            DB::table('board_visit_days')
+                ->where('day', '<', now()->subDays(self::VISIT_DAYS_KEPT)->toDateString())
+                ->delete();
         }
     }
 
@@ -193,8 +198,16 @@ class Workspace extends Model
         return [$secret, Hash::make($secret)];
     }
 
+    /** Visitor days needed in the last 30 for a board to count as used (the ambassador reward). */
+    public const USED_MIN_DAYS = 3;
+
+    /** How far back visitor days are kept: the reward window, with room to spare. */
+    public const VISIT_DAYS_KEPT = 90;
+
     public function touchAccess(): void
     {
+        $this->noteVisitor();
+
         if ($this->last_accessed_at?->gt(now()->subHour())) {
             return;
         }
@@ -206,6 +219,27 @@ class Workspace extends Model
         $this->timestamps = false;
         $this->saveQuietly();
         $this->timestamps = true;
+    }
+
+    /**
+     * Marks today as a day someone other than the owner used this board.
+     * The owner's own visits still keep it from being removed (touchAccess),
+     * but never count it as used by the class.
+     */
+    private function noteVisitor(): void
+    {
+        if ($this->sessionIsOwner()) {
+            return;
+        }
+
+        $today = now()->toDateString();
+        $seen = "ws_seen_{$this->id}";
+        if (session($seen) === $today) {
+            return;
+        }
+
+        DB::table('board_visit_days')->insertOrIgnore(['workspace_id' => $this->id, 'day' => $today]);
+        session([$seen => $today]);
     }
 
     /** Slug from the name, with a numeric suffix if it collides. */

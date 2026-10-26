@@ -273,19 +273,26 @@ class OperatorController extends Controller
 
     private function referrerStats()
     {
-        $monthAgo = now()->subDays(30);
+        $since = now()->subDays(29)->toDateString();
 
+        // Used = files, and people other than the owner on several days. The
+        // owner (often the ambassador) opening it alone never pays out.
         return Workspace::query()
             ->whereNotNull('referrer')
+            ->select(['id', 'referrer'])
+            ->selectSub(fn ($q) => $q->from('board_visit_days')
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('board_visit_days.workspace_id', 'workspaces.id')
+                ->where('day', '>=', $since), 'visitor_days')
             ->withCount('materials')
-            ->get(['id', 'referrer', 'last_accessed_at'])
+            ->get()
             ->groupBy('referrer')
             ->map(fn ($boards, $slug) => [
                 'slug' => $slug,
                 'boards' => $boards->count(),
                 'seeded' => $boards->where('materials_count', '>', 0)->count(),
                 'active' => $boards->filter(fn ($w) => $w->materials_count > 0
-                    && $w->last_accessed_at?->gte($monthAgo))->count(),
+                    && $w->visitor_days >= Workspace::USED_MIN_DAYS)->count(),
             ])
             ->sortByDesc('active')
             ->values();

@@ -162,15 +162,71 @@ class AmbassadorProgramTest extends TestCase
         Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
         [$recent] = Workspace::provision('Recent');
         [$stale] = Workspace::provision('Stale');
-        $recent->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()->subDays(20)])->save();
-        $stale->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()->subDays(40)])->save();
+        $recent->forceFill(['referrer' => 'kwame'])->save();
+        $stale->forceFill(['referrer' => 'kwame'])->save();
         $this->seedBoard($recent, 'AAA 101');
         $this->seedBoard($stale, 'BBB 101');
+        $this->visitedOn($recent, 20, 21, 22);
+        $this->visitedOn($stale, 40, 41, 42);
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
 
-        // Opened 20 days ago counts for this month's payout; 40 days ago does not.
+        // Visited 20 days ago counts for this month's payout; 40 days ago does not.
         $this->assertStringContainsString('data-ref="kwame" data-boards="2" data-seeded="2" data-active="1"', $html);
+    }
+
+    private function visitedOn(Workspace $ws, int ...$daysAgo): void
+    {
+        foreach ($daysAgo as $ago) {
+            \DB::table('board_visit_days')->insert(['workspace_id' => $ws->id, 'day' => now()->subDays($ago)->toDateString()]);
+        }
+    }
+
+    private function ambassadorsTab(): string
+    {
+        return $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
+    }
+
+    public function test_a_board_visited_on_too_few_days_is_not_used(): void
+    {
+        Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+        [$ws] = Workspace::provision('Twice');
+        $ws->forceFill(['referrer' => 'kwame'])->save();
+        $this->seedBoard($ws, 'PHY 101');
+        $this->visitedOn($ws, 0, 1);
+
+        $this->assertStringContainsString('data-ref="kwame" data-boards="1" data-seeded="1" data-active="0"', $this->ambassadorsTab());
+
+        $this->visitedOn($ws, 2);
+
+        $this->assertStringContainsString('data-ref="kwame" data-boards="1" data-seeded="1" data-active="1"', $this->ambassadorsTab());
+    }
+
+    public function test_the_owners_own_visits_never_make_a_board_used(): void
+    {
+        Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+        [$ws] = Workspace::provision('Opened By Its Owner');
+        $ws->forceFill(['referrer' => 'kwame'])->save();
+        $this->seedBoard($ws, 'PHY 101');
+
+        // The ambassador made the board, so holds the owner link, and opens it daily.
+        session([$ws->ownerSessionKey() => $ws->ownerSessionValue()]);
+        foreach (range(1, 3) as $_) {
+            $this->get('/'.$ws->slug)->assertOk();
+            $this->travel(1)->days();
+        }
+
+        $this->assertNotNull($ws->fresh()->last_accessed_at); // still kept from removal
+        $this->assertStringContainsString('data-ref="kwame" data-boards="1" data-seeded="1" data-active="0"', $this->ambassadorsTab());
+
+        // Classmates, without the owner link.
+        $this->flushSession();
+        foreach (range(1, 3) as $_) {
+            $this->get('/'.$ws->slug)->assertOk();
+            $this->travel(1)->days();
+        }
+
+        $this->assertStringContainsString('data-ref="kwame" data-boards="1" data-seeded="1" data-active="1"', $this->ambassadorsTab());
     }
 
     public function test_the_reward_currency_is_configurable(): void
@@ -178,8 +234,9 @@ class AmbassadorProgramTest extends TestCase
         config(['noteshare.ambassador_reward' => 500, 'noteshare.ambassador_currency' => 'NGN']);
         Ambassador::create(['name' => 'Chidi', 'slug' => 'unilag-chidi']);
         [$ws] = Workspace::provision('Live Board');
-        $ws->forceFill(['referrer' => 'unilag-chidi', 'last_accessed_at' => now()])->save();
+        $ws->forceFill(['referrer' => 'unilag-chidi'])->save();
         $this->seedBoard($ws, 'CSC 101');
+        $this->visitedOn($ws, 0, 1, 2);
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
 
@@ -192,7 +249,8 @@ class AmbassadorProgramTest extends TestCase
     {
         Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
         [$empty] = Workspace::provision('Opened But Empty');
-        $empty->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()])->save();
+        $empty->forceFill(['referrer' => 'kwame'])->save();
+        $this->visitedOn($empty, 0, 1, 2);
 
         $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->getContent();
 
@@ -209,7 +267,8 @@ class AmbassadorProgramTest extends TestCase
         [$live] = Workspace::provision('Live Board');
         [$emptyBoard] = Workspace::provision('Empty Board');
         [$stranger] = Workspace::provision('Guessed');
-        $live->forceFill(['referrer' => 'kwame', 'last_accessed_at' => now()])->save();
+        $live->forceFill(['referrer' => 'kwame'])->save();
+        $this->visitedOn($live, 0, 1, 2);
         $emptyBoard->forceFill(['referrer' => 'kwame'])->save();
         $stranger->forceFill(['referrer' => 'nobody'])->save();
 

@@ -42,7 +42,7 @@ class Ambassador extends Model
         return "Hi {$this->name} — here's your SlipNote ambassador link:\n"
             ."{$link}\n\n"
             .'Send it to course reps. When a rep creates a board through it, it counts as yours. '
-            ."A board counts as live once it has files in it and classmates are opening it — that's what the reward is paid on, not sign-ups.\n\n"
+            ."A board counts as live once it has files in it and classmates open it on several days a month — that's what the reward is paid on, not sign-ups. The board owner's own visits don't count.\n\n"
             .'The pitch that works: "One link for all our slides and past papers, no account needed."';
     }
 }

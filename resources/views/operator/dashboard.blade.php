@@ -221,7 +221,7 @@
         $dueTotal = $ambassadorRows->filter(fn ($r) => $r['ambassador'] !== null)->sum('due');
     @endphp
     <p class="mt-3 text-[13px] text-muted">
-        Created = a board made through their link. With files = it has at least one file. Used this month = someone opened it or downloaded from it in the last 30 days.
+        Created = a board made through their link. With files = it has at least one file. Used this month = someone other than its owner opened it or downloaded from it on at least {{ \App\Models\Workspace::USED_MIN_DAYS }} different days in the last 30.
         Due = used boards × {{ $currency }} {{ $rate }} (<span class="font-mono">AMBASSADOR_REWARD</span>), paid by hand once a month.
         @if ($dueTotal > 0)
             <span class="font-semibold text-ink">Due this month: {{ $currency }} {{ $dueTotal }}.</span>
