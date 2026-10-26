@@ -621,6 +621,9 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <div class="mt-0.5 flex min-w-0 items-center gap-1 text-[12px] text-muted">
                                         <span v-if="material.is_new" class="shrink-0 rounded-full bg-neon/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.06em] text-neon">New</span>
                                         <span class="min-w-0 truncate"><template v-if="material.uploader_name">{{ material.uploader_name }} · </template>{{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template></span>
+                                        <button v-if="isOwner && !selecting && !material.title" type="button" @click.stop="openEdit(material)"
+                                                class="shrink-0 cursor-pointer font-semibold text-neon hover:underline"
+                                                title="Still named by its file. Give it a name the class will recognise.">· Rename</button>
                                     </div>
                                 </div>
                             </div>
@@ -675,8 +678,8 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </details>
                                 <a v-if="!selecting && material.download_url" :href="material.download_url"
                                    aria-label="Download" title="Download"
-                                   class="op-pill op-press flex size-10 items-center justify-center rounded-full border border-sky bg-base text-ink transition hover:bg-sky/40 sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
-                                    <svg aria-hidden="true" class="size-4 sm:hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                   class="op-press flex size-10 items-center justify-center gap-1.5 rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:h-auto sm:w-auto sm:px-3 sm:py-1.5">
+                                    <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
                                     </svg>
                                     <span class="hidden text-[13px] font-semibold sm:inline">Download</span>
@@ -783,9 +786,9 @@ watch(() => props.materials, () => { selected.value = [] })
 
                             <div v-if="uploadForm.files.length <= 1">
                                 <div class="min-w-0">
-                                    <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">File name <span class="font-normal text-muted">(optional)</span></label>
+                                    <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">Name <span class="font-normal text-muted">(what the class will see)</span></label>
                                     <input id="utitle" type="text" v-model="uploadForm.title"
-                                           placeholder="e.g. Week 7 quiz solutions"
+                                           :placeholder="uploadForm.files[0] ? uploadForm.files[0].name.replace(/\.[^.]+$/, '') : 'e.g. Week 7 quiz solutions'"
                                            :aria-invalid="!!errors.title"
                                            class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
                                     <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
