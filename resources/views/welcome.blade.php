@@ -197,21 +197,10 @@
                                                 <span class="truncate">{{ $howHost }}/<span class="font-medium text-ink">econ-level-200</span></span>
                                             </p>
                                         @elseif ($kind === 'courses')
-                                            <div class="w-full max-w-xs divide-y divide-sky/70 overflow-hidden rounded-xl bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
-                                                @foreach ([['ECON 201', 'Microeconomics', '14 files'], ['ECON 203', 'Statistics', '9 files'], ['ECON 205', 'Mathematics', 'No files yet']] as [$code, $title, $count])
-                                                    <div class="flex items-center justify-between gap-3 px-3 py-2">
-                                                        <div class="min-w-0">
-                                                            <p class="truncate text-[13px] font-bold tracking-tight text-teal">{{ $code }}</p>
-                                                            <p class="truncate text-[11px] text-muted">{{ $title }}</p>
-                                                        </div>
-                                                        @if ($count === 'No files yet')
-                                                            <span class="shrink-0 rounded-full border border-dashed border-muted/40 px-2 py-0.5 text-[10px] font-semibold text-muted">{{ $count }}</span>
-                                                        @else
-                                                            <span class="shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-semibold text-teal">{{ $count }}</span>
-                                                        @endif
-                                                    </div>
-                                                @endforeach
-                                            </div>
+                                            <span class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted/40 px-3 py-1.5 text-[13px] font-semibold text-muted">
+                                                <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+                                                New course
+                                            </span>
                                         @else
                                             <div class="inline-flex max-w-full items-center gap-3 rounded-xl bg-surface py-2 pl-3 pr-2 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
                                                 <span class="truncate text-[13px] text-muted">{{ $howHost }}/<span class="font-medium text-ink">econ-level-200</span></span>
@@ -239,7 +228,7 @@
                     ['Get files shared before you joined', [['no', null], ['yes', null], ['yes', null]]],
                     ['Download a course’s notes in one go', [['no', null], ['yes', null], ['yes', null]]],
                     ['See what’s new since you last looked', [['part', 'Messages only'], ['yes', null], ['no', null]]],
-                    ['Let classmates add files without an account', [['yes', null], ['yes', null], ['part', 'Needs a Google account']]],
+                    ['Let classmates add files without an account', [['yes', null], ['yes', null], ['part', 'Google account']]],
                     ['Keep files organised without anyone tidying', [['no', null], ['yes', null], ['no', null]]],
                 ];
                 $marks = [

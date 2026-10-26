@@ -520,12 +520,13 @@ html:has(dialog[open], [role='dialog'][aria-modal='true']) {
 
 .lp-close {
     --lp-margin: 28px;
+    --lp-rule: color-mix(in srgb, #e5484d 60%, transparent);
     padding-left: calc(var(--lp-margin) + 22px);
     background-color: var(--color-surface);
     background-image:
         linear-gradient(to right,
             transparent var(--lp-margin),
-            color-mix(in srgb, #e5484d 60%, transparent) var(--lp-margin) calc(var(--lp-margin) + 1.5px),
+            var(--lp-rule) var(--lp-margin) calc(var(--lp-margin) + 1.5px),
             transparent calc(var(--lp-margin) + 1.5px)),
         repeating-linear-gradient(to bottom,
             transparent 0 31px,
@@ -535,6 +536,16 @@ html:has(dialog[open], [role='dialog'][aria-modal='true']) {
     .lp-close {
         --lp-margin: 56px;
         padding-left: calc(var(--lp-margin) + 32px);
+    }
+}
+/* On dark, a bright red rule reads as a glitch, not a notebook margin. */
+html[data-theme='dark'] .lp-close,
+html[data-theme='system'][data-system-theme='dark'] .lp-close {
+    --lp-rule: color-mix(in srgb, #e5484d 30%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme]) .lp-close {
+        --lp-rule: color-mix(in srgb, #e5484d 30%, transparent);
     }
 }
 
