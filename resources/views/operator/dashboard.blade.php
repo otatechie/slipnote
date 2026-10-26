@@ -392,6 +392,27 @@
                             · <span class="font-semibold text-danger">{{ $ws->reported_count }} reported</span>
                         @endif
                     </p>
+                    <p class="mt-0.5 text-[12px] text-muted">
+                        made {{ $ws->created_at->diffForHumans(null, true) }} ago
+                        @if ($ws->materials_max_created_at)
+                            · last file {{ \Illuminate\Support\Carbon::parse($ws->materials_max_created_at)->diffForHumans(null, true) }} ago
+                        @endif
+                        @if ($ws->top_country)
+                            · <span title="Most visits in 30 days came from here">{{ $ws->top_country }}</span>
+                        @endif
+                        @if ($ws->uploads_owner_only)
+                            · <span class="font-medium text-ink" title="Only the owner can add files: usually a teacher">owner uploads only</span>
+                        @endif
+                        @if ($ws->referrer)
+                            · <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}" class="relative z-10 hover:underline">via {{ $ws->referrer }}</a>
+                        @endif
+                        @if ($ws->message_count > 0)
+                            · <a href="{{ route('operator.dashboard', ['tab' => 'suggestions']) }}" class="relative z-10 font-semibold text-neon hover:underline">{{ $ws->message_count }} {{ Str::plural('message', $ws->message_count) }}</a>
+                        @endif
+                        @if (filled($ws->recovery_email))
+                            · <span title="The owner set a recovery email">can be emailed</span>
+                        @endif
+                    </p>
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-x-1.5 text-[12px] sm:block sm:text-right">
                     @if ($ws->materials_count > 0)

@@ -127,6 +127,7 @@ class OperatorController extends Controller
                 'materials as reported_count' => fn ($q) => $q->whereHas('reports'),
             ])
             ->withSum('materials', 'file_size')
+            ->withMax('materials', 'created_at')
             ->when($boardSort === 'visited', fn ($q) => $q->orderByDesc('recent_arrivals')->orderByDesc('materials_count'))
             ->when($boardSort === 'opened', fn ($q) => $q->orderByRaw('last_accessed_at IS NULL')->orderByDesc('last_accessed_at'))
             ->when($boardSort === 'largest', fn ($q) => $q->orderByDesc('materials_sum_file_size'))
@@ -134,6 +135,7 @@ class OperatorController extends Controller
             ->latest('id')
             ->paginate(20)
             ->appends(self::boardParams($boardQuery, $boardSort, $showEmpty));
+        $this->describeBoards($recent->getCollection(), $visitsSince);
 
         return view('operator.dashboard', [
             'materials' => $materials,
@@ -153,6 +155,39 @@ class OperatorController extends Controller
             'suggestions' => $this->tab($request) === 'suggestions' ? Suggestion::latest()->limit(100)->get() : collect(),
             'suggestionsWeek' => Suggestion::where('created_at', '>=', now()->subDays(7))->count(),
         ]);
+    }
+
+    /** Who is behind each board on the page: where its visitors are, and what they've written in. */
+    private function describeBoards($boards, string $visitsSince): void
+    {
+        if ($boards->isEmpty()) {
+            return;
+        }
+
+        $topCountry = DB::table('visit_tallies')
+            ->whereIn('workspace_id', $boards->pluck('id'))
+            ->where('day', '>=', $visitsSince)
+            ->where('country', '!=', '')
+            ->select('workspace_id', 'country', DB::raw('SUM(arrivals) as total'))
+            ->groupBy('workspace_id', 'country')
+            ->get()
+            ->groupBy('workspace_id')
+            ->map(fn ($rows) => self::countryLabel($rows->sortByDesc('total')->first()->country));
+
+        // A suggestion sent from the board or any page under it.
+        $messages = Suggestion::query()
+            ->where(function ($q) use ($boards) {
+                foreach ($boards as $ws) {
+                    $q->orWhere('page', '/'.$ws->slug)->orWhere('page', 'like', '/'.$ws->slug.'/%');
+                }
+            })
+            ->pluck('page')
+            ->countBy(fn ($page) => explode('/', $page)[1] ?? '');
+
+        $boards->each(function (Workspace $ws) use ($topCountry, $messages) {
+            $ws->top_country = $topCountry->get($ws->id);
+            $ws->message_count = (int) $messages->get($ws->slug, 0);
+        });
     }
 
     /** The window the Visitors tab covers. Long enough to span a teaching block. */

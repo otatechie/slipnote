@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Suggestion;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -192,6 +193,42 @@ class OperatorTest extends TestCase
         $this->assertStringContainsString('op-faded', $unsharedRow);
         // Shared first, however new the unshared one is.
         $this->assertLessThan(strpos($html, 'Unshared Board'), strpos($html, 'Shared Board'));
+    }
+
+    public function test_a_board_row_says_who_is_behind_it(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        [$ws] = Workspace::provision('Grade 5 English');
+        $ws->forceFill([
+            'created_at' => now()->subDays(5), 'uploads_owner_only' => true, 'referrer' => 'kwame',
+            'recovery_email' => 'teacher@example.com',
+        ])->saveQuietly();
+        $this->actingInWorkspace($ws);
+        $course = Course::create(['code' => 'ENG 5', 'title' => 'English', 'slug' => 'eng-5']);
+        $course->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf', 'stored_path' => 'materials/a.pdf',
+            'download_token' => 'dl-a', 'file_size' => 1])->forceFill(['created_at' => now()->subDays(2)])->saveQuietly();
+        DB::table('visit_tallies')->insert([
+            ['day' => now()->toDateString(), 'workspace_id' => $ws->id, 'country' => 'SA', 'source' => 'direct', 'arrivals' => 30],
+            ['day' => now()->toDateString(), 'workspace_id' => $ws->id, 'country' => 'GH', 'source' => 'direct', 'arrivals' => 2],
+            ['day' => now()->subDays(40)->toDateString(), 'workspace_id' => $ws->id, 'country' => 'NG', 'source' => 'direct', 'arrivals' => 99],
+        ]);
+        Suggestion::create(['message' => 'Thanks!', 'page' => '/'.$ws->slug]);
+        Suggestion::create(['message' => 'Annotate?', 'page' => '/'.$ws->slug.'/c/eng-5']);
+        Suggestion::create(['message' => 'Elsewhere', 'page' => '/'.$ws->slug.'-other']);
+
+        $html = $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards']))->assertOk()->getContent();
+        $start = strpos($html, 'Grade 5 English') - 500;
+        $row = substr($html, $start, strpos($html, '<details', $start) - $start);
+
+        $this->assertStringContainsString('made 5 days ago', $row);
+        $this->assertStringContainsString('last file 2 days ago', $row);
+        $this->assertStringContainsString('Saudi Arabia', $row);
+        $this->assertStringNotContainsString('Nigeria', $row);
+        $this->assertStringContainsString('owner uploads only', $row);
+        $this->assertStringContainsString('via kwame', $row);
+        $this->assertStringContainsString('2 messages', $row);
+        $this->assertStringContainsString('can be emailed', $row);
+        $this->assertStringNotContainsString('teacher@example.com', $html);
     }
 
     public function test_a_note_returns_to_the_same_list_and_reopens_on_an_error(): void
