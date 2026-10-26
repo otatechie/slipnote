@@ -80,7 +80,7 @@
                             class="lp-stage relative mx-auto w-full max-w-md overflow-hidden rounded-[24px] px-3 pb-5 pt-10 sm:rounded-[28px] sm:px-8 sm:pb-8 sm:pt-12 lg:max-w-none">
                         <figcaption aria-hidden="true" class="absolute left-4 top-3.5 text-[12px] font-medium text-muted sm:left-8 sm:top-4">In your class group chat</figcaption>
 
-                        <div aria-hidden="true" class="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[28px] bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_24px_60px_-24px_rgba(16,24,40,0.35)]">
+                        <div aria-hidden="true" class="lp-phone relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[28px] bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_24px_60px_-24px_rgba(16,24,40,0.35)]">
                             <div class="flex items-center gap-3 px-4 pb-2 pt-3">
                                 <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-base text-muted">
                                     <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -96,14 +96,14 @@
                                     ['Ama', 'lp-name-1', 'Please who has the ECON 201 slides from Tuesday?', '9:41'],
                                     ['Yaw', 'lp-name-3', 'I sent it last week, scroll up', '9:44'],
                                 ] as [$who, $nameClass, $text, $time])
-                                    <div class="w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-base px-3 py-1.5">
+                                    <div class="w-fit max-w-[85%] lp-bubble rounded-2xl rounded-bl-md bg-base px-3 py-1.5">
                                         <p class="text-[11px] font-semibold {{ $nameClass }}">{{ $who }}</p>
                                         <p class="text-ink">{{ $text }}<span class="ml-2 inline-block align-baseline text-[10px] text-muted">{{ $time }}</span></p>
                                     </div>
                                 @endforeach
 
                                 <div class="lp-mine ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-md p-1.5">
-                                    <div class="flex items-center gap-2.5 rounded-xl bg-surface p-2 shadow-[0_1px_2px_rgba(16,24,40,0.08)]">
+                                    <div class="flex items-center gap-2.5 lp-bubble rounded-xl bg-surface p-2 shadow-[0_1px_2px_rgba(16,24,40,0.08)]">
                                         <img src="/logo-mark.png" alt="" class="size-9 shrink-0 rounded-lg">
                                         <div class="min-w-0">
                                             <p class="truncate text-[13px] font-semibold text-ink">ECON Level 200</p>
@@ -117,14 +117,14 @@
                                     </p>
                                 </div>
 
-                                <div class="w-fit max-w-[85%] rounded-2xl rounded-bl-md bg-base px-3 py-1.5">
+                                <div class="w-fit max-w-[85%] lp-bubble rounded-2xl rounded-bl-md bg-base px-3 py-1.5">
                                     <p class="text-[11px] font-semibold lp-name-2">Kofi</p>
                                     <p class="text-ink">Finally. Thank you!<span class="ml-2 inline-block align-baseline text-[10px] text-muted">9:48</span></p>
                                 </div>
                             </div>
 
                             <div class="hidden px-3 pb-3 sm:block">
-                                <div class="flex items-center gap-2 rounded-full bg-base py-1.5 pl-3 pr-1.5">
+                                <div class="flex items-center gap-2 lp-bubble rounded-full bg-base py-1.5 pl-3 pr-1.5">
                                     <svg class="size-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                                     <span class="flex-1 text-[13px] text-muted">Message</span>
                                     <span class="flex size-7 items-center justify-center rounded-full lp-mine text-neon">

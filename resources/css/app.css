@@ -564,6 +564,20 @@ html[data-theme='system'][data-system-theme='dark'] .lp-stage {
 .lp-mine {
     background: color-mix(in srgb, var(--color-neon) 16%, var(--color-surface));
 }
+/* Dark flattens the chat: page, stage, phone and bubbles all land on one grey.
+   Lift each layer a step so it still reads as a chat. Light is untouched. */
+html[data-theme='dark'] .lp-phone,
+html[data-theme='system'][data-system-theme='dark'] .lp-phone {
+    background: color-mix(in srgb, var(--color-surface) 93%, white);
+}
+html[data-theme='dark'] .lp-bubble,
+html[data-theme='system'][data-system-theme='dark'] .lp-bubble {
+    background: color-mix(in srgb, var(--color-sky) 90%, white);
+}
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme]) .lp-phone { background: color-mix(in srgb, var(--color-surface) 93%, white); }
+    html:not([data-theme]) .lp-bubble { background: color-mix(in srgb, var(--color-sky) 90%, white); }
+}
 .lp-name-1 { color: #2450c8; }
 .lp-name-2 { color: #b4470f; }
 .lp-name-3 { color: #0f7a55; }
