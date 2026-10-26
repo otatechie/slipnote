@@ -80,8 +80,6 @@
                             class="lp-stage relative mx-auto w-full max-w-md overflow-hidden rounded-[24px] px-3 pb-5 pt-10 sm:rounded-[28px] sm:px-8 sm:pb-8 sm:pt-12 lg:max-w-none">
                         <figcaption aria-hidden="true" class="absolute left-4 top-3.5 text-[12px] font-medium text-muted sm:left-8 sm:top-4">In your class group chat</figcaption>
 
-                        <div aria-hidden="true" class="absolute bottom-10 left-1/2 top-16 hidden w-[300px] -translate-x-[62%] -rotate-3 rounded-[28px] bg-surface/50 sm:block"></div>
-
                         <div aria-hidden="true" class="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[28px] bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_24px_60px_-24px_rgba(16,24,40,0.35)]">
                             <div class="flex items-center gap-3 px-4 pb-2 pt-3">
                                 <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-base text-muted">
