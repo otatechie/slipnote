@@ -146,7 +146,7 @@
 
                         {{-- What a course looks like once the class has used it for a few weeks. --}}
                         <figure role="img" aria-label="A course page on a board: ECON 201 Microeconomics, with files under Past papers, Slides and Notes."
-                                class="mt-6 w-full max-w-sm overflow-hidden rounded-2xl bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_12px_32px_-20px_rgba(16,24,40,0.35)] ring-1 ring-sky/70">
+                                class="mt-6 w-full max-w-sm overflow-hidden rounded-2xl bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.06),0_12px_32px_-20px_rgba(16,24,40,0.35)]">
                             <div class="flex items-center justify-between gap-3 px-4 pb-2.5 pt-3.5">
                                 <div class="min-w-0">
                                     <p class="text-[11px] font-semibold text-muted">ECON Level 200</p>
