@@ -38,4 +38,9 @@ class OperatorIdentityTest extends TestCase
             ->assertDontSee('Who runs SlipNote')
             ->assertDontSee('for classes by', false);
     }
+
+    public function test_the_footer_carries_this_years_colophon(): void
+    {
+        $this->get('/')->assertOk()->assertSee('&copy; '.date('Y').' SlipNote', false);
+    }
 }
