@@ -124,6 +124,17 @@ class VisitTallyTest extends TestCase
         $this->assertSame('SA', $this->tallies()->sole()->country);
     }
 
+    public function test_country_is_still_read_when_the_visitor_ip_comes_from_a_proxy_header(): void
+    {
+        // Production: Traefik is the peer, Cloudflare's header names the visitor.
+        config(['noteshare.trusted_proxies' => ['10.0.0.1'], 'noteshare.client_ip_header' => 'CF-Connecting-IP']);
+        TrustProxies::at(['10.0.0.1']);
+
+        $this->visit(route('courses.index', $this->wsParams()), ['CF-IPCountry' => 'GH', 'CF-Connecting-IP' => '41.66.200.9'], '10.0.0.1');
+
+        $this->assertSame('GH', $this->tallies()->sole()->country);
+    }
+
     public function test_a_country_header_from_an_untrusted_client_is_ignored(): void
     {
         $this->visit(route('courses.index', $this->wsParams()), ['CF-IPCountry' => 'SA'], '198.51.100.7');

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Http\Middleware\ClientIpFromHeader;
 use App\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,7 +72,7 @@ class VisitTally
 
     public static function country(Request $request): string
     {
-        if (! $request->isFromTrustedProxy()) {
+        if (! ClientIpFromHeader::viaTrustedProxy($request)) {
             return '';
         }
 
