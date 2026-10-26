@@ -325,7 +325,6 @@ html[data-theme='system'][data-system-theme='dark'] .text-amber-600 {
     border-radius: var(--op-radius);
     background: var(--card-well);
     border: 1px solid var(--card-frame);
-    box-shadow: inset 0 0 0 4px var(--card-well), inset 0 0 0 5px var(--card-inner);
 }
 .op-card.op-card-quiet {
     background: transparent;

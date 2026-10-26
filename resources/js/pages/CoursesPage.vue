@@ -405,7 +405,7 @@ function persistOrder() {
                 </button>
             </div>
 
-            <header class="mb-2.5 flex items-center justify-between gap-4 pt-1 sm:sticky sm:top-0 sm:z-10 sm:bg-base/70 sm:py-3 sm:backdrop-blur-xl">
+            <header class="mb-2.5 flex items-center justify-between gap-4 pt-1 sm:sticky sm:top-0 sm:z-10 sm:bg-base sm:py-3">
                 <h1 class="op-title line-clamp-2 min-w-0 wrap-break-word text-[1.6rem] font-bold text-ink sm:line-clamp-1 sm:text-[1.85rem]">{{ workspace.name }}</h1>
                 <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
                     class="op-press hidden h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex">
@@ -602,24 +602,11 @@ function persistOrder() {
 
                         <Link :href="courseUrl(course.slug)" class="min-w-0 flex-1" @click.stop>
                             <div class="flex items-center gap-2">
-                                <p
-                                    class="flex min-w-0 items-center gap-1.5 text-[15px] font-bold tracking-tight text-ink">
-                                    <span class="truncate">{{ course.code }}</span>
-                                    <svg aria-hidden="true"
-                                        class="size-3.5 shrink-0 text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-neon"
-                                        viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M8 6l4 4-4 4" />
-                                    </svg>
-                                </p>
+                                <p class="min-w-0 truncate text-[15px] font-bold tracking-tight text-ink">{{ course.code }}</p>
                                 <span v-if="course.new_count > 0"
                                     class="shrink-0 rounded-full bg-neon/10 px-2 py-0.5 text-[11px] font-semibold text-neon"
                                     :title="`${course.new_count} added since you last opened this course`">
                                     {{ course.new_count }} new
-                                </span>
-                                <span v-if="course.materials_count === 0 && !isOwner"
-                                    class="shrink-0 text-[12px] text-muted">
-                                    No files yet
                                 </span>
                             </div>
                             <p class="mt-0.5 text-[13px] text-muted">{{ course.title }}</p>
@@ -632,7 +619,15 @@ function persistOrder() {
                             <p v-if="course.materials_count > 0" class="mt-1 text-[12px] tabular-nums text-muted">
                                 {{ plural(course.materials_count, 'file') }}<template v-if="course.materials_max_created_at"> · updated {{ timeAgo(course.materials_max_created_at) }}</template>
                             </p>
+                            <p v-else-if="!isOwner" class="mt-1 text-[12px] text-muted">No files yet</p>
                         </Link>
+
+                        <svg v-if="!isOwner" aria-hidden="true"
+                            class="mt-1 size-4 shrink-0 text-muted/50 transition group-hover:translate-x-0.5 group-hover:text-neon"
+                            viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M8 6l4 4-4 4" />
+                        </svg>
 
                         <button v-if="isOwner" type="button" @click.stop.prevent="openEdit(course)"
                             :aria-label="`Edit ${course.code}`"
