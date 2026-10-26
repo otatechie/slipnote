@@ -273,6 +273,7 @@
                 $faqs = [
                     ['Is SlipNote free?', 'Yes.', 'There is no paid plan and no limit on how many classmates use a board.'],
                     ['Do my classmates need an account?', 'No.', 'Nobody does, including you. Anyone with the link can open the board, download files and add files.'],
+                    ['Can I stop others adding files?', 'Yes.', 'The owner can lock uploads so only they add files. Everyone else can still open and download. Teachers and lecturers running a board for a class they teach usually do this.'],
                     ['Who can see the files on a board?', 'Anyone with the link.', 'Boards are hidden from search engines and the links cannot be guessed, but a link can be passed on. Don’t upload anything you wouldn’t want a stranger to read.'],
                     ['What files can I upload?', 'PDF, Word, PowerPoint and images (PNG or JPG), up to 25 MB each.', "A board holds up to {$capMb} MB, more than a semester needs."],
                     ['Who can delete a file?', 'The person who uploaded it, and whoever set up the board.', 'After you upload, you get a link to delete your file. The person who set up the board can remove any file with their owner link. Everyone else can only read and add.'],

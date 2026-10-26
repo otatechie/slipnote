@@ -162,4 +162,11 @@ class WorkspaceLandingTest extends TestCase
 
         $this->get('/lecturers')->assertOk()->assertSee('For lecturers');
     }
+
+    public function test_the_landing_page_tells_teachers_uploads_can_be_locked(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('Can I stop others adding files?')
+            ->assertSee('lock uploads so only they add files');
+    }
 }
