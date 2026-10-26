@@ -678,7 +678,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </details>
                                 <a v-if="!selecting && material.download_url" :href="material.download_url"
                                    aria-label="Download" title="Download"
-                                   class="op-press flex size-10 items-center justify-center gap-1.5 rounded-full text-muted transition hover:bg-sky/40 hover:text-ink sm:h-auto sm:w-auto sm:px-3 sm:py-1.5">
+                                   class="op-pill op-press flex size-10 items-center justify-center gap-1.5 rounded-full border border-sky bg-base text-ink transition hover:bg-sky/40 sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
                                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15h12" />
                                     </svg>
