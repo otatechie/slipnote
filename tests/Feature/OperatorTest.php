@@ -85,7 +85,7 @@ class OperatorTest extends TestCase
             ->assertDontSee('Review file', false);
     }
 
-    public function test_the_boards_tab_pages_through_every_board_newest_first(): void
+    public function test_the_boards_tab_pages_through_every_board(): void
     {
         // setUp made one board; 24 more, oldest first, so 25 in all.
         for ($i = 1; $i <= 24; $i++) {
@@ -95,16 +95,16 @@ class OperatorTest extends TestCase
         $this->workspace->forceFill(['created_at' => now()->subDays(1)])->saveQuietly();
         $session = ['operator_fp' => hash('sha256', 'op-secret')];
 
-        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1]))
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'newest', 'empty' => 1]))
             ->assertOk()
             ->assertSee('1–20 of 25, newest first.', false)
             ->assertSee('Page 1 of 2')
             ->assertSee('Paged Board 24')
             ->assertDontSee('Test Workspace')
-            ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1, 'page' => 2]));
+            ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'newest', 'empty' => 1, 'page' => 2]));
 
         // The oldest board, unreachable before without searching for it.
-        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1, 'page' => 2]))
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'newest', 'empty' => 1, 'page' => 2]))
             ->assertOk()
             ->assertSee('21–25 of 25', false)
             ->assertSee('Test Workspace')
@@ -116,7 +116,7 @@ class OperatorTest extends TestCase
             ->assertSee(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Paged', 'page' => 2]));
     }
 
-    public function test_boards_sort_by_newest_most_visited_recently_opened_and_largest(): void
+    public function test_boards_sort_by_most_visited_by_default_then_newest_recently_opened_and_largest(): void
     {
         $session = ['operator_fp' => hash('sha256', 'op-secret')];
         [$visited] = Workspace::provision('Visited Board');
@@ -138,15 +138,60 @@ class OperatorTest extends TestCase
             ->get(route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $sort, 'empty' => 1])))
             ->assertOk()->viewData('recent')->first()->name;
 
-        $this->assertSame('Newest Board', $first(null));
-        $this->assertSame('Visited Board', $first('visited'));
+        $this->assertSame('Visited Board', $first(null));
+        $this->assertSame('Newest Board', $first('newest'));
         $this->assertSame('Opened Board', $first('opened'));
         $this->assertSame('Large Board', $first('largest'));
-        $this->assertSame('Newest Board', $first('nonsense'));
+        $this->assertSame('Visited Board', $first('nonsense'));
 
-        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'visited', 'empty' => 1]))
-            ->assertSee('9 visits in 30 days')
+        $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1]))
+            ->assertSee('9 visits')
             ->assertSee('most visited first (30 days)');
+    }
+
+    public function test_the_active_tile_counts_boards_classmates_opened_this_week(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        [$byOwner] = Workspace::provision('Owner Only');
+        [$byClass] = Workspace::provision('Class Opened');
+        $byOwner->forceFill(['last_accessed_at' => now()])->saveQuietly();
+        DB::table('board_visit_days')->insert([
+            ['workspace_id' => $byClass->id, 'day' => now()->toDateString()],
+            ['workspace_id' => $byClass->id, 'day' => now()->subDays(2)->toDateString()],
+            ['workspace_id' => $byOwner->id, 'day' => now()->subDays(10)->toDateString()],
+        ]);
+
+        $stats = $this->withSession($session)->get(route('operator.dashboard'))->assertOk()->viewData('stats');
+
+        $this->assertSame(1, $stats['active_week']);
+        $this->assertTrue($stats['tracking_started']);
+    }
+
+    public function test_a_board_with_files_but_no_visitors_says_so_and_is_faded(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        [$shared] = Workspace::provision('Shared Board');
+        [$unshared] = Workspace::provision('Unshared Board');
+        foreach ([$shared, $unshared] as $ws) {
+            $this->actingInWorkspace($ws);
+            Course::create(['code' => 'C 1', 'title' => 'C', 'slug' => 'c-1'])
+                ->materials()->create(['section' => 'notes', 'original_filename' => 'a.pdf',
+                    'stored_path' => 'materials/'.$ws->slug.'.pdf', 'download_token' => 'dl-'.$ws->slug, 'file_size' => 1]);
+        }
+        DB::table('visit_tallies')->insert([
+            'day' => now()->toDateString(), 'workspace_id' => $shared->id, 'country' => '', 'source' => 'direct', 'arrivals' => 4,
+        ]);
+
+        $html = $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards']))->assertOk()->getContent();
+
+        $sharedRow = substr($html, strpos($html, 'Shared Board') - 500, 1500);
+        $unsharedRow = substr($html, strpos($html, 'Unshared Board') - 500, 1500);
+        $this->assertStringContainsString('4 visits', $sharedRow);
+        $this->assertStringNotContainsString('op-faded', $sharedRow);
+        $this->assertStringContainsString('no visitors in 30 days', $unsharedRow);
+        $this->assertStringContainsString('op-faded', $unsharedRow);
+        // Shared first, however new the unshared one is.
+        $this->assertLessThan(strpos($html, 'Unshared Board'), strpos($html, 'Shared Board'));
     }
 
     public function test_a_note_returns_to_the_same_list_and_reopens_on_an_error(): void

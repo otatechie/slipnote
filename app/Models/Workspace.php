@@ -27,6 +27,7 @@ class Workspace extends Model
         'recovery_email' => 'encrypted',
         'last_accessed_at' => 'datetime',
         'operator_note_at' => 'datetime',
+        'operator_note_seen_at' => 'datetime',
         'abandon_warned_at' => 'datetime',
         'uploads_owner_only' => 'boolean',
     ];

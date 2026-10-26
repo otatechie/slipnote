@@ -61,7 +61,7 @@ class OperatorController extends Controller
     {
         parse_str((string) parse_url((string) $request->headers->get('referer'), PHP_URL_QUERY), $from);
         $page = (int) ($from['page'] ?? 1);
-        $sort = is_string($from['sort'] ?? null) && isset(self::BOARD_SORTS[$from['sort']]) ? $from['sort'] : 'newest';
+        $sort = is_string($from['sort'] ?? null) && isset(self::BOARD_SORTS[$from['sort']]) ? $from['sort'] : self::DEFAULT_BOARD_SORT;
 
         return route('operator.dashboard', self::boardParams(
             is_string($from['q'] ?? null) ? trim($from['q']) : '',
@@ -99,8 +99,9 @@ class OperatorController extends Controller
             'files' => Material::count(),
             'files_week' => Material::where('created_at', '>=', now()->subDays(7))->count(),
             'storage_mb' => round(Material::sum('file_size') / 1_048_576, 1),
-            'active_week' => Workspace::where('last_accessed_at', '>=', now()->subDays(7))->count(),
-            'tracking_started' => Workspace::whereNotNull('last_accessed_at')->exists(),
+            // Boards classmates (not the owner) opened or downloaded from this week.
+            'active_week' => DB::table('board_visit_days')->where('day', '>=', now()->subDays(6)->toDateString())->distinct()->count('workspace_id'),
+            'tracking_started' => DB::table('board_visit_days')->exists(),
             // Created and never filled — the drop-off worth watching.
             'empty_boards' => Workspace::whereDoesntHave('materials')->count(),
         ];
@@ -126,7 +127,7 @@ class OperatorController extends Controller
                 'materials as reported_count' => fn ($q) => $q->whereHas('reports'),
             ])
             ->withSum('materials', 'file_size')
-            ->when($boardSort === 'visited', fn ($q) => $q->orderByDesc('recent_arrivals'))
+            ->when($boardSort === 'visited', fn ($q) => $q->orderByDesc('recent_arrivals')->orderByDesc('materials_count'))
             ->when($boardSort === 'opened', fn ($q) => $q->orderByRaw('last_accessed_at IS NULL')->orderByDesc('last_accessed_at'))
             ->when($boardSort === 'largest', fn ($q) => $q->orderByDesc('materials_sum_file_size'))
             ->latest()
@@ -141,6 +142,7 @@ class OperatorController extends Controller
             'recent' => $recent,
             'boardQuery' => $boardQuery,
             'boardSort' => $boardSort,
+            'defaultSort' => self::DEFAULT_BOARD_SORT,
             'showEmpty' => $showEmpty,
             'boardSorts' => self::BOARD_SORTS,
             'tab' => $this->tab($request),
@@ -158,23 +160,26 @@ class OperatorController extends Controller
 
     /** Boards tab sorts: key => label. The first is the default. */
     private const BOARD_SORTS = [
-        'newest' => 'Newest',
         'visited' => 'Most visited',
+        'newest' => 'Newest',
         'opened' => 'Recently opened',
         'largest' => 'Largest',
     ];
+
+    /** The boards that matter are the ones classmates open, so those come first. */
+    public const DEFAULT_BOARD_SORT = 'visited';
 
     private static function boardSort(Request $request): string
     {
         $sort = $request->query('sort');
 
-        return is_string($sort) && isset(self::BOARD_SORTS[$sort]) ? $sort : 'newest';
+        return is_string($sort) && isset(self::BOARD_SORTS[$sort]) ? $sort : self::DEFAULT_BOARD_SORT;
     }
 
     /** Query string for the boards list: tab, plus search, sort and "show empty" when set. */
     private static function boardParams(string $q, string $sort, bool $showEmpty = false, array $extra = []): array
     {
-        return array_filter(['tab' => 'boards', 'q' => $q, 'sort' => $sort === 'newest' ? null : $sort, 'empty' => $showEmpty ? 1 : null] + $extra);
+        return array_filter(['tab' => 'boards', 'q' => $q, 'sort' => $sort === self::DEFAULT_BOARD_SORT ? null : $sort, 'empty' => $showEmpty ? 1 : null] + $extra);
     }
 
     private function visitorStats(): array
@@ -447,6 +452,7 @@ class OperatorController extends Controller
         $board->forceFill([
             'operator_note' => $note !== '' ? $note : null,
             'operator_note_at' => $note !== '' ? now() : null,
+            'operator_note_seen_at' => null,
         ])->save();
 
         return redirect($back)

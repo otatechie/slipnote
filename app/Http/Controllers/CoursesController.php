@@ -59,6 +59,9 @@ class CoursesController extends Controller
         if ($isOwner && ($recent = RecentWorkspaces::touch($request, $workspace))) {
             Cookie::queue($recent);
         }
+        if ($isOwner && filled($workspace->operator_note) && ! $workspace->operator_note_seen_at) {
+            $workspace->forceFill(['operator_note_seen_at' => now()])->saveQuietly();
+        }
 
         return Inertia::render('CoursesPage', [
             'workspace' => ['name' => $workspace->name, 'slug' => $workspace->slug],

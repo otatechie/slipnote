@@ -123,14 +123,25 @@ class SuggestionTest extends TestCase
             ->post(route('operator.boards.note', $ws->id), ['note' => 'Could we ask you two questions?'])
             ->assertRedirect(route('operator.dashboard', ['tab' => 'boards']));
 
-        // The owner sees it ...
+        // A classmate opening the board doesn't count as the owner seeing it.
+        $this->get('/'.$ws->slug)->assertInertia(fn ($page) => $page->where('operatorNote', null));
+        $this->assertNull($ws->fresh()->operator_note_seen_at);
+        $operator = fn () => $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1]));
+        $operator()->assertSee('Note left')->assertDontSee('Note seen');
+
+        // The owner sees it, and the operator sees that they did.
         $this->withSession([$ws->ownerSessionKey() => $ws->ownerSessionValue()])
             ->get('/'.$ws->slug)
             ->assertInertia(fn ($page) => $page->where('operatorNote.text', 'Could we ask you two questions?'));
+        $this->assertNotNull($ws->fresh()->operator_note_seen_at);
+        $operator()->assertSee('Note seen')->assertDontSee('Note left');
 
-        // ... a classmate does not.
-        $this->flushSession();
-        $this->get('/'.$ws->slug)->assertInertia(fn ($page) => $page->where('operatorNote', null));
+        // A new note starts over.
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->post(route('operator.boards.note', $ws->id), ['note' => 'One more thing.']);
+        $this->assertNull($ws->fresh()->operator_note_seen_at);
+        $operator()->assertSee('Note left');
     }
 
     public function test_an_empty_note_removes_it_and_only_the_operator_can_set_one(): void

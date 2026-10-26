@@ -332,7 +332,7 @@
     @if ($tab === 'boards')
     <form method="GET" action="{{ route('operator.dashboard') }}" class="mb-3 flex gap-2">
         <input type="hidden" name="tab" value="boards">
-        @if ($boardSort !== 'newest')
+        @if ($boardSort !== $defaultSort)
             <input type="hidden" name="sort" value="{{ $boardSort }}">
         @endif
         @if ($showEmpty)
@@ -345,12 +345,12 @@
     </form>
 
     @php
-        $shortSort = ['newest' => 'Newest', 'visited' => 'Visited', 'opened' => 'Opened', 'largest' => 'Largest'];
+        $shortSort = ['visited' => 'Visited', 'newest' => 'Newest', 'opened' => 'Opened', 'largest' => 'Largest'];
     @endphp
     <nav aria-label="Sort boards" class="mb-4 flex items-center gap-0.5 overflow-x-auto text-[13px] sm:gap-1.5">
         <span class="mr-1 shrink-0 text-muted">Sort</span>
         @foreach ($boardSorts as $key => $label)
-            <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'sort' => $key === 'newest' ? null : $key, 'empty' => $showEmpty ? 1 : null])) }}"
+            <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'sort' => $key === $defaultSort ? null : $key, 'empty' => $showEmpty ? 1 : null])) }}"
                @if ($boardSort === $key) aria-current="true" @endif
                aria-label="{{ $label }}"
                class="op-press inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full px-3 font-semibold sm:min-h-8 sm:px-3.5 {{ $boardSort === $key ? 'bg-sky/70 text-ink' : 'text-muted hover:text-ink' }}"><span class="sm:hidden">{{ $shortSort[$key] }}</span><span class="hidden sm:inline">{{ $label }}</span></a>
@@ -364,8 +364,10 @@
                 $size = $bytes >= 1_048_576
                     ? number_format($bytes / 1_048_576, 1).' MB'
                     : number_format($bytes / 1024).' KB';
+                // Files but nobody besides the owner in 30 days: made and never shared.
+                $unvisited = $ws->materials_count > 0 && (int) $ws->recent_arrivals === 0;
             @endphp
-            <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 ? 'op-faded' : '' }}">
+            <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 || $unvisited ? 'op-faded' : '' }}">
                 <div class="min-w-0 sm:flex-1">
                     <p class="truncate pr-10 text-[14px] font-semibold tracking-tight text-ink sm:pr-0">
                         <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-y-0 after:left-0 after:right-14 hover:underline">{{ $ws->name }}</a>
@@ -378,7 +380,9 @@
                             {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
                         @endif
                         @if ($ws->recent_arrivals > 0)
-                            · {{ number_format($ws->recent_arrivals) }} {{ Str::plural('visit', $ws->recent_arrivals) }} in 30 days
+                            · <span class="font-semibold text-ink">{{ number_format($ws->recent_arrivals) }} {{ Str::plural('visit', $ws->recent_arrivals) }}</span> in 30 days
+                        @elseif ($unvisited)
+                            · <span class="font-semibold" title="Opened only by its owner, if at all">no visitors in 30 days</span>
                         @endif
                         @if ($ws->materials_count === 0)
                             @php $daysLeft = max(0, (int) ceil(now()->diffInDays($ws->removalDueAt(), false))); @endphp
@@ -405,7 +409,7 @@
                         @if ($ws->materials_count > 0 || $ws->last_accessed_at)
                             <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
                         @endif
-                        <p class="text-[12px] font-semibold text-neon">Note left</p>
+                        <p class="text-[12px] font-semibold text-neon" @if ($ws->operator_note_seen_at) title="Owner opened the board {{ $ws->operator_note_seen_at->diffForHumans() }}" @endif>{{ $ws->operator_note_seen_at ? 'Note seen' : 'Note left' }}</p>
                     @endif
                 </div>
                 <details class="op-menu absolute right-1.5 top-1.5 z-10 sm:relative sm:right-auto sm:top-auto sm:shrink-0">
@@ -510,7 +514,7 @@
                     <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>
                 @endif
                 @if ($boardQuery === '' && $stats['empty_boards'] > 0)
-                    <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $boardSort === 'newest' ? null : $boardSort, 'empty' => $showEmpty ? null : 1])) }}"
+                    <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'sort' => $boardSort === $defaultSort ? null : $boardSort, 'empty' => $showEmpty ? null : 1])) }}"
                        class="-my-3 inline-flex min-h-11 items-center font-semibold text-ink underline decoration-muted/50 underline-offset-2 hover:decoration-ink sm:my-0 sm:min-h-0">{{ $showEmpty ? 'Hide empty boards' : 'Show '.$stats['empty_boards'].' empty '.Str::plural('board', $stats['empty_boards']) }}</a>
                 @endif
             </p>
@@ -684,7 +688,7 @@
             <p class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Active</p>
             <p class="mt-0.5 text-[1.35rem] font-bold leading-tight tabular-nums tracking-tight text-ink sm:mt-1 sm:text-[1.65rem]">{{ $stats['tracking_started'] ? number_format($stats['active_week']) : '—' }}</p>
             <p class="mt-0.5 text-[12px] text-muted">
-                {!! $stats['tracking_started'] ? 'opened or downloaded, 7&nbsp;days' : 'no visits recorded yet' !!}
+                {!! $stats['tracking_started'] ? 'opened by classmates, 7&nbsp;days' : 'no classmate visits recorded yet' !!}
             </p>
         </div>
         <div class="op-metric">
