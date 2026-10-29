@@ -40,7 +40,9 @@ FROM serversideup/php:8.4.27-fpm-nginx AS runtime
 #   TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16  (Traefik's Docker network; never "*")
 #   CLIENT_IP_HEADER=CF-Connecting-IP   (behind Cloudflare: the visitor's own address)
 # Mount persistent volumes:
-#   /var/www/html/database               -> SQLite file (NEVER let this disappear)
+#   /var/www/html/database               -> SQLite file (NEVER let this disappear),
+#                                           plus database/backups: a copy taken
+#                                           before each deploy's migrations
 #   /var/www/html/storage/app            -> user uploads (they live in
 #                                           storage/app/private; mounting only
 #                                           storage/app/public loses every
@@ -51,14 +53,20 @@ ENV PHP_OPCACHE_ENABLE=1 \
     SSL_MODE=off \
     AUTORUN_ENABLED=true \
     AUTORUN_LARAVEL_STORAGE_LINK=true \
-    AUTORUN_LARAVEL_MIGRATION=true \
+    # Migrations run from docker/entrypoint.d instead, after a database copy.
+    AUTORUN_LARAVEL_MIGRATION=false \
     # Disable build-time route/config/view caching: caches get baked before
     # the runtime .env is in place, so requests 404 with stale routes. With
     # opcache enabled the perf cost is negligible for an app this size.
     AUTORUN_LARAVEL_CONFIG_CACHE=false \
     AUTORUN_LARAVEL_ROUTE_CACHE=false \
     AUTORUN_LARAVEL_VIEW_CACHE=false \
-    AUTORUN_LARAVEL_EVENT_CACHE=false
+    AUTORUN_LARAVEL_EVENT_CACHE=false \
+    # One log file a day, two weeks kept, warnings and up: a single debug log
+    # grows until the free-space check refuses every upload.
+    LOG_STACK=daily \
+    LOG_DAILY_DAYS=14 \
+    LOG_LEVEL=warning
 
 USER root
 RUN install-php-extensions gd exif intl pdo_sqlite bcmath \
@@ -78,6 +86,7 @@ WORKDIR /var/www/html
 COPY --chown=www-data:www-data . .
 COPY --from=vendor --chown=www-data:www-data /app/vendor ./vendor
 COPY --from=assets --chown=www-data:www-data /app/public/build ./public/build
+COPY --chmod=755 docker/entrypoint.d/ /etc/entrypoint.d/
 
 # storage:link is best-effort; safe to fail if already linked on a redeploy
 RUN php artisan storage:link || true
