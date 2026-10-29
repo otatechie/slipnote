@@ -3,6 +3,7 @@ import { computed, ref, watch, nextTick } from 'vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import FlashNotice from '@/components/FlashNotice.vue'
+import { shrinkImage } from '@/components/shrinkImage.js'
 
 const props = defineProps({
     workspace: Object,
@@ -91,6 +92,25 @@ const materialsBySection = computed(() => {
     return map
 })
 
+// A long section shows its first rows and a "Show all"; search and select show everything.
+const COLLAPSE_OVER = 20
+const COLLAPSED_ROWS = 15
+const expanded = ref(new Set())
+
+function visibleMaterials(key) {
+    const all = materialsBySection.value[key]
+    if (all.length <= COLLAPSE_OVER || expanded.value.has(key) || isFiltered.value || selecting.value) {
+        return all
+    }
+    return all.slice(0, COLLAPSED_ROWS)
+}
+
+function showAll(key) {
+    const next = materialsBySection.value[key][COLLAPSED_ROWS]
+    expanded.value.add(key)
+    nextTick(() => document.querySelector(`[data-material="${next?.id}"] a`)?.focus())
+}
+
 // "Download all" — zips a whole section (the exam-time need). Plain GET link.
 function sectionZipUrl(key) {
     return '/' + props.workspace.slug + '/c/' + props.course.slug + '/download/' + key
@@ -118,6 +138,12 @@ const storageTone = computed(() => {
     if (props.storagePct >= 75) return 'text-neon'
     return 'text-muted'
 })
+
+// Files are keyed by what was picked, since a shrunk photo has a new name and size.
+const pickedKeys = new Set()
+const keyOfFile = new WeakMap()
+const preparing = ref(0)
+const savedBytes = ref(0)
 
 const hasOversizedFile = computed(() =>
     uploadForm.files.some(f => f.size > MAX_FILE_BYTES))
@@ -149,21 +175,32 @@ window.addEventListener('hashchange', () => {
     if (props.canUpload && window.location.hash === '#add-file') uploadOpen.value = true
 })
 
-function onFileChange(e) {
+async function onFileChange(e) {
     const picked = Array.from(e.target.files)
-    const seen = new Set(uploadForm.files.map(f => f.name + ':' + f.size))
-    for (const f of picked) {
-        const key = f.name + ':' + f.size
-        if (!seen.has(key)) {
-            uploadForm.files.push(f)
-            seen.add(key)
-        }
-    }
     e.target.value = ''
+
+    const fresh = picked.filter((f) => !pickedKeys.has(f.name + ':' + f.size))
+    fresh.forEach((f) => pickedKeys.add(f.name + ':' + f.size))
+    preparing.value += fresh.length
+
+    for (const f of fresh) {
+        const ready = await shrinkImage(f)
+        keyOfFile.set(ready, f.name + ':' + f.size)
+        savedBytes.value += f.size - ready.size
+        uploadForm.files.push(ready)
+        preparing.value--
+    }
 }
 
 function removeFile(index) {
+    const gone = uploadForm.files[index]
+    pickedKeys.delete(keyOfFile.get(gone))
     uploadForm.files = uploadForm.files.filter((_, i) => i !== index)
+}
+
+function forgetPicked() {
+    pickedKeys.clear()
+    savedBytes.value = 0
 }
 
 function upload() {
@@ -172,6 +209,7 @@ function upload() {
         preserveScroll: true,
         onSuccess: () => {
             uploadForm.reset()
+            forgetPicked()
             uploadOpen.value = false
             nextTick(() => {
                 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -580,7 +618,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 Download all ({{ sectionCounts[key] }})
                             </a>
                         </div>
-                        <div v-for="material in materialsBySection[key]" :key="material.id"
+                        <div v-for="material in visibleMaterials(key)" :key="material.id" :data-material="material.id"
                              class="op-row flex items-center justify-between gap-2 last:rounded-b-[var(--op-radius)] sm:gap-3"
                              :class="isSelected(material.id) ? 'bg-teal/5' : ''">
                             <div class="flex min-w-0 items-start gap-2.5 sm:gap-3">
@@ -687,6 +725,10 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </a>
                             </div>
                         </div>
+                        <button v-if="visibleMaterials(key).length < materialsBySection[key].length" type="button" @click="showAll(key)"
+                                class="op-press mx-2 mb-2 flex min-h-11 w-[calc(100%-16px)] cursor-pointer items-center justify-center rounded-[calc(var(--op-radius)-8px)] text-[13px] font-semibold text-neon transition hover:bg-sky/30">
+                            Show all {{ materialsBySection[key].length }}
+                        </button>
                     </section>
                 </template>
             </template>
@@ -747,9 +789,15 @@ watch(() => props.materials, () => { selected.value = [] })
                                     </span>
                                     <span class="text-xs text-muted">PDF, Word, PowerPoint, image · max {{ maxFileMb }}&nbsp;MB</span>
                                 </label>
+                                <p v-if="preparing > 0" aria-live="polite" class="mt-2 text-[12px] text-muted">
+                                    Preparing {{ preparing === 1 ? '1 file' : preparing + ' files' }}…
+                                </p>
                                 <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg bg-base px-3 py-2.5">
                                     <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                                         {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected
+                                    </p>
+                                    <p v-if="savedBytes >= 1048576" class="mb-1.5 text-[12px] text-muted">
+                                        Photos made smaller: {{ fileSize(savedBytes) }} less to upload.
                                     </p>
                                     <ul class="space-y-0.5">
                                         <li v-for="(f, i) in uploadForm.files" :key="i"
@@ -796,7 +844,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </div>
                             </div>
 
-                            <button type="submit" :disabled="uploadForm.processing || uploadForm.files.length === 0 || hasOversizedFile"
+                            <button type="submit" :disabled="uploadForm.processing || preparing > 0 || uploadForm.files.length === 0 || hasOversizedFile"
                                     class="op-press relative min-h-11 cursor-pointer overflow-hidden rounded-full bg-neon py-3 text-[15px] font-semibold text-white transition
                                            disabled:cursor-not-allowed disabled:bg-sky disabled:text-muted">
                                 <span v-if="uploadForm.progress"
@@ -810,7 +858,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </span>
                                 <span class="relative" v-else>Saving…</span>
                             </button>
-                            <p v-if="uploadForm.files.length === 0" class="-mt-1 text-center text-[12px] text-muted">
+                            <p v-if="uploadForm.files.length === 0 && preparing === 0" class="-mt-1 text-center text-[12px] text-muted">
                                 Choose at least one file to upload.
                             </p>
                             <p v-else-if="hasOversizedFile" class="-mt-1 text-center text-[12px] text-danger">

@@ -20,7 +20,10 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   one or several files at once. PDF / Word / PowerPoint / image, up to 25 MB
   each. Files that would exceed the workspace cap are skipped while the rest
   save. Identical files already on the board (matched by content hash) are
-  skipped as duplicates.
+  skipped as duplicates. Phone photos (JPEG) are scaled to about 4 megapixels
+  and re-saved in the browser before upload: a 3–6 MB photo becomes well under
+  1 MB, and its EXIF, GPS location included, is dropped. Screenshots (PNG) and
+  documents go up untouched.
 - **Uploader delete** — a single-file upload gets a secret token; the success
   banner shows a one-time "Undo upload" link, good only for that page view.
   Holding the token is the only credential. A batch upload gets one Undo that
