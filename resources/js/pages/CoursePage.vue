@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import FlashNotice from '@/components/FlashNotice.vue'
@@ -92,23 +92,41 @@ const materialsBySection = computed(() => {
     return map
 })
 
-// A long section shows its first rows and a "Show all"; search and select show everything.
-const COLLAPSE_OVER = 20
-const COLLAPSED_ROWS = 15
+// A long section shows its first rows and a "Show all"; search and select show
+// everything. Phones fold sooner, so every section is within a screen or two.
+const phoneQuery = window.matchMedia('(max-width: 639.98px)')
+const isPhone = ref(phoneQuery.matches)
+const onPhoneChange = (e) => { isPhone.value = e.matches }
+phoneQuery.addEventListener('change', onPhoneChange)
+onBeforeUnmount(() => phoneQuery.removeEventListener('change', onPhoneChange))
+
+const fold = computed(() => isPhone.value ? { rows: 5, over: 7 } : { rows: 15, over: 20 })
 const expanded = ref(new Set())
 
 function visibleMaterials(key) {
     const all = materialsBySection.value[key]
-    if (all.length <= COLLAPSE_OVER || expanded.value.has(key) || isFiltered.value || selecting.value) {
+    if (all.length <= fold.value.over || expanded.value.has(key) || isFiltered.value || selecting.value) {
         return all
     }
-    return all.slice(0, COLLAPSED_ROWS)
+    return all.slice(0, fold.value.rows)
 }
 
 function showAll(key) {
-    const next = materialsBySection.value[key][COLLAPSED_ROWS]
+    const next = materialsBySection.value[key][fold.value.rows]
     expanded.value.add(key)
     nextTick(() => document.querySelector(`[data-material="${next?.id}"] a`)?.focus())
+}
+
+// Jump buttons: reach Past papers without scrolling past every note.
+const filledSections = computed(() =>
+    Object.keys(props.sections).filter((key) => materialsBySection.value[key]?.length > 0))
+
+function jumpTo(key) {
+    const el = document.getElementById('sec-' + key)
+    if (!el) return
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' })
+    el.focus({ preventScroll: true })
 }
 
 // "Download all" — zips a whole section (the exam-time need). Plain GET link.
@@ -695,6 +713,13 @@ watch(() => props.materials, () => { selected.value = [] })
                         </svg>
                     </div>
                 </div>
+                <nav v-if="filledSections.length > 1" aria-label="Jump to a section" class="mt-2 flex flex-wrap gap-1.5">
+                    <button v-for="key in filledSections" :key="key" type="button" @click="jumpTo(key)"
+                            class="op-pill op-press inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-full border border-sky bg-surface px-3.5 text-[13px] font-semibold text-ink transition hover:bg-sky/40 sm:min-h-9">
+                        {{ sections[key] }}
+                        <span class="font-normal tabular-nums text-muted">{{ materialsBySection[key].length }}</span>
+                    </button>
+                </nav>
             </div>
 
             <p v-if="isFiltered && materials.length === 0"
@@ -746,7 +771,7 @@ watch(() => props.materials, () => { selected.value = [] })
 
             <template v-for="(label, key) in sections" :key="key">
                 <template v-if="materialsBySection[key]?.length > 0">
-                    <section :id="'sec-' + key" class="op-card mb-4 scroll-mt-20">
+                    <section :id="'sec-' + key" tabindex="-1" class="op-card mb-4 scroll-mt-4 outline-none sm:scroll-mt-36">
                         <div v-if="!singleSection || sectionCounts[key] > 1"
                              class="flex items-center gap-3 px-4 pb-1 pt-3 sm:px-5"
                              :class="singleSection ? 'justify-end' : 'justify-between'">

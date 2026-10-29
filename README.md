@@ -53,6 +53,9 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
 - **Live search + sort** — multi-word, separator-tolerant search over title and
   filename (so "past paper" finds `past_papers_2023.pdf`); sort Newest / Oldest
   / A–Z.
+- **Long courses stay short** — jump buttons (Notes 59 · Slides 8 · Past
+  papers 24) under the search box, and long sections fold to their newest rows
+  with a "Show all" (5 on phones, 15 on desktop).
 - **Storage meter** — owners see how much of the workspace cap is used before
   uploads start bouncing.
 - Dark mode, mobile-optimised, and accessible (WCAG AA contrast, `aria` on
