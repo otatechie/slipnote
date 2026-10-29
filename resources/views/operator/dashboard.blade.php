@@ -31,6 +31,17 @@
         <div class="op-toast mb-5 text-sm font-medium text-danger" role="alert">{{ $message }}</div>
     @enderror
 
+    @if ($setupWarnings)
+        <div class="op-card mb-5 px-5 py-4">
+            <h2 class="text-[15px] font-bold tracking-tight text-danger">Fix in .env</h2>
+            <ul class="mt-2 list-disc space-y-1.5 pl-5 text-[13px] leading-relaxed text-ink/80">
+                @foreach ($setupWarnings as $warning)
+                    <li>{{ $warning }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="op-seg mb-5" role="tablist">
         <a href="{{ route('operator.dashboard') }}"
            @if ($tab === 'reported') aria-current="page" @endif

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\ClientIpFromHeader;
 use App\Models\Ambassador;
 use App\Models\BlockedUpload;
 use App\Models\Material;
@@ -154,7 +155,39 @@ class OperatorController extends Controller
             'visitors' => $this->tab($request) === 'visitors' ? $this->visitorStats() : null,
             'suggestions' => $this->tab($request) === 'suggestions' ? Suggestion::latest()->limit(100)->get() : collect(),
             'suggestionsWeek' => Suggestion::where('created_at', '>=', now()->subDays(7))->count(),
+            'setupWarnings' => $this->setupWarnings($request),
         ]);
+    }
+
+    /** Deployment settings that quietly hurt boards: each a fix in .env. */
+    private function setupWarnings(Request $request): array
+    {
+        $warnings = [];
+
+        if (in_array(config('mail.default'), ['log', 'array', null], true)) {
+            $warnings[] = 'Mail is off (MAIL_MAILER=log). Owners who lose their link can\'t recover it, and empty boards are removed without a warning email.';
+        }
+
+        if (blank(config('noteshare.telegram_bot_token')) || blank(config('noteshare.telegram_chat_id'))) {
+            $warnings[] = 'Telegram isn\'t set up, so reports only reach the log. Check the Reported tab yourself to keep the '.config('noteshare.takedown_turnaround').' takedown promise.';
+        }
+
+        $proxied = $request->headers->has('X-Forwarded-For') || $request->headers->has('CF-Connecting-IP');
+        if ($proxied && ! ClientIpFromHeader::viaTrustedProxy($request)) {
+            $warnings[] = 'This request came through a proxy that TRUSTED_PROXIES doesn\'t list. Every visitor shares the proxy\'s address, so one busy class trips the upload and report limits for everyone.';
+        } elseif ($request->headers->has('CF-Connecting-IP') && blank(config('noteshare.client_ip_header'))) {
+            $warnings[] = 'You\'re behind Cloudflare but CLIENT_IP_HEADER is empty, so rate limits see Cloudflare\'s address. Set CLIENT_IP_HEADER=CF-Connecting-IP.';
+        }
+
+        if (app()->isProduction() && config('app.debug')) {
+            $warnings[] = 'APP_DEBUG is on in production: an error page shows visitors your code and settings.';
+        }
+
+        if ($request->isSecure() && ! config('session.secure')) {
+            $warnings[] = 'SESSION_SECURE_COOKIE is off on HTTPS: the session cookie (owner mode included) can be sent over plain http.';
+        }
+
+        return $warnings;
     }
 
     /** Who is behind each board on the page: where its visitors are, and what they've written in. */

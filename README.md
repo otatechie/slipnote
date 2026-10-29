@@ -135,6 +135,18 @@ driver is `log` or `array`.
   injection); and per-workspace byte and file-count caps bound abuse. Files are
   **not** virus-scanned — treat downloads as untrusted (see the Terms page).
 
+**Keep `APP_KEY` safe and never just replace it.** Recovery emails are
+encrypted with it: a new key without the old one makes every saved recovery
+email unreadable (and signs everyone out). To rotate, put the old key in
+`APP_PREVIOUS_KEYS` (comma-separated) alongside the new `APP_KEY`.
+
+**Back up two things together:** the SQLite file (`database/`) and the uploads
+(`storage/app/private`). Neither is useful without the other, and nothing in
+the app backs them up for you.
+
+The operator dashboard flags the commonest misconfigurations (mail off,
+Telegram off, an untrusted proxy, debug on in production) under "Fix in .env".
+
 For production: set `APP_DEBUG=false`, `SESSION_ENCRYPT=true`,
 `SESSION_SECURE_COOKIE=true`, `TRUSTED_PROXIES`, and serve over HTTPS. The
 owner link is redeemed by a `?owner=` GET that immediately redirects to the

@@ -395,4 +395,30 @@ class OperatorTest extends TestCase
             'content_hash' => hash('sha256', Storage::disk('local')->get($path)),
         ]);
     }
+
+    public function test_the_dashboard_flags_settings_that_hurt_boards(): void
+    {
+        config(['mail.default' => 'log', 'noteshare.telegram_bot_token' => null]);
+        $this->post(route('operator.login'), ['secret' => 'op-secret']);
+
+        $this->withHeader('X-Forwarded-For', '203.0.113.9')
+            ->get(route('operator.dashboard'))
+            ->assertOk()
+            ->assertSee('Fix in .env')
+            ->assertSee('MAIL_MAILER=log')
+            ->assertSee('reports only reach the log')
+            ->assertSee('TRUSTED_PROXIES doesn&#039;t list', false);
+    }
+
+    public function test_a_well_set_up_deployment_shows_no_setup_warnings(): void
+    {
+        config([
+            'mail.default' => 'smtp',
+            'noteshare.telegram_bot_token' => 'bot',
+            'noteshare.telegram_chat_id' => '1',
+        ]);
+        $this->post(route('operator.login'), ['secret' => 'op-secret']);
+
+        $this->get(route('operator.dashboard'))->assertOk()->assertDontSee('Fix in .env');
+    }
 }
