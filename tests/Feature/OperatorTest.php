@@ -6,9 +6,11 @@ use App\Models\Course;
 use App\Models\Material;
 use App\Models\Suggestion;
 use App\Models\Workspace;
+use App\Services\TelegramNotifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
@@ -420,5 +422,22 @@ class OperatorTest extends TestCase
         $this->post(route('operator.login'), ['secret' => 'op-secret']);
 
         $this->get(route('operator.dashboard'))->assertOk()->assertDontSee('Fix in .env');
+    }
+
+    public function test_the_dashboard_says_when_the_last_telegram_alert_failed(): void
+    {
+        config([
+            'mail.default' => 'smtp',
+            'noteshare.telegram_bot_token' => 'bot',
+            'noteshare.telegram_chat_id' => '1',
+        ]);
+        Http::fake(['api.telegram.org/*' => Http::sequence()->push('Unauthorized', 401)->push(['ok' => true])]);
+        app(TelegramNotifier::class)->notifyReport($this->material, 'spam');
+
+        $this->post(route('operator.login'), ['secret' => 'op-secret']);
+        $this->get(route('operator.dashboard'))->assertSee('The last Telegram alert failed');
+
+        app(TelegramNotifier::class)->notifyReport($this->material, 'spam');
+        $this->get(route('operator.dashboard'))->assertDontSee('Fix in .env');
     }
 }

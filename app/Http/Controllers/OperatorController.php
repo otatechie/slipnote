@@ -9,9 +9,12 @@ use App\Models\Material;
 use App\Models\Report;
 use App\Models\Suggestion;
 use App\Models\Workspace;
+use App\Services\TelegramNotifier;
 use App\Support\ClientKey;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
@@ -170,6 +173,8 @@ class OperatorController extends Controller
 
         if (blank(config('noteshare.telegram_bot_token')) || blank(config('noteshare.telegram_chat_id'))) {
             $warnings[] = 'Telegram isn\'t set up, so reports only reach the log. Check the Reported tab yourself to keep the '.config('noteshare.takedown_turnaround').' takedown promise.';
+        } elseif ($failedAt = Cache::get(TelegramNotifier::FAILED_KEY)) {
+            $warnings[] = 'The last Telegram alert failed to send ('.Carbon::parse($failedAt)->diffForHumans().'). Check TELEGRAM_BOT_TOKEN and that the bot is still in the chat; reports may not be reaching you.';
         }
 
         $proxied = $request->headers->has('X-Forwarded-For') || $request->headers->has('CF-Connecting-IP');

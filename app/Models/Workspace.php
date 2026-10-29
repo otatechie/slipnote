@@ -229,7 +229,8 @@ class Workspace extends Model
      */
     private function noteVisitor(): void
     {
-        if ($this->sessionIsOwner()) {
+        // The operator checking boards is not the class using them.
+        if ($this->sessionIsOwner() || session()->has('operator_fp')) {
             return;
         }
 

@@ -106,6 +106,14 @@ class BoardActivityTest extends TestCase
         $this->assertSame(0, $this->visitorDays());
     }
 
+    public function test_the_operators_visits_are_not_classmate_visits(): void
+    {
+        $this->withSession(['operator_fp' => 'any'])->get('/'.$this->workspace->slug)->assertOk();
+
+        $this->assertSame(0, $this->visitorDays());
+        $this->assertSame(0, \DB::table('visit_tallies')->count());
+    }
+
     public function test_a_classmate_download_is_a_visit(): void
     {
         $this->unlockOwnerSession();

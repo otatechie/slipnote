@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Material;
 use App\Models\Suggestion;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -29,6 +30,7 @@ class TelegramNotifier
                     'disable_web_page_preview' => true,
                 ]);
 
+            $this->noteResult($response->successful());
             if ($response->failed()) {
                 Log::warning('Telegram upload notification failed', [
                     'status' => $response->status(),
@@ -37,6 +39,7 @@ class TelegramNotifier
             }
         } catch (\Throwable $e) {
             // Network error, DNS, timeout — never propagate to the uploader.
+            $this->noteResult(false);
             Log::warning('Telegram upload notification threw', [
                 'message' => $this->safeMessage($e),
             ]);
@@ -68,6 +71,7 @@ class TelegramNotifier
                     'disable_web_page_preview' => true,
                 ]);
 
+            $this->noteResult($response->successful());
             if ($response->failed()) {
                 Log::warning('Telegram abuse report failed', [
                     'status' => $response->status(),
@@ -76,6 +80,7 @@ class TelegramNotifier
                 ]);
             }
         } catch (\Throwable $e) {
+            $this->noteResult(false);
             Log::warning('Telegram abuse report threw', [
                 'message' => $this->safeMessage($e),
                 'material_id' => $material->id,
@@ -93,11 +98,13 @@ class TelegramNotifier
         }
 
         try {
-            Http::asJson()->timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+            $response = Http::asJson()->timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
                 'chat_id' => $chatId,
                 'text' => "🧹 {$count} empty ".($count === 1 ? 'board' : 'boards').' removed: no files and not opened for 30 days.',
             ]);
+            $this->noteResult($response->successful());
         } catch (\Throwable $e) {
+            $this->noteResult(false);
             Log::warning('Telegram cleanup notification threw', ['message' => $this->safeMessage($e)]);
         }
     }
@@ -129,10 +136,12 @@ class TelegramNotifier
                     'disable_web_page_preview' => true,
                 ]);
 
+            $this->noteResult($response->successful());
             if ($response->failed()) {
                 Log::warning('Telegram suggestion notification failed', ['status' => $response->status()]);
             }
         } catch (\Throwable $e) {
+            $this->noteResult(false);
             Log::warning('Telegram suggestion notification threw', ['message' => $this->safeMessage($e)]);
         }
     }
@@ -196,6 +205,14 @@ class TelegramNotifier
             .($detail !== '' ? $detail."\n" : '')
             ."<a href=\"{$url}\">Browse {$code} →</a>";
     }
+
+    /** Remembered so the operator dashboard can say alerts stopped arriving. */
+    private function noteResult(bool $ok): void
+    {
+        $ok ? Cache::forget(self::FAILED_KEY) : Cache::put(self::FAILED_KEY, now()->toIso8601String(), now()->addDays(14));
+    }
+
+    public const FAILED_KEY = 'telegram_last_failed_at';
 
     private function esc(string $value): string
     {
