@@ -79,8 +79,7 @@ class UploadTest extends TestCase
 
     public function test_a_multi_file_upload_does_not_return_a_manage_url(): void
     {
-        // manageUrl is only meaningful for a single upload — with several
-        // files there's no one link to hand back, so it must be absent.
+        // manageUrl is the single-file delete link; a batch gets undoBatch instead.
         $files = [
             UploadedFile::fake()->createWithContent('a.pdf', 'alpha'),
             UploadedFile::fake()->createWithContent('b.pdf', 'bravo'),
@@ -92,6 +91,43 @@ class UploadTest extends TestCase
         ]);
 
         $this->assertNull($response->getSession()->get('manageUrl'));
+    }
+
+    public function test_a_multi_file_upload_can_be_undone_in_one_go(): void
+    {
+        $response = $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [
+                UploadedFile::fake()->createWithContent('a.pdf', 'alpha'),
+                UploadedFile::fake()->createWithContent('b.pdf', 'bravo'),
+            ],
+        ]);
+
+        $undo = $response->getSession()->get('undoBatch');
+        $this->assertCount(2, $undo['tokens']);
+        $paths = Material::pluck('stored_path');
+
+        $this->delete($undo['url'], ['tokens' => $undo['tokens']])->assertRedirect();
+
+        $this->assertSame(0, Material::count());
+        $paths->each(fn ($p) => Storage::disk('local')->assertMissing($p));
+    }
+
+    public function test_the_batch_undo_only_removes_files_whose_token_it_holds(): void
+    {
+        $theirs = $this->course->materials()->create([
+            'section' => 'notes',
+            'original_filename' => 'theirs.pdf',
+            'stored_path' => UploadedFile::fake()->create('theirs.pdf', 10)->store('materials', 'local'),
+            'manage_token' => Str::random(40),
+            'download_token' => Str::random(40),
+        ]);
+
+        $url = route('course.undo-upload', $this->wsParams(['slug' => $this->course->slug]));
+        $this->delete($url, ['tokens' => [Str::random(40)]])->assertForbidden();
+        $this->delete($url)->assertForbidden();
+
+        $this->assertModelExists($theirs);
     }
 
     public function test_the_receipt_says_what_was_added_for_tell_the_class(): void

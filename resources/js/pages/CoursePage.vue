@@ -457,10 +457,11 @@ watch(() => props.materials, () => { selected.value = [] })
                     </span>
                     <div class="min-w-0">
                         <p class="text-[14px] font-semibold text-ink">{{ flash.uploaded }}</p>
-                        <form v-if="flash.manageUrl" ref="undoForm" :action="flash.manageUrl" method="POST"
+                        <form v-if="flash.manageUrl || flash.undoBatch" ref="undoForm" :action="flash.manageUrl ?? flash.undoBatch.url" method="POST"
                               class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
                             <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
                             <input type="hidden" name="_method" value="DELETE">
+                            <input v-for="t in flash.undoBatch?.tokens ?? []" :key="t" type="hidden" name="tokens[]" :value="t">
                             <button type="button" @click="confirmingUndo = true"
                                     class="-my-3 inline-flex min-h-11 cursor-pointer items-center font-semibold text-ink underline decoration-muted/50 underline-offset-2 hover:decoration-ink sm:my-0 sm:min-h-0">Undo upload</button>
                             <span>· only until you leave</span>
@@ -925,7 +926,7 @@ watch(() => props.materials, () => { selected.value = [] })
                 <div class="relative w-full max-w-md rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
                     <h2 class="text-[15px] font-bold text-ink">Undo this upload?</h2>
-                    <p class="mt-1 text-[13px] text-muted">The file will be removed from the board. This can't be undone.</p>
+                    <p class="mt-1 text-[13px] text-muted">{{ flash.undoBatch ? `All ${flash.undoBatch.tokens.length} files` : 'The file' }} will be removed from the board. This can't be undone.</p>
 
                     <div class="mt-4 flex items-center justify-end gap-2">
                         <button type="button" @click="confirmingUndo = false"

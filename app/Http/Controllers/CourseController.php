@@ -193,6 +193,32 @@ class CourseController extends Controller
         return back()->with('notice', $count === 1 ? '1 file removed.' : "{$count} files removed.");
     }
 
+    /** The uploader's Undo for a batch: only files whose manage_token they were handed. */
+    public function undoUpload(Request $request, string $workspaceSlug, string $slug)
+    {
+        $this->workspace();
+        $course = Course::where('slug', $slug)->firstOrFail();
+
+        $tokens = array_values(array_filter(
+            (array) $request->input('tokens', []),
+            fn ($t) => is_string($t) && strlen($t) === 40,
+        ));
+        $materials = $tokens === []
+            ? collect()
+            : $course->materials()->whereIn('manage_token', array_slice($tokens, 0, 20))->get();
+
+        abort_if($materials->isEmpty(), 403);
+
+        foreach ($materials as $material) {
+            Storage::disk('local')->delete($material->stored_path);
+            $material->delete();
+        }
+
+        $count = $materials->count();
+
+        return back()->with('notice', $count === 1 ? 'File removed.' : "{$count} files removed.");
+    }
+
     public function pin(Request $request, string $workspaceSlug, string $slug, int $material)
     {
         $this->workspace();
@@ -440,6 +466,11 @@ class CourseController extends Controller
         return back()->with([
             'uploaded' => $message,
             'manageUrl' => $count === 1 ? $created[0]->manageUrl() : null,
+            // Several files: one Undo for the lot, by each file's own manage_token.
+            'undoBatch' => $count > 1 ? [
+                'url' => route('course.undo-upload', ['workspace' => $workspace->slug, 'slug' => $course->slug]),
+                'tokens' => array_map(fn (Material $m) => $m->manage_token, $created),
+            ] : null,
             // For "Tell the class": the message names what's new.
             'addedName' => $count === 1 ? $created[0]->displayName() : null,
             'addedCount' => $count,

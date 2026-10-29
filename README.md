@@ -23,8 +23,8 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   skipped as duplicates.
 - **Uploader delete** — a single-file upload gets a secret token; the success
   banner shows a one-time "Undo upload" link, good only for that page view.
-  Holding the token is the only credential. Batch uploads (multiple files at
-  once) don't get this link yet.
+  Holding the token is the only credential. A batch upload gets one Undo that
+  removes every file in it, by each file's own token.
 - **Owner mode** — visit `/<workspace>?owner=SECRET` to unlock a per-row
   "Delete" on every file for the session; "Lock board" leaves owner mode on
   the current device. The secret is per-workspace, stored only as a bcrypt

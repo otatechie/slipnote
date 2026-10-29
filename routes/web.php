@@ -121,6 +121,7 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/c/{slug}/upload', [CourseController::class, 'upload'])->name('course.upload');
 
     Route::delete('/{workspace}/c/{slug}/materials', [CourseController::class, 'bulkDelete'])->name('course.bulk-delete');
+    Route::delete('/{workspace}/c/{slug}/undo', [CourseController::class, 'undoUpload'])->name('course.undo-upload');
 
     Route::post('/{workspace}/c/{slug}/report/{material}', [CourseController::class, 'report'])->name('material.report');
     Route::post('/{workspace}/c/{slug}/pin/{material}', [CourseController::class, 'pin'])->name('material.pin');
