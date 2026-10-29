@@ -162,7 +162,7 @@ watch(uploadOpen, (v) => {
     if (v) {
         nextTick(() => {
             const el = document.getElementById('add-file')
-            el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
         })
     }
 })
@@ -507,6 +507,10 @@ watch(() => props.materials, () => { selected.value = [] })
                                     class="-my-3 inline-flex min-h-11 cursor-pointer items-center font-semibold text-ink underline decoration-muted/50 underline-offset-2 hover:decoration-ink sm:my-0 sm:min-h-0">Undo upload</button>
                             <span>· only until you leave</span>
                         </form>
+                        <button v-if="canUpload && !storageFull && !uploadOpen" type="button" @click="uploadOpen = true"
+                                class="-my-3 mt-0.5 inline-flex min-h-11 cursor-pointer items-center gap-1 text-[13px] font-semibold text-neon hover:underline sm:my-0 sm:mt-1 sm:min-h-0">
+                            <span class="text-base leading-none">+</span> Add more files
+                        </button>
                     </div>
                 </div>
                 <div class="-mr-8 mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -526,6 +530,142 @@ watch(() => props.materials, () => { selected.value = [] })
                     </div>
                 </div>
             </div>
+
+            <section v-if="canUpload" id="add-file" class="scroll-mt-6" :class="uploadOpen || storageFull ? 'mb-5' : ''">
+                <div v-if="storageFull" class="rounded-2xl border border-danger/30 bg-danger/5 px-6 py-5 text-center">
+                    <p class="text-[14px] font-semibold text-danger">This board is full</p>
+                    <p class="mt-1 text-[13px] text-danger">
+                        Ask the owner to delete old files before new uploads can go up.
+                    </p>
+                </div>
+
+                <template v-else>
+                    <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
+                            class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
+                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
+                        Add file
+                    </button>
+
+                    <div v-if="uploadOpen"
+                         class="op-card px-4 py-5 sm:px-6">
+                        <div class="mb-3.5 flex items-center justify-between">
+                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Add files</h2>
+                            <button type="button" @click="uploadOpen = false"
+                                    aria-label="Close"
+                                    class="op-press -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
+                                <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none"
+                                     stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                                    <path d="M5 5l10 10M15 5L5 15" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="upload" class="flex flex-col gap-3.5">
+                            <div v-if="passphraseNeeded">
+                                <label for="passphrase" class="mb-0.5 block text-[13px] font-semibold text-ink">Course passphrase</label>
+                                <p class="mb-1.5 text-[12px] text-muted">Ask your course rep if you don't have it.</p>
+                                <input id="passphrase" type="password" v-model="uploadForm.passphrase"
+                                       :aria-invalid="!!errors.passphrase"
+                                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
+                                <span v-if="errors.passphrase" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.passphrase[0] }}</span>
+                            </div>
+
+                            <div>
+                                <span class="mb-1.5 block text-[13px] font-semibold text-ink">
+                                    Files
+                                </span>
+                                <input id="ufile" type="file" multiple @change="onFileChange"
+                                       accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg"
+                                       :aria-invalid="!!errors.files" class="sr-only">
+                                <label for="ufile"
+                                       class="op-press flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-muted/50 px-4 py-4 text-center transition hover:bg-sky/30">
+                                    <span class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-neon">
+                                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round">
+                                            <path d="M10 4v12M4 10h12"/>
+                                        </svg>
+                                        {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
+                                    </span>
+                                    <span class="text-xs text-muted">PDF, Word, PowerPoint, image · max {{ maxFileMb }}&nbsp;MB</span>
+                                </label>
+                                <p v-if="preparing > 0" aria-live="polite" class="mt-2 text-[12px] text-muted">
+                                    Preparing {{ preparing === 1 ? '1 file' : preparing + ' files' }}…
+                                </p>
+                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg bg-base px-3 py-2.5">
+                                    <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                                        {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected
+                                    </p>
+                                    <p v-if="savedBytes >= 1048576" class="mb-1.5 text-[12px] text-muted">
+                                        Photos made smaller: {{ fileSize(savedBytes) }} less to upload.
+                                    </p>
+                                    <ul class="space-y-0.5">
+                                        <li v-for="(f, i) in uploadForm.files" :key="i"
+                                            class="flex items-center gap-2 text-[12px] text-ink">
+                                            <span class="min-w-0 flex-1 truncate">{{ f.name }}</span>
+                                            <span class="shrink-0 tabular-nums"
+                                                  :class="f.size > MAX_FILE_BYTES ? 'font-semibold text-danger' : 'text-muted'">
+                                                {{ fileSize(f.size) }}<template v-if="f.size > MAX_FILE_BYTES"> · too big</template>
+                                            </span>
+                                            <button type="button" @click="removeFile(i)"
+                                                    :aria-label="`Remove ${f.name}`"
+                                                    class="-my-2 -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger">
+                                                <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
+                                                    <path d="M4 4l8 8M12 4l-8 8"/>
+                                                </svg>
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <span v-if="errors.files" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.files[0] }}</span>
+                                <span v-if="perFileError" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ perFileError }}</span>
+                            </div>
+
+                            <fieldset>
+                                <legend class="mb-1.5 text-[13px] font-semibold text-ink">Section</legend>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <label v-for="(label, key) in sections" :key="key"
+                                           class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold transition sm:min-h-9"
+                                           :class="uploadForm.section === key ? 'bg-neon text-white' : 'bg-base text-muted hover:text-ink'">
+                                        <input type="radio" name="usection" :value="key" v-model="uploadForm.section" class="sr-only">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                            </fieldset>
+
+                            <div v-if="uploadForm.files.length <= 1">
+                                <div class="min-w-0">
+                                    <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">Name <span class="font-normal text-muted">(what the class will see)</span></label>
+                                    <input id="utitle" type="text" v-model="uploadForm.title"
+                                           :placeholder="uploadForm.files[0] ? uploadForm.files[0].name.replace(/\.[^.]+$/, '') : 'e.g. Week 7 quiz solutions'"
+                                           :aria-invalid="!!errors.title"
+                                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
+                                    <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" :disabled="uploadForm.processing || preparing > 0 || uploadForm.files.length === 0 || hasOversizedFile"
+                                    class="op-press relative min-h-11 cursor-pointer overflow-hidden rounded-full bg-neon py-3 text-[15px] font-semibold text-white transition
+                                           disabled:cursor-not-allowed disabled:bg-sky disabled:text-muted">
+                                <span v-if="uploadForm.progress"
+                                      class="absolute inset-y-0 left-0 bg-white/25 transition-[width] duration-150 ease-linear"
+                                      :style="{ width: uploadForm.progress.percentage + '%' }"></span>
+                                <span class="relative" v-if="!uploadForm.processing">
+                                    {{ uploadForm.files.length > 1 ? `Upload ${uploadForm.files.length} files` : 'Upload' }}
+                                </span>
+                                <span class="relative tabular-nums" v-else-if="uploadForm.progress">
+                                    Uploading… {{ uploadForm.progress.percentage }}%
+                                </span>
+                                <span class="relative" v-else>Saving…</span>
+                            </button>
+                            <p v-if="uploadForm.files.length === 0 && preparing === 0" class="-mt-1 text-center text-[12px] text-muted">
+                                Choose at least one file to upload.
+                            </p>
+                            <p v-else-if="hasOversizedFile" class="-mt-1 text-center text-[12px] text-danger">
+                                Remove any file over {{ maxFileMb }}&nbsp;MB to upload.
+                            </p>
+                        </form>
+                    </div>
+                </template>
+            </section>
 
             <div v-if="errors.pin" role="alert"
                  class="mb-5 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm font-medium text-danger">
@@ -562,7 +702,7 @@ watch(() => props.materials, () => { selected.value = [] })
                 No files match "<span class="font-semibold text-ink">{{ localSearch }}</span>".
             </p>
 
-            <div v-if="resultCount === 0 && !isFiltered"
+            <div v-if="resultCount === 0 && !isFiltered && !uploadOpen"
                  class="op-card px-6 py-14 text-center">
                 <p class="text-[16px] font-semibold tracking-tight text-ink">No files yet</p>
                 <p v-if="canUpload" class="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-muted">
@@ -735,142 +875,6 @@ watch(() => props.materials, () => { selected.value = [] })
                     </section>
                 </template>
             </template>
-
-            <section v-if="canUpload" id="add-file" class="scroll-mt-6" :class="uploadOpen || storageFull ? 'mt-7' : ''">
-                <div v-if="storageFull" class="rounded-2xl border border-danger/30 bg-danger/5 px-6 py-5 text-center">
-                    <p class="text-[14px] font-semibold text-danger">This board is full</p>
-                    <p class="mt-1 text-[13px] text-danger">
-                        Ask the owner to delete old files before new uploads can go up.
-                    </p>
-                </div>
-
-                <template v-else>
-                    <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
-                            class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
-                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
-                        Add file
-                    </button>
-
-                    <div v-if="uploadOpen"
-                         class="op-card px-4 py-5 sm:px-6">
-                        <div class="mb-3.5 flex items-center justify-between">
-                            <h2 class="text-xs font-bold uppercase tracking-[0.06em] text-muted">Add files</h2>
-                            <button type="button" @click="uploadOpen = false"
-                                    aria-label="Close"
-                                    class="op-press -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger sm:size-9">
-                                <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none"
-                                     stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
-                                    <path d="M5 5l10 10M15 5L5 15" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <form @submit.prevent="upload" class="flex flex-col gap-3.5">
-                            <div v-if="passphraseNeeded">
-                                <label for="passphrase" class="mb-0.5 block text-[13px] font-semibold text-ink">Course passphrase</label>
-                                <p class="mb-1.5 text-[12px] text-muted">Ask your course rep if you don't have it.</p>
-                                <input id="passphrase" type="password" v-model="uploadForm.passphrase"
-                                       :aria-invalid="!!errors.passphrase"
-                                       class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
-                                <span v-if="errors.passphrase" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.passphrase[0] }}</span>
-                            </div>
-
-                            <div>
-                                <span class="mb-1.5 block text-[13px] font-semibold text-ink">
-                                    Files
-                                </span>
-                                <input id="ufile" type="file" multiple @change="onFileChange"
-                                       accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg"
-                                       :aria-invalid="!!errors.files" class="sr-only">
-                                <label for="ufile"
-                                       class="op-press flex min-h-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-muted/50 px-4 py-4 text-center transition hover:bg-sky/30">
-                                    <span class="inline-flex items-center gap-1.5 text-[14px] font-semibold text-neon">
-                                        <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round">
-                                            <path d="M10 4v12M4 10h12"/>
-                                        </svg>
-                                        {{ uploadForm.files.length > 0 ? 'Add more files' : 'Choose files' }}
-                                    </span>
-                                    <span class="text-xs text-muted">PDF, Word, PowerPoint, image · max {{ maxFileMb }}&nbsp;MB</span>
-                                </label>
-                                <p v-if="preparing > 0" aria-live="polite" class="mt-2 text-[12px] text-muted">
-                                    Preparing {{ preparing === 1 ? '1 file' : preparing + ' files' }}…
-                                </p>
-                                <div v-if="uploadForm.files.length > 0" class="mt-2 rounded-lg bg-base px-3 py-2.5">
-                                    <p class="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
-                                        {{ uploadForm.files.length }} {{ uploadForm.files.length === 1 ? 'file' : 'files' }} selected
-                                    </p>
-                                    <p v-if="savedBytes >= 1048576" class="mb-1.5 text-[12px] text-muted">
-                                        Photos made smaller: {{ fileSize(savedBytes) }} less to upload.
-                                    </p>
-                                    <ul class="space-y-0.5">
-                                        <li v-for="(f, i) in uploadForm.files" :key="i"
-                                            class="flex items-center gap-2 text-[12px] text-ink">
-                                            <span class="min-w-0 flex-1 truncate">{{ f.name }}</span>
-                                            <span class="shrink-0 tabular-nums"
-                                                  :class="f.size > MAX_FILE_BYTES ? 'font-semibold text-danger' : 'text-muted'">
-                                                {{ fileSize(f.size) }}<template v-if="f.size > MAX_FILE_BYTES"> · too big</template>
-                                            </span>
-                                            <button type="button" @click="removeFile(i)"
-                                                    :aria-label="`Remove ${f.name}`"
-                                                    class="-my-2 -mr-1 flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted transition hover:bg-danger/10 hover:text-danger">
-                                                <svg class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round">
-                                                    <path d="M4 4l8 8M12 4l-8 8"/>
-                                                </svg>
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <span v-if="errors.files" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.files[0] }}</span>
-                                <span v-if="perFileError" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ perFileError }}</span>
-                            </div>
-
-                            <fieldset>
-                                <legend class="mb-1.5 text-[13px] font-semibold text-ink">Section</legend>
-                                <div class="flex flex-wrap gap-1.5">
-                                    <label v-for="(label, key) in sections" :key="key"
-                                           class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[13px] font-semibold transition sm:min-h-9"
-                                           :class="uploadForm.section === key ? 'bg-neon text-white' : 'bg-base text-muted hover:text-ink'">
-                                        <input type="radio" name="usection" :value="key" v-model="uploadForm.section" class="sr-only">
-                                        {{ label }}
-                                    </label>
-                                </div>
-                            </fieldset>
-
-                            <div v-if="uploadForm.files.length <= 1">
-                                <div class="min-w-0">
-                                    <label for="utitle" class="mb-1.5 block text-[13px] font-semibold text-ink">Name <span class="font-normal text-muted">(what the class will see)</span></label>
-                                    <input id="utitle" type="text" v-model="uploadForm.title"
-                                           :placeholder="uploadForm.files[0] ? uploadForm.files[0].name.replace(/\.[^.]+$/, '') : 'e.g. Week 7 quiz solutions'"
-                                           :aria-invalid="!!errors.title"
-                                           class="w-full rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner placeholder:text-muted">
-                                    <span v-if="errors.title" role="alert" class="mt-1.5 block text-[13px] text-danger">{{ errors.title[0] }}</span>
-                                </div>
-                            </div>
-
-                            <button type="submit" :disabled="uploadForm.processing || preparing > 0 || uploadForm.files.length === 0 || hasOversizedFile"
-                                    class="op-press relative min-h-11 cursor-pointer overflow-hidden rounded-full bg-neon py-3 text-[15px] font-semibold text-white transition
-                                           disabled:cursor-not-allowed disabled:bg-sky disabled:text-muted">
-                                <span v-if="uploadForm.progress"
-                                      class="absolute inset-y-0 left-0 bg-white/25 transition-[width] duration-150 ease-linear"
-                                      :style="{ width: uploadForm.progress.percentage + '%' }"></span>
-                                <span class="relative" v-if="!uploadForm.processing">
-                                    {{ uploadForm.files.length > 1 ? `Upload ${uploadForm.files.length} files` : 'Upload' }}
-                                </span>
-                                <span class="relative tabular-nums" v-else-if="uploadForm.progress">
-                                    Uploading… {{ uploadForm.progress.percentage }}%
-                                </span>
-                                <span class="relative" v-else>Saving…</span>
-                            </button>
-                            <p v-if="uploadForm.files.length === 0 && preparing === 0" class="-mt-1 text-center text-[12px] text-muted">
-                                Choose at least one file to upload.
-                            </p>
-                            <p v-else-if="hasOversizedFile" class="-mt-1 text-center text-[12px] text-danger">
-                                Remove any file over {{ maxFileMb }}&nbsp;MB to upload.
-                            </p>
-                        </form>
-                    </div>
-                </template>
-            </section>
 
             <div v-if="reportTarget" ref="modalRef" tabindex="-1" @keydown="trapTab"
                  class="fixed inset-0 z-50 flex items-end justify-center sm:items-center"

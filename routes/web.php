@@ -112,6 +112,7 @@ Route::middleware('workspace')->group(function () {
     Route::post('/{workspace}/unlock', [CoursesController::class, 'unlock'])->name('courses.unlock');
     Route::post('/{workspace}/lock', [CourseController::class, 'exitOwner'])->name('courses.lock');
     Route::post('/{workspace}/recovery-email', [CoursesController::class, 'saveRecoveryEmail'])->name('courses.recovery-email');
+    Route::post('/{workspace}/name', [CoursesController::class, 'rename'])->name('courses.rename');
     Route::post('/{workspace}/upload-access', [CoursesController::class, 'setUploadAccess'])->name('courses.upload-access');
     Route::post('/{workspace}/owner-link/reset', [CoursesController::class, 'resetOwnerLink'])->name('courses.owner-link.reset');
     Route::delete('/{workspace}', [CoursesController::class, 'destroy'])->name('courses.destroy');

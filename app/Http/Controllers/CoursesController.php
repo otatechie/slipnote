@@ -179,6 +179,23 @@ class CoursesController extends Controller
         return back();
     }
 
+    /** The board's display name. The slug stays, so every shared link keeps working. */
+    public function rename(Request $request)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $request->validate(['boardName' => 'required|string|max:60'], [], ['boardName' => 'board name']);
+        $name = trim(strip_tags($request->input('boardName')));
+        if (mb_strlen($name) < 2) {
+            return back()->withErrors(['boardName' => 'Use at least 2 characters.']);
+        }
+
+        $workspace->forceFill(['name' => $name])->save();
+
+        return back()->with('nameSaved', 'Board renamed. Its link stays the same.');
+    }
+
     public function saveRecoveryEmail(Request $request)
     {
         $workspace = $this->workspace();

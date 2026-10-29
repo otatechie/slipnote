@@ -25,6 +25,7 @@ class HandleInertiaRequests extends Middleware
                 'manageUrl' => $session->get('manageUrl'),
                 'undoBatch' => $session->get('undoBatch'),
                 'recoverySaved' => $session->get('recoverySaved'),
+                'nameSaved' => $session->get('nameSaved'),
                 'done' => $session->get('done'),
                 'createdName' => $session->get('createdName'),
                 'createdUrl' => $session->get('createdUrl'),

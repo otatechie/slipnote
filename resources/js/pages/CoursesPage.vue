@@ -201,7 +201,9 @@ function submitCourse() {
 
 const settingsOpen = ref(
     !!page.props.flash?.recoverySaved
-    || !!page.props.errors?.recoveryEmail,
+    || !!page.props.flash?.nameSaved
+    || !!page.props.errors?.recoveryEmail
+    || !!page.props.errors?.boardName,
 )
 const settingsLift = ref(null)
 function measureSettingsLift() {
@@ -227,6 +229,12 @@ onBeforeUnmount(() => {
     window.visualViewport?.removeEventListener('resize', measureSettingsLift)
     window.visualViewport?.removeEventListener('scroll', measureSettingsLift)
 })
+
+const renameForm = useForm({ boardName: props.workspace.name })
+watch(() => props.workspace.name, (name) => { renameForm.boardName = name; renameForm.defaults({ boardName: name }) })
+function renameBoard() {
+    renameForm.post('/' + props.workspace.slug + '/name', { preserveScroll: true })
+}
 
 const recoveryForm = useForm({ recoveryEmail: '' })
 function saveRecoveryEmail() {
@@ -753,6 +761,28 @@ function persistOrder() {
                         </div>
 
                         <section>
+                            <form @submit.prevent="renameBoard">
+                                <label for="boardName" class="text-[14px] font-semibold text-ink">Board name</label>
+                                <p class="mt-0.5 text-[12px] text-muted">The link stays the same, so links you've shared keep working.</p>
+                                <div class="mt-2 flex gap-2">
+                                    <input id="boardName" type="text" v-model="renameForm.boardName" maxlength="60" required
+                                        :aria-invalid="!!errors.boardName" :aria-describedby="errors.boardName ? 'boardNameError' : undefined"
+                                        class="min-w-0 flex-1 rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[15px] text-ink shadow-inner">
+                                    <button type="submit" :disabled="renameForm.processing || !renameForm.isDirty || renameForm.boardName.trim().length < 2"
+                                        class="op-press inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full bg-neon px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-sky disabled:text-muted">
+                                        Save
+                                    </button>
+                                </div>
+                                <span v-if="errors.boardName" id="boardNameError" role="alert" class="mt-1.5 block text-[12px] text-danger">{{ errors.boardName[0] }}</span>
+                                <p v-else-if="flash.nameSaved" role="status"
+                                   class="teal-accent mt-2 flex items-center gap-1.5 rounded-lg bg-teal/10 px-3 py-2 text-[13px] font-semibold text-teal">
+                                    <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5l4 4 8-9"/></svg>
+                                    {{ flash.nameSaved }}
+                                </p>
+                            </form>
+                        </section>
+
+                        <section class="mt-7 border-t border-sky pt-6">
                             <div class="flex items-center justify-between gap-4">
                                 <p id="uploadAccessLabel" class="text-[14px] font-semibold text-ink">Anyone with the link can add files</p>
                                 <button type="button" role="switch" :aria-checked="!uploadsOwnerOnly" aria-labelledby="uploadAccessLabel"
