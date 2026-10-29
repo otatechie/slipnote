@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +44,13 @@ class Material extends Model
         }
 
         return route('material.download', ['token' => $this->download_token]);
+    }
+
+    /** Removes the file and the row: the uploader's Undo, the owner's Delete, bulk delete. */
+    public function discard(): void
+    {
+        Storage::disk('local')->delete($this->stored_path);
+        $this->delete();
     }
 
     public function manageUrl(): ?string

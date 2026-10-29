@@ -10,21 +10,27 @@ const MIN_BYTES = 600 * 1024
 
 /** The file to upload in place of `file`: a smaller JPEG, or `file` itself when shrinking doesn't pay. */
 export async function shrinkImage(file) {
-    if (file.type !== 'image/jpeg' || file.size < MIN_BYTES || typeof createImageBitmap !== 'function') {
+    if (file.type !== 'image/jpeg' || file.size < MIN_BYTES) {
         return file
     }
 
+    const url = URL.createObjectURL(file)
     try {
-        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
-        const scale = Math.min(1, Math.sqrt(MAX_PIXELS / (bitmap.width * bitmap.height)))
+        // An <img> is drawn the way up its EXIF says in every current browser;
+        // createImageBitmap's imageOrientation option is honoured in fewer, and
+        // dropping EXIF from a sideways bitmap would leave a page nobody can read.
+        const img = new Image()
+        img.src = url
+        await img.decode()
+
+        const scale = Math.min(1, Math.sqrt(MAX_PIXELS / (img.naturalWidth * img.naturalHeight)))
         const canvas = document.createElement('canvas')
-        canvas.width = Math.round(bitmap.width * scale)
-        canvas.height = Math.round(bitmap.height * scale)
+        canvas.width = Math.round(img.naturalWidth * scale)
+        canvas.height = Math.round(img.naturalHeight * scale)
 
         const ctx = canvas.getContext('2d')
         ctx.imageSmoothingQuality = 'high'
-        ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-        bitmap.close?.()
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
         const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', QUALITY))
         if (!blob || blob.size > file.size * 0.8) {
@@ -37,5 +43,7 @@ export async function shrinkImage(file) {
         })
     } catch {
         return file
+    } finally {
+        URL.revokeObjectURL(url)
     }
 }

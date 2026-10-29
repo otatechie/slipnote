@@ -79,8 +79,7 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 
     abort_unless($byToken || $byOwner, 403);
 
-    Storage::disk('local')->delete($material->stored_path);
-    $material->delete();
+    $material->discard();
 
     return redirect()
         ->route('course.show', [
@@ -94,6 +93,7 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
 Route::get('/operator', [OperatorController::class, 'dashboard'])->name('operator.dashboard');
 Route::post('/operator/login', [OperatorController::class, 'login'])->name('operator.login');
 Route::post('/operator/logout', [OperatorController::class, 'logout'])->name('operator.logout');
+Route::post('/operator/telegram-test', [OperatorController::class, 'telegramTest'])->name('operator.telegram-test');
 Route::post('/operator/material/{material}/remove', [OperatorController::class, 'remove'])->name('operator.remove');
 Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');

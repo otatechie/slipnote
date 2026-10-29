@@ -144,10 +144,12 @@ email unreadable (and signs everyone out). To rotate, put the old key in
 `APP_PREVIOUS_KEYS` (comma-separated) alongside the new `APP_KEY`.
 
 **Back up two things together:** the SQLite file (`database/`) and the uploads
-(`storage/app/private`). Neither is useful without the other. Each deploy copies
-the database to a `backups` folder beside it before migrating (`php artisan
-db:snapshot`, newest 10 kept), but that copy sits on the same disk: it saves you from a bad
-migration, not a lost server. Copy both somewhere else as well.
+(`storage/app/private`). Neither is useful without the other. A deploy that brings
+migrations first copies the database to a `backups` folder beside it
+(`php artisan db:snapshot`, newest 10 kept) and aborts the start if the copy
+or a migration fails, so the previous container keeps serving. That copy sits
+on the same disk: it saves you from a bad migration, not a lost server. Copy
+both somewhere else as well.
 
 The operator dashboard flags the commonest misconfigurations (mail off,
 Telegram off, an untrusted proxy, debug on in production) under "Fix in .env".

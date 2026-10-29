@@ -29,7 +29,12 @@ Artisan::command('db:snapshot {--keep=10}', function () {
 
     $dir = dirname($path).'/backups';
     File::ensureDirectoryExists($dir);
-    $to = $dir.'/'.now()->format('Y-m-d_His').'.sqlite';
+    // VACUUM INTO refuses an existing file: a second copy in the same second gets a suffix.
+    $stamp = now()->format('Y-m-d_His');
+    $to = "{$dir}/{$stamp}.sqlite";
+    for ($n = 2; is_file($to); $n++) {
+        $to = "{$dir}/{$stamp}-{$n}.sqlite";
+    }
 
     // VACUUM INTO is a consistent copy even while the app is writing.
     DB::connection('sqlite')->statement('VACUUM INTO ?', [$to]);

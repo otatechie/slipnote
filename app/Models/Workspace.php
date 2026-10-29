@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\OperatorSession;
 use App\Mail\AbandonedBoardWarning;
 use App\Services\TelegramNotifier;
 use Illuminate\Database\Eloquent\Model;
@@ -230,7 +231,7 @@ class Workspace extends Model
     private function noteVisitor(): void
     {
         // The operator checking boards is not the class using them.
-        if ($this->sessionIsOwner() || session()->has('operator_fp')) {
+        if ($this->sessionIsOwner() || OperatorSession::isActive()) {
             return;
         }
 

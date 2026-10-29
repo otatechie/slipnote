@@ -206,6 +206,30 @@ class TelegramNotifier
             ."<a href=\"{$url}\">Browse {$code} →</a>";
     }
 
+    /** The operator's "send a test": true when Telegram accepted it, which also clears the failure note. */
+    public function notifyTest(): bool
+    {
+        $token = (string) config('noteshare.telegram_bot_token');
+        $chatId = (string) config('noteshare.telegram_chat_id');
+        if ($token === '' || $chatId === '') {
+            return false;
+        }
+
+        try {
+            $ok = Http::asJson()->timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                'chat_id' => $chatId,
+                'text' => '✅ SlipNote test: alerts reach this chat.',
+            ])->successful();
+        } catch (\Throwable $e) {
+            Log::warning('Telegram test threw', ['message' => $this->safeMessage($e)]);
+            $ok = false;
+        }
+
+        $this->noteResult($ok);
+
+        return $ok;
+    }
+
     /** Remembered so the operator dashboard can say alerts stopped arriving. */
     private function noteResult(bool $ok): void
     {

@@ -39,6 +39,12 @@
                     <li>{{ $warning }}</li>
                 @endforeach
             </ul>
+            @if ($telegramFailed)
+                <form method="POST" action="{{ route('operator.telegram-test') }}" class="mt-3">
+                    @csrf
+                    <button type="submit" class="op-press inline-flex h-11 cursor-pointer items-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-ink sm:h-8">Send a Telegram test message</button>
+                </form>
+            @endif
         </div>
     @endif
 

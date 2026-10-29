@@ -43,7 +43,7 @@ class VisitTally
             return false;
         }
 
-        if (self::isBot($request) || ($request->hasSession() && $request->session()->has('operator_fp'))) {
+        if (self::isBot($request) || ($request->hasSession() && OperatorSession::isActive())) {
             return false;
         }
 

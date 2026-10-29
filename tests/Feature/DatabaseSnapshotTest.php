@@ -63,4 +63,16 @@ class DatabaseSnapshotTest extends TestCase
 
         $this->assertDirectoryDoesNotExist($this->dir.'/backups');
     }
+
+    public function test_two_copies_in_the_same_second_both_survive(): void
+    {
+        $this->travelTo(now()->startOfSecond());
+        $this->artisan('db:snapshot')->assertSuccessful();
+        $this->artisan('db:snapshot')->assertSuccessful();
+
+        $names = array_map('basename', glob($this->dir.'/backups/*.sqlite'));
+        sort($names);
+        $this->assertCount(2, $names);
+        $this->assertStringEndsWith('-2.sqlite', $names[0]); // '-' sorts before '.'
+    }
 }

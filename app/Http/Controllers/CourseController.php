@@ -183,10 +183,7 @@ class CourseController extends Controller
 
         $materials = $course->materials()->whereIn('id', $ids)->get();
 
-        foreach ($materials as $material) {
-            Storage::disk('local')->delete($material->stored_path);
-            $material->delete();
-        }
+        $materials->each->discard();
 
         $count = $materials->count();
 
@@ -209,10 +206,7 @@ class CourseController extends Controller
 
         abort_if($materials->isEmpty(), 403);
 
-        foreach ($materials as $material) {
-            Storage::disk('local')->delete($material->stored_path);
-            $material->delete();
-        }
+        $materials->each->discard();
 
         $count = $materials->count();
 

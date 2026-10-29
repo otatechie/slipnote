@@ -11,6 +11,7 @@ use App\Models\Suggestion;
 use App\Models\Workspace;
 use App\Services\TelegramNotifier;
 use App\Support\ClientKey;
+use App\Support\OperatorSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -32,15 +33,9 @@ class OperatorController extends Controller
         return filled(config('noteshare.operator_secret'));
     }
 
-    private function secretFingerprint(): string
-    {
-        return hash('sha256', (string) config('noteshare.operator_secret'));
-    }
-
     private function authed(): bool
     {
-        return is_string(session('operator_fp'))
-            && hash_equals($this->secretFingerprint(), session('operator_fp'));
+        return OperatorSession::isActive();
     }
 
     private const TABS = ['reported', 'boards', 'visitors', 'suggestions', 'ambassadors'];
@@ -159,7 +154,19 @@ class OperatorController extends Controller
             'suggestions' => $this->tab($request) === 'suggestions' ? Suggestion::latest()->limit(100)->get() : collect(),
             'suggestionsWeek' => Suggestion::where('created_at', '>=', now()->subDays(7))->count(),
             'setupWarnings' => $this->setupWarnings($request),
+            'telegramFailed' => (bool) Cache::get(TelegramNotifier::FAILED_KEY),
         ]);
+    }
+
+    public function telegramTest(Request $request)
+    {
+        abort_unless($this->enabled() && $this->authed(), 404);
+
+        $ok = app(TelegramNotifier::class)->notifyTest();
+
+        return $this->dashboardRedirect($request)->with('done', $ok
+            ? 'Test message sent. Telegram alerts are working.'
+            : 'Telegram refused the test message. Check TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID.');
     }
 
     /** Deployment settings that quietly hurt boards: each a fix in .env. */
@@ -431,7 +438,7 @@ class OperatorController extends Controller
         if ($given !== '' && hash_equals((string) config('noteshare.operator_secret'), $given)) {
             RateLimiter::clear($key);
             $request->session()->regenerate(); // anti-fixation on privilege change
-            session(['operator_fp' => $this->secretFingerprint()]);
+            session([OperatorSession::KEY => OperatorSession::fingerprint()]);
 
             return redirect()->route('operator.dashboard');
         }

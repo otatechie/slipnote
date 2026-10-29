@@ -108,10 +108,18 @@ class BoardActivityTest extends TestCase
 
     public function test_the_operators_visits_are_not_classmate_visits(): void
     {
-        $this->withSession(['operator_fp' => 'any'])->get('/'.$this->workspace->slug)->assertOk();
+        config(['noteshare.operator_secret' => 'op-secret']);
+        $fp = hash('sha256', 'op-secret');
 
+        $this->withSession(['operator_fp' => $fp])->get('/'.$this->workspace->slug)->assertOk();
         $this->assertSame(0, $this->visitorDays());
         $this->assertSame(0, \DB::table('visit_tallies')->count());
+
+        // A fingerprint from a rotated secret is no longer the operator: it counts again.
+        $this->flushSession();
+        config(['noteshare.operator_secret' => 'rotated']);
+        $this->withSession(['operator_fp' => $fp])->get('/'.$this->workspace->slug)->assertOk();
+        $this->assertSame(1, $this->visitorDays());
     }
 
     public function test_a_classmate_download_is_a_visit(): void

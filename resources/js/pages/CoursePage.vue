@@ -142,6 +142,7 @@ const storageTone = computed(() => {
 // Files are keyed by what was picked, since a shrunk photo has a new name and size.
 const pickedKeys = new Set()
 const keyOfFile = new WeakMap()
+const savedOfFile = new WeakMap()
 const preparing = ref(0)
 const savedBytes = ref(0)
 
@@ -186,6 +187,7 @@ async function onFileChange(e) {
     for (const f of fresh) {
         const ready = await shrinkImage(f)
         keyOfFile.set(ready, f.name + ':' + f.size)
+        savedOfFile.set(ready, f.size - ready.size)
         savedBytes.value += f.size - ready.size
         uploadForm.files.push(ready)
         preparing.value--
@@ -195,6 +197,7 @@ async function onFileChange(e) {
 function removeFile(index) {
     const gone = uploadForm.files[index]
     pickedKeys.delete(keyOfFile.get(gone))
+    savedBytes.value -= savedOfFile.get(gone) ?? 0
     uploadForm.files = uploadForm.files.filter((_, i) => i !== index)
 }
 

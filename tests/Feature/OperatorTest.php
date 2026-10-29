@@ -440,4 +440,26 @@ class OperatorTest extends TestCase
         app(TelegramNotifier::class)->notifyReport($this->material, 'spam');
         $this->get(route('operator.dashboard'))->assertDontSee('Fix in .env');
     }
+
+    public function test_a_telegram_test_message_clears_the_failure_warning(): void
+    {
+        config(['mail.default' => 'smtp', 'noteshare.telegram_bot_token' => 'bot', 'noteshare.telegram_chat_id' => '1']);
+        Http::fake(['api.telegram.org/*' => Http::sequence()->push('Unauthorized', 401)->push(['ok' => true])]);
+        app(TelegramNotifier::class)->notifyReport($this->material, 'spam');
+        $this->post(route('operator.login'), ['secret' => 'op-secret']);
+
+        $this->get(route('operator.dashboard'))->assertSee('Send a Telegram test message');
+
+        $this->post(route('operator.telegram-test'))
+            ->assertRedirect(route('operator.dashboard'))
+            ->assertSessionHas('done', 'Test message sent. Telegram alerts are working.');
+        $this->get(route('operator.dashboard'))->assertDontSee('Fix in .env');
+    }
+
+    public function test_the_telegram_test_needs_the_operator_session(): void
+    {
+        Http::fake();
+        $this->post(route('operator.telegram-test'))->assertNotFound();
+        Http::assertNothingSent();
+    }
 }
