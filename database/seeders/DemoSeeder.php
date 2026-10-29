@@ -14,7 +14,8 @@ use Illuminate\Support\Str;
  * Local demo boards for looking at the UI in every state that matters: a busy
  * board (search, sort, many files, every section), a small one with an empty
  * course, a board with no courses, a long board name, and a board near its
- * storage cap. Re-runnable: it deletes its own boards (and their files) first.
+ * storage cap, plus a long class board shaped like real homework collection
+ * (dozens of phone photos per section, so sections fold). Re-runnable: it deletes its own boards (and their files) first.
  *
  *   php artisan db:seed --class=DemoSeeder
  *
@@ -101,12 +102,66 @@ class DemoSeeder extends Seeder
             $links[] = [$name, url('/'.$ws->slug), url('/'.$ws->slug).'?owner='.$secret];
         }
 
+        $links[] = $this->longClassBoard();
+
         $this->command?->newLine();
         foreach ($links as [$name, $share, $owner]) {
             $this->command?->line("<info>{$name}</info>");
             $this->command?->line("  share: {$share}");
             $this->command?->line("  owner: {$owner}");
         }
+    }
+
+    /**
+     * A class collecting homework: students photograph their pages and upload
+     * them one assignment at a time, so a section runs to dozens of rows.
+     * The names are invented.
+     */
+    private function longClassBoard(): array
+    {
+        $name = 'English Year 8 Demo Board';
+        $this->deleteExisting($name);
+        [$ws, $secret] = Workspace::provision($name);
+        mt_srand(8);
+
+        $students = ['Kwabena Asare', 'Layla Haddad', 'Yusuf Al-Amin', 'Akosua Frimpong', 'Omar Khalil',
+            'Efua Mensima', 'Hamza Saleh', 'Nadia Boateng', 'Kojo Antwi', 'Mariam Yousef', 'سارة أحمد', 'علي حسن'];
+        $tasks = ['Homework — present continuous tense', 'Classwork — reading comprehension', 'Notebook work and worksheets',
+            'Homework — past simple questions', 'Writing task — my best friend'];
+
+        $english = $ws->courses()->create(['code' => 'ENG 108', 'title' => 'English, Year 8', 'slug' => 'eng-108', 'position' => 1]);
+        $img = 3380;
+        $hours = 2;
+        foreach ($students as $student) {
+            foreach (array_rand(array_flip($tasks), 2) as $task) {
+                $hours += mt_rand(1, 9);
+                if (mt_rand(0, 1)) {
+                    // A scanned PDF, named after the student.
+                    $this->addFile($english, 'notes', "{$student} — {$task}", "{$student}.pdf", null, mt_rand(600_000, 21_000_000), "-{$hours} hours");
+                } else {
+                    // Page photos straight from the phone, untitled.
+                    foreach (range(1, mt_rand(2, 5)) as $page) {
+                        $this->addFile($english, 'notes', null, 'IMG_'.($img++).'.jpg', null, mt_rand(2_600_000, 4_200_000), "-{$hours} hours");
+                    }
+                }
+            }
+        }
+        foreach (range(1, 8) as $week) {
+            $this->addFile($english, 'slides', "Week {$week} — grammar lesson", "week-{$week}-grammar.pdf", 'Mrs. Owusu', mt_rand(1_500_000, 9_000_000), '-'.(70 - $week * 7).' days');
+        }
+        foreach (range(2014, 2025) as $year) {
+            foreach (['Term 1', 'Term 2'] as $term) {
+                $this->addFile($english, 'past_papers', "{$year} {$term} exam", "eng8-{$year}-".Str::slug($term).'.pdf', null, mt_rand(300_000, 1_400_000), '-'.(2026 - $year).' years');
+            }
+        }
+
+        $maths = $ws->courses()->create(['code' => 'MATH 108', 'title' => 'Mathematics, Year 8', 'slug' => 'math-108', 'position' => 2]);
+        foreach (range(1, 12) as $i) {
+            $this->addFile($maths, 'notes', "Exercise {$i} solutions", "exercise-{$i}.pdf", 'Mr. Darko', mt_rand(200_000, 2_000_000), "-{$i} days");
+        }
+        $ws->courses()->create(['code' => 'SCI 108', 'title' => 'Integrated science, Year 8', 'slug' => 'sci-108', 'position' => 3]);
+
+        return [$name, url('/'.$ws->slug), url('/'.$ws->slug).'?owner='.$secret];
     }
 
     private function deleteExisting(string $name): void
