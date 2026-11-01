@@ -133,10 +133,35 @@ class CourseController extends Controller
             abort(503, 'Downloads are busy right now. Try again in a few minutes.');
         }
 
+        // Two zips at a time site-wide: each one holds a worker and up to a
+        // board's worth of temp disk, and the free-space check above only
+        // looks, it doesn't reserve.
+        $slot = null;
+        foreach ([1, 2] as $n) {
+            if (($lock = Cache::lock("section_zip_slot:{$n}", 600))->get()) {
+                $slot = $lock;
+                break;
+            }
+        }
+        abort_if($slot === null, 503, 'Downloads are busy right now. Try again in a minute.');
+
+        try {
+            return $this->buildSectionZip($course, $section, $materials);
+        } finally {
+            $slot->release();
+        }
+    }
+
+    private function buildSectionZip(Course $course, string $section, $materials)
+    {
+        $materials->each->setRelation('course', $course);
+
         $zipPath = tempnam(sys_get_temp_dir(), 'slipzip');
         $zip = new \ZipArchive;
         $zip->open($zipPath, \ZipArchive::OVERWRITE);
 
+        // Names are compared lowercased: Windows and macOS unzip "a.pdf" and
+        // "A.pdf" onto each other.
         $used = [];
         $added = 0;
         foreach ($materials as $material) {
@@ -145,18 +170,17 @@ class CourseController extends Controller
                 continue;
             }
 
-            $key = $material->downloadName();
-            $name = $key;
-            if (isset($used[$name])) {
-                $ext = pathinfo($name, PATHINFO_EXTENSION);
-                $base = pathinfo($name, PATHINFO_FILENAME);
-                $name = $ext !== '' ? "{$base} ({$used[$name]}).{$ext}" : "{$base} ({$used[$name]})";
-                $used[$key]++;
-            } else {
-                $used[$name] = 1;
+            $name = $material->downloadName();
+            $ext = pathinfo($name, PATHINFO_EXTENSION);
+            $base = pathinfo($name, PATHINFO_FILENAME);
+            for ($n = 1; isset($used[mb_strtolower($name)]); $n++) {
+                $name = $ext !== '' ? "{$base} ({$n}).{$ext}" : "{$base} ({$n})";
             }
+            $used[mb_strtolower($name)] = true;
 
+            // PDFs and photos barely compress; storing them saves the CPU.
             $zip->addFile($realPath, $name);
+            $zip->setCompressionName($name, \ZipArchive::CM_STORE);
             $added++;
         }
         $zip->close();
@@ -342,27 +366,31 @@ class CourseController extends Controller
             'title.max' => 'That title is too long — keep it under 120 characters.',
         ]);
 
-        $rlKey = 'upload:'.ClientKey::of($request);
-        if (RateLimiter::tooManyAttempts($rlKey, 30)) {
+        // Per board, with a looser all-boards cap: a class on campus Wi-Fi or
+        // one carrier address shares an IP, and a homework drop is one batch each.
+        $rlKey = 'upload:'.$workspace->id.':'.ClientKey::of($request);
+        $rlAny = 'upload_any:'.ClientKey::of($request);
+        if (RateLimiter::tooManyAttempts($rlKey, 60) || RateLimiter::tooManyAttempts($rlAny, 120)) {
             return back()->withErrors(['files' => 'Too many uploads in a short time. Please wait a few minutes and try again.']);
         }
         RateLimiter::hit($rlKey, 600);
+        RateLimiter::hit($rlAny, 600);
 
         $free = disk_free_space(storage_path('app/private'));
         if ($free === false || $free < (int) config('noteshare.min_free_disk_bytes')) {
             return back()->withErrors(['files' => 'The site is at capacity — please try again later.']);
         }
 
-        if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true) {
+        // Legacy boards only; nothing sets a passphrase any more. The owner is
+        // let through, and the budget is per client so nobody can lock the class out.
+        if (filled($workspace->upload_passphrase) && session($workspace->uploadUnlockKey()) !== true && ! $this->isOwner()) {
             $key = 'upload_passphrase:'.$workspace->id.':'.ClientKey::of($request);
-            $boardKey = 'upload_passphrase_board:'.$workspace->id;
-            if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($boardKey, 30)) {
+            if (RateLimiter::tooManyAttempts($key, 5)) {
                 return back()->withErrors(['passphrase' => 'Too many attempts. Try again in a few minutes.']);
             }
 
             if (! $workspace->uploadPassphraseMatches($data['passphrase'] ?? null)) {
                 RateLimiter::hit($key, 600);
-                RateLimiter::hit($boardKey, 600);
 
                 return back()->withErrors(['passphrase' => "That passphrase isn't right — ask your course rep."]);
             }

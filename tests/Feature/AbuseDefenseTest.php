@@ -48,10 +48,11 @@ class AbuseDefenseTest extends TestCase
 
     public function test_uploads_are_rate_limited_per_ip(): void
     {
-        // 30 allowed in the window; the 31st is throttled.
-        RateLimiter::clear('upload:127.0.0.1');
-        for ($i = 0; $i < 30; $i++) {
-            RateLimiter::hit('upload:127.0.0.1', 600);
+        // 60 per board in the window; the 61st is throttled.
+        $key = 'upload:'.$this->workspace->id.':127.0.0.1';
+        RateLimiter::clear($key);
+        for ($i = 0; $i < 60; $i++) {
+            RateLimiter::hit($key, 600);
         }
 
         $this->post($this->uploadUrl(), [
