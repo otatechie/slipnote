@@ -167,6 +167,19 @@ const savedBytes = ref(0)
 const hasOversizedFile = computed(() =>
     uploadForm.files.some(f => f.size > MAX_FILE_BYTES))
 
+// One request carries the whole batch. Cloudflare and the image's PHP both stop
+// a request at 100 MB, and PHP silently drops a file past the 20th, so the
+// server's own checks would never get to say so.
+const MAX_FILES = 20
+const MAX_BATCH_BYTES = 90 * 1024 * 1024
+const batchBytes = computed(() => uploadForm.files.reduce((sum, f) => sum + f.size, 0))
+const tooManyFiles = computed(() => uploadForm.files.length > MAX_FILES)
+const batchTooBig = computed(() => batchBytes.value > MAX_BATCH_BYTES)
+
+// Set when the upload never got an answer the page can show: a dropped
+// connection, or an error page from the proxy in front of the app.
+const uploadProblem = ref('')
+
 // Upload form
 const uploadOpen = ref(false)
 const uploadForm = useForm({
@@ -225,9 +238,20 @@ function forgetPicked() {
 }
 
 function upload() {
+    uploadProblem.value = ''
     uploadForm.post('/' + props.workspace.slug + '/c/' + props.course.slug + '/upload', {
         forceFormData: true,
         preserveScroll: true,
+        onHttpException: (response) => {
+            uploadProblem.value = response.status === 413
+                ? 'That was too much to send in one go. Upload fewer files at a time.'
+                : `The upload didn’t go through (error ${response.status}). Please try again.`
+            return false
+        },
+        onNetworkError: () => {
+            uploadProblem.value = 'The connection dropped before the upload finished. Your files are still here; try again.'
+            return false
+        },
         onSuccess: () => {
             uploadForm.reset()
             forgetPicked()
@@ -660,7 +684,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </div>
                             </div>
 
-                            <button type="submit" :disabled="uploadForm.processing || preparing > 0 || uploadForm.files.length === 0 || hasOversizedFile"
+                            <button type="submit" :disabled="uploadForm.processing || preparing > 0 || uploadForm.files.length === 0 || hasOversizedFile || tooManyFiles || batchTooBig"
                                     class="op-press relative min-h-11 cursor-pointer overflow-hidden rounded-full bg-neon py-3 text-[15px] font-semibold text-white transition
                                            disabled:cursor-not-allowed disabled:bg-sky disabled:text-muted">
                                 <span v-if="uploadForm.progress"
@@ -674,11 +698,24 @@ watch(() => props.materials, () => { selected.value = [] })
                                 </span>
                                 <span class="relative" v-else>Saving…</span>
                             </button>
+                            <button v-if="uploadForm.processing" type="button" @click="uploadForm.cancel()"
+                                    class="-mt-1 min-h-11 cursor-pointer text-center text-[13px] font-semibold text-muted transition hover:text-ink sm:min-h-9">
+                                Cancel upload
+                            </button>
+                            <p v-if="uploadProblem" role="alert" class="-mt-1 text-center text-[13px] text-danger">
+                                {{ uploadProblem }}
+                            </p>
                             <p v-if="uploadForm.files.length === 0 && preparing === 0" class="-mt-1 text-center text-[12px] text-muted">
                                 Choose at least one file to upload.
                             </p>
                             <p v-else-if="hasOversizedFile" class="-mt-1 text-center text-[12px] text-danger">
                                 Remove any file over {{ maxFileMb }}&nbsp;MB to upload.
+                            </p>
+                            <p v-else-if="tooManyFiles" class="-mt-1 text-center text-[12px] text-danger">
+                                Up to {{ MAX_FILES }} files at a time. Remove {{ uploadForm.files.length - MAX_FILES === 1 ? '1 and upload it' : (uploadForm.files.length - MAX_FILES) + ' and upload them' }} next.
+                            </p>
+                            <p v-else-if="batchTooBig" class="-mt-1 text-center text-[12px] text-danger">
+                                That's {{ fileSize(batchBytes) }} in one go; up to {{ Math.round(MAX_BATCH_BYTES / 1048576) }}&nbsp;MB at a time. Remove some, and upload them next.
                             </p>
                         </form>
                     </div>

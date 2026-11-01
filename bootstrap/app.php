@@ -5,6 +5,8 @@ use App\Http\Middleware\SecureHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -33,5 +35,26 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Inertia shows any other error response as a raw page in a pop-up. A
+        // form sent from a page left open past the session (419), or one that
+        // hit a server error, goes back to that page with a message instead.
+        $exceptions->respond(function (Response $response, Throwable $e, Request $request) {
+            if ($request->isMethod('GET') || ! $request->header('X-Inertia')) {
+                return $response;
+            }
+
+            $message = match (true) {
+                $response->getStatusCode() === 419 => 'This page was open a long time, so that didn’t go through. Please try again.',
+                $response->getStatusCode() >= 500 && ! config('app.debug') => 'Something went wrong on our side. Please try again.',
+                default => null,
+            };
+            if ($message === null) {
+                return $response;
+            }
+
+            // The upload form shows its own errors and opens itself for them.
+            return str_ends_with($request->path(), '/upload')
+                ? back()->withErrors(['files' => $message])
+                : back()->with('notice', $message);
+        });
     })->create();
