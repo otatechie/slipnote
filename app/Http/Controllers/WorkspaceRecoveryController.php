@@ -35,17 +35,21 @@ class WorkspaceRecoveryController extends Controller
         $key = 'recovery:'.$workspace->id.':'.ClientKey::of($request);
         $boardKey = 'recovery_board:'.$workspace->id;
 
-        if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts($boardKey, 50)) {
+        if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->with('done', true);
         }
 
         $data = $request->validate(['email' => 'required|email:rfc']);
         RateLimiter::hit($key, 600);
-        RateLimiter::hit($boardKey, 600);
 
         $mailOn = ! in_array(config('mail.default'), ['log', 'array', null], true);
 
-        if ($mailOn && $workspace->recoveryEmailMatches($data['email'])) {
+        // The board-wide cap counts mails sent, not requests: wrong guesses
+        // from anywhere can't use up the owner's own, and the owner's inbox
+        // gets at most a few links an hour however many clients ask.
+        if ($mailOn && $workspace->recoveryEmailMatches($data['email'])
+            && ! RateLimiter::tooManyAttempts($boardKey, 5)) {
+            RateLimiter::hit($boardKey, 3600);
             $nonce = Str::random(40);
             Cache::put(self::redeemKey($nonce), $workspace->id, self::REDEEM_TTL_SECONDS);
 

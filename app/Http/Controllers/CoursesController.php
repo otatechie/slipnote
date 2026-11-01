@@ -17,10 +17,8 @@ class CoursesController extends Controller
     {
         $workspace = $this->workspace();
 
-        if ($this->redeemOwnerQuery($request, $workspace)) {
-            return redirect()
-                ->route('courses.index', ['workspace' => $workspace->slug])
-                ->withCookie(RecentWorkspaces::add($request, $workspace));
+        if ($redirect = $this->redeemOwnerQuery($request, $workspace, route('courses.index', ['workspace' => $workspace->slug]))) {
+            return $redirect;
         }
 
         $search = $this->searchInput($request);

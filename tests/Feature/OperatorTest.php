@@ -47,6 +47,18 @@ class OperatorTest extends TestCase
         $this->get(route('operator.dashboard'))->assertNotFound();
     }
 
+    public function test_operator_login_has_a_site_wide_cap_as_well(): void
+    {
+        // A client that forges a new address per request gets past the per-client budget only.
+        for ($i = 0; $i < 30; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])->post(route('operator.login'), ['secret' => 'nope']);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])
+            ->post(route('operator.login'), ['secret' => 'op-secret'])
+            ->assertSessionHasErrors(['secret' => 'Too many attempts. Try again in a few minutes.']);
+    }
+
     public function test_dashboard_shows_a_login_form_until_authenticated(): void
     {
         $this->get(route('operator.dashboard'))

@@ -429,8 +429,11 @@ class OperatorController extends Controller
     {
         abort_unless($this->enabled(), 404);
 
+        // Per client, and site-wide: a client that can forge its address
+        // (an origin reachable around Cloudflare) gets a fresh per-client
+        // budget with every request, but not a fresh site-wide one.
         $key = 'operator_login:'.ClientKey::of($request);
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts('operator_login_all', 30)) {
             return back()->withErrors(['secret' => 'Too many attempts. Try again in a few minutes.']);
         }
 
@@ -444,6 +447,7 @@ class OperatorController extends Controller
         }
 
         RateLimiter::hit($key, 600);
+        RateLimiter::hit('operator_login_all', 600);
 
         return back()->withErrors(['secret' => "That operator secret isn't right."]);
     }

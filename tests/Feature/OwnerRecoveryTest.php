@@ -153,6 +153,30 @@ class OwnerRecoveryTest extends TestCase
         Mail::assertSent(OwnerLinkRecovery::class, fn ($mail) => $mail->hasTo('owner@example.com'));
     }
 
+    public function test_wrong_guesses_from_many_clients_do_not_block_the_owners_request(): void
+    {
+        $this->workspace->setRecoveryEmail('owner@example.com');
+        $url = route('workspace.recover.store', $this->wsParams());
+        for ($i = 0; $i < 60; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])->post($url, ['email' => "x{$i}@example.com"]);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])->post($url, ['email' => 'owner@example.com']);
+        Mail::assertSent(OwnerLinkRecovery::class, 1);
+    }
+
+    public function test_the_owners_inbox_gets_at_most_five_links_an_hour(): void
+    {
+        $this->workspace->setRecoveryEmail('owner@example.com');
+        $url = route('workspace.recover.store', $this->wsParams());
+        for ($i = 0; $i < 8; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])->post($url, ['email' => 'owner@example.com'])
+                ->assertSessionHas('done', true);
+        }
+
+        Mail::assertSent(OwnerLinkRecovery::class, 5);
+    }
+
     private function requestRestoreLink(string $email = 'owner@example.com'): string
     {
         $this->workspace->setRecoveryEmail($email);

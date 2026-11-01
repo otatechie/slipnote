@@ -26,10 +26,8 @@ class CourseController extends Controller
     {
         $workspace = $this->workspace();
 
-        if ($this->redeemOwnerQuery($request, $workspace)) {
-            return redirect()
-                ->route('course.show', ['workspace' => $workspace->slug, 'slug' => $slug])
-                ->withCookie(RecentWorkspaces::add($request, $workspace));
+        if ($redirect = $this->redeemOwnerQuery($request, $workspace, route('course.show', ['workspace' => $workspace->slug, 'slug' => $slug]))) {
+            return $redirect;
         }
 
         $course = Course::where('slug', $slug)->firstOrFail();

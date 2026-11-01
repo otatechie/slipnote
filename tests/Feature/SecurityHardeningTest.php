@@ -205,7 +205,7 @@ class SecurityHardeningTest extends TestCase
         $url = route('courses.index', $this->wsParams());
 
         for ($i = 0; $i < 8; $i++) {
-            $this->get($url.'?owner=wrong-'.$i)->assertOk();
+            $this->get($url.'?owner=wrong-'.$i)->assertRedirect($url)->assertSessionHasErrors('ownerInput');
         }
 
         // Five checked, three refused before reaching bcrypt.
@@ -229,6 +229,19 @@ class SecurityHardeningTest extends TestCase
         }
 
         $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])->get($url.'?owner='.$this->ownerSecret);
+        $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
+    }
+
+    public function test_guesses_from_many_clients_do_not_lock_the_owner_out(): void
+    {
+        // A board-wide budget meant anyone with the slug could block the owner.
+        $url = route('courses.index', $this->wsParams());
+        for ($i = 0; $i < 120; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.($i % 250)])->get($url.'?owner=wrong-'.$i);
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])->get($url.'?owner='.$this->ownerSecret)
+            ->assertRedirect($url);
         $this->assertTrue($this->workspace->fresh()->sessionIsOwner());
     }
 
