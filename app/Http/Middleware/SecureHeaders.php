@@ -36,7 +36,8 @@ class SecureHeaders
                 "script-src 'self' 'nonce-".Vite::cspNonce()."'",
                 "style-src 'self' 'unsafe-inline'",
                 "font-src 'self'",
-                "img-src 'self' data:",
+                // blob: is the photo shrinker reading the picked file back in.
+                "img-src 'self' data: blob:",
                 "connect-src 'self'",
                 "frame-ancestors 'self'",
                 "base-uri 'self'",
