@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Material;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -117,16 +118,48 @@ class AbandonedBoardsTest extends TestCase
 
     public function test_the_daily_run_happens_once_a_day(): void
     {
+        // It runs after the response, so the app's terminate step fires it.
         $this->board('Gone Soon', 31);
         Workspace::pruneAbandonedDaily();
+        $this->app->terminate();
         $this->assertSame(0, Workspace::count());
 
+        // Already claimed today: nothing is queued for after this response.
         $this->board('Gone Tomorrow', 31);
+        Bus::fake();
         Workspace::pruneAbandonedDaily();
+        Bus::assertNothingDispatched();
         $this->assertSame(1, Workspace::count());
 
         $this->artisan('boards:prune-abandoned')->assertSuccessful();
         $this->assertSame(0, Workspace::count());
         $this->assertSame(0, Material::count());
+    }
+
+    public function test_a_failed_daily_run_lets_the_next_request_try_again(): void
+    {
+        $this->board('Gone Soon', 31);
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE board_visit_days RENAME TO board_visit_days_away');
+
+        Workspace::pruneAbandonedDaily();
+        $this->app->terminate(); // fails on the missing table: reported, not thrown
+        \Illuminate\Support\Facades\DB::statement('ALTER TABLE board_visit_days_away RENAME TO board_visit_days');
+
+        // The claim is released, so the next request runs it again.
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has('prune_abandoned_boards'));
+    }
+
+    public function test_operator_undo_copies_older_than_a_day_are_swept(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        $disk->put('operator-undo/old', 'x');
+        $disk->put('operator-undo/new', 'x');
+        touch($disk->path('operator-undo/old'), now()->subDays(2)->getTimestamp());
+
+        Workspace::pruneOperatorUndoCopies();
+
+        $disk->assertMissing('operator-undo/old');
+        $disk->assertExists('operator-undo/new');
     }
 }

@@ -46,11 +46,11 @@ class Material extends Model
         return route('material.download', ['token' => $this->download_token]);
     }
 
-    /** Removes the file and the row: the uploader's Undo, the owner's Delete, bulk delete. */
+    /** Removes the row, then the file: the uploader's Undo, the owner's Delete, bulk delete. */
     public function discard(): void
     {
-        Storage::disk('local')->delete($this->stored_path);
         $this->delete();
+        Storage::disk('local')->delete($this->stored_path);
     }
 
     public function manageUrl(): ?string

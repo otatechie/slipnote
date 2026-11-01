@@ -474,7 +474,9 @@ class OperatorController extends Controller
         $createdBlock = false;
 
         if (Storage::disk('local')->exists($material->stored_path)) {
-            $hash = hash('sha256', Storage::disk('local')->get($material->stored_path));
+            // Older rows predate content_hash; hash those from the stream.
+            $hash = $material->content_hash
+                ?? hash_file('sha256', Storage::disk('local')->path($material->stored_path));
             $trashPath = 'operator-undo/'.$material->id.'-'.Str::random(12);
             if (! Storage::disk('local')->copy($material->stored_path, $trashPath)) {
                 $trashPath = null;
@@ -486,8 +488,8 @@ class OperatorController extends Controller
             BlockedUpload::firstOrCreate(['content_hash' => $hash]);
         }
 
-        Storage::disk('local')->delete($material->stored_path);
         $material->delete();
+        Storage::disk('local')->delete($material->stored_path);
 
         $this->stashUndo([
             'action' => 'remove',

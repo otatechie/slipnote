@@ -43,15 +43,21 @@ class Workspace extends Model
         return $this->hasManyThrough(Material::class, Course::class);
     }
 
+    // Rows first, in one transaction, then files: a failure part way leaves
+    // at worst an unreferenced file, never a row whose download is gone.
     public function purge(): void
     {
         $courseIds = Course::withoutGlobalScopes()->where('workspace_id', $this->id)->pluck('id');
-        Material::whereIn('course_id', $courseIds)->pluck('stored_path')
-            ->each(fn ($path) => Storage::disk('local')->delete($path));
-        Material::whereIn('course_id', $courseIds)->delete();
-        Course::withoutGlobalScopes()->whereIn('id', $courseIds)->delete();
-        DB::table('board_visit_days')->where('workspace_id', $this->id)->delete();
-        $this->delete();
+        $paths = Material::whereIn('course_id', $courseIds)->pluck('stored_path');
+
+        DB::transaction(function () use ($courseIds) {
+            Material::whereIn('course_id', $courseIds)->delete();
+            Course::withoutGlobalScopes()->whereIn('id', $courseIds)->delete();
+            DB::table('board_visit_days')->where('workspace_id', $this->id)->delete();
+            $this->delete();
+        });
+
+        $paths->each(fn ($path) => Storage::disk('local')->delete($path));
     }
 
     /** An empty board unopened this long (by a person) is removed. */
@@ -117,13 +123,40 @@ class Workspace extends Model
         return [$removed, $warned];
     }
 
+    /**
+     * Once a day, from whichever request comes first (there's no scheduler
+     * process). It runs after that response is sent, so a slow mail server or
+     * a failure never costs the person their page, and a failure lets the
+     * next request try again instead of waiting a day.
+     */
     public static function pruneAbandonedDaily(): void
     {
-        if (Cache::add('prune_abandoned_boards', true, now()->addDay())) {
-            static::pruneAbandoned();
-            DB::table('board_visit_days')
-                ->where('day', '<', now()->subDays(self::VISIT_DAYS_KEPT)->toDateString())
-                ->delete();
+        if (! Cache::add('prune_abandoned_boards', true, now()->addDay())) {
+            return;
+        }
+
+        dispatch(function () {
+            try {
+                static::pruneAbandoned();
+                DB::table('board_visit_days')
+                    ->where('day', '<', now()->subDays(self::VISIT_DAYS_KEPT)->toDateString())
+                    ->delete();
+                static::pruneOperatorUndoCopies();
+            } catch (\Throwable $e) {
+                Cache::forget('prune_abandoned_boards');
+                report($e);
+            }
+        })->afterResponse();
+    }
+
+    /** Copies kept for the operator's Undo outlive it when the session lapses before the next action. */
+    public static function pruneOperatorUndoCopies(): void
+    {
+        $disk = Storage::disk('local');
+        foreach ($disk->files('operator-undo') as $path) {
+            if ($disk->lastModified($path) < now()->subDay()->getTimestamp()) {
+                $disk->delete($path);
+            }
         }
     }
 
