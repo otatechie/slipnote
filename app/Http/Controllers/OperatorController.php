@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Middleware\ClientIpFromHeader;
 use App\Models\Ambassador;
 use App\Models\BlockedUpload;
+use App\Models\Course;
 use App\Models\Material;
 use App\Models\Report;
 use App\Models\Suggestion;
@@ -429,11 +430,10 @@ class OperatorController extends Controller
     {
         abort_unless($this->enabled(), 404);
 
-        // Per client, and site-wide: a client that can forge its address
-        // (an origin reachable around Cloudflare) gets a fresh per-client
-        // budget with every request, but not a fresh site-wide one.
+        // Per client only: a site-wide budget would let six clients lock the
+        // operator out, and a long random secret doesn't need one.
         $key = 'operator_login:'.ClientKey::of($request);
-        if (RateLimiter::tooManyAttempts($key, 5) || RateLimiter::tooManyAttempts('operator_login_all', 30)) {
+        if (RateLimiter::tooManyAttempts($key, 5)) {
             return back()->withErrors(['secret' => 'Too many attempts. Try again in a few minutes.']);
         }
 
@@ -447,7 +447,6 @@ class OperatorController extends Controller
         }
 
         RateLimiter::hit($key, 600);
-        RateLimiter::hit('operator_login_all', 600);
 
         return back()->withErrors(['secret' => "That operator secret isn't right."]);
     }
@@ -548,6 +547,8 @@ class OperatorController extends Controller
     public function deleteBoard(Request $request, Workspace $board)
     {
         abort_unless($this->enabled() && $this->authed(), 403);
+
+        $this->commitUndo(); // a removed file can't go back onto a board that's gone
 
         $back = $this->boardsListUrl($request);
         $name = $board->name;
@@ -673,6 +674,10 @@ class OperatorController extends Controller
         }
 
         if (Material::query()->whereKey($attrs['id'])->exists()) {
+            return;
+        }
+        // The course (and so the board) may have been deleted since.
+        if (! Course::withoutGlobalScopes()->whereKey($attrs['course_id'] ?? null)->exists()) {
             return;
         }
 

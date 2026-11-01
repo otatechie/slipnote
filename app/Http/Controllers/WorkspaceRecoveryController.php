@@ -59,12 +59,18 @@ class WorkspaceRecoveryController extends Controller
                 ['workspace' => $workspace->slug, 'nonce' => $nonce],
             );
 
-            try {
-                Mail::to($workspace->recovery_email)->send(new OwnerLinkRecovery($workspace->name, $restoreUrl));
-            } catch (Throwable $e) {
-                Cache::forget(self::redeemKey($nonce));
-                report($e);
-            }
+            // Sent after the response: a matching address took as long as the
+            // mail server, so timing told a guesser when they were right.
+            $to = $workspace->recovery_email;
+            $name = $workspace->name;
+            dispatch(function () use ($to, $name, $restoreUrl, $nonce) {
+                try {
+                    Mail::to($to)->send(new OwnerLinkRecovery($name, $restoreUrl));
+                } catch (Throwable $e) {
+                    Cache::forget(self::redeemKey($nonce));
+                    report($e);
+                }
+            })->afterResponse();
         }
 
         return back()->with('done', true);

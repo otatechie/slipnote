@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use App\Support\OperatorSession;
 use App\Mail\AbandonedBoardWarning;
 use App\Services\TelegramNotifier;
+use App\Support\OperatorSession;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -48,13 +48,15 @@ class Workspace extends Model
     public function purge(): void
     {
         $courseIds = Course::withoutGlobalScopes()->where('workspace_id', $this->id)->pluck('id');
-        $paths = Material::whereIn('course_id', $courseIds)->pluck('stored_path');
 
-        DB::transaction(function () use ($courseIds) {
+        $paths = DB::transaction(function () use ($courseIds) {
+            $paths = Material::whereIn('course_id', $courseIds)->pluck('stored_path');
             Material::whereIn('course_id', $courseIds)->delete();
             Course::withoutGlobalScopes()->whereIn('id', $courseIds)->delete();
             DB::table('board_visit_days')->where('workspace_id', $this->id)->delete();
             $this->delete();
+
+            return $paths;
         });
 
         $paths->each(fn ($path) => Storage::disk('local')->delete($path));
@@ -93,26 +95,11 @@ class Workspace extends Model
             ->whereDoesntHave('materials')
             ->whereRaw('COALESCE(last_accessed_at, created_at) < ?', [$warnFrom])
             ->each(function (self $board) use ($mailOn, &$removed, &$warned) {
-                // Warn first, once, where there is someone to warn.
-                if ($mailOn && filled($board->recovery_email) && ! $board->abandon_warned_at) {
-                    try {
-                        Mail::to($board->recovery_email)->send(new AbandonedBoardWarning(
-                            $board->name,
-                            route('courses.index', ['workspace' => $board->slug]),
-                            self::ABANDON_WARNING_DAYS,
-                        ));
-                        $board->forceFill(['abandon_warned_at' => now()])->saveQuietly();
-                        $warned++;
-                    } catch (\Throwable $e) {
-                        Log::warning('Abandoned-board warning failed', ['workspace' => $board->id]);
-                    }
-
-                    return;
-                }
-
-                if ($board->removalDueAt()->isPast()) {
-                    $board->purge();
-                    $removed++;
+                try {
+                    self::pruneOne($board, $mailOn, $removed, $warned);
+                } catch (\Throwable $e) {
+                    // One board that can't be read or purged mustn't stop the rest.
+                    report($e);
                 }
             });
 
@@ -121,6 +108,31 @@ class Workspace extends Model
         }
 
         return [$removed, $warned];
+    }
+
+    private static function pruneOne(self $board, bool $mailOn, int &$removed, int &$warned): void
+    {
+        // Warn first, once, where there is someone to warn.
+        if ($mailOn && filled($board->recovery_email) && ! $board->abandon_warned_at) {
+            try {
+                Mail::to($board->recovery_email)->send(new AbandonedBoardWarning(
+                    $board->name,
+                    route('courses.index', ['workspace' => $board->slug]),
+                    self::ABANDON_WARNING_DAYS,
+                ));
+                $board->forceFill(['abandon_warned_at' => now()])->saveQuietly();
+                $warned++;
+            } catch (\Throwable $e) {
+                Log::warning('Abandoned-board warning failed', ['workspace' => $board->id]);
+            }
+
+            return;
+        }
+
+        if ($board->removalDueAt()->isPast()) {
+            $board->purge();
+            $removed++;
+        }
     }
 
     /**
@@ -142,6 +154,9 @@ class Workspace extends Model
                     ->where('day', '<', now()->subDays(self::VISIT_DAYS_KEPT)->toDateString())
                     ->delete();
                 static::pruneOperatorUndoCopies();
+                // The database cache only drops an expired row when that key is
+                // read again; rate-limit keys for one-off visitors never are.
+                DB::table('cache')->where('expiration', '<', time())->delete();
             } catch (\Throwable $e) {
                 Cache::forget('prune_abandoned_boards');
                 report($e);

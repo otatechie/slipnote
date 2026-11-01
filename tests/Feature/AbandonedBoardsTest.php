@@ -6,8 +6,11 @@ use App\Mail\AbandonedBoardWarning;
 use App\Models\Course;
 use App\Models\Material;
 use App\Models\Workspace;
+use App\Tenancy\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -36,7 +39,7 @@ class AbandonedBoardsTest extends TestCase
             $ws->setRecoveryEmail($email);
         }
         if ($withFile) {
-            app(\App\Tenancy\Tenancy::class)->set($ws);
+            app(Tenancy::class)->set($ws);
             $course = Course::create(['code' => 'X 1', 'title' => 'X', 'slug' => 'x-1']);
             Storage::disk('local')->put('materials/keep.pdf', 'x');
             $course->materials()->create(['section' => 'notes', 'original_filename' => 'keep.pdf',
@@ -139,20 +142,20 @@ class AbandonedBoardsTest extends TestCase
     public function test_a_failed_daily_run_lets_the_next_request_try_again(): void
     {
         $this->board('Gone Soon', 31);
-        \Illuminate\Support\Facades\DB::statement('ALTER TABLE board_visit_days RENAME TO board_visit_days_away');
+        DB::statement('ALTER TABLE board_visit_days RENAME TO board_visit_days_away');
 
         Workspace::pruneAbandonedDaily();
         $this->app->terminate(); // fails on the missing table: reported, not thrown
-        \Illuminate\Support\Facades\DB::statement('ALTER TABLE board_visit_days_away RENAME TO board_visit_days');
+        DB::statement('ALTER TABLE board_visit_days_away RENAME TO board_visit_days');
 
         // The claim is released, so the next request runs it again.
-        $this->assertFalse(\Illuminate\Support\Facades\Cache::has('prune_abandoned_boards'));
+        $this->assertFalse(Cache::has('prune_abandoned_boards'));
     }
 
     public function test_operator_undo_copies_older_than_a_day_are_swept(): void
     {
-        \Illuminate\Support\Facades\Storage::fake('local');
-        $disk = \Illuminate\Support\Facades\Storage::disk('local');
+        Storage::fake('local');
+        $disk = Storage::disk('local');
         $disk->put('operator-undo/old', 'x');
         $disk->put('operator-undo/new', 'x');
         touch($disk->path('operator-undo/old'), now()->subDays(2)->getTimestamp());

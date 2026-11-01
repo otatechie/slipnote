@@ -82,7 +82,7 @@ class CoursesController extends Controller
                 ? ['text' => $workspace->operator_note, 'at' => $workspace->operator_note_at?->toIso8601String()]
                 : null,
             'recoveryAvailable' => ! in_array(config('mail.default'), ['log', 'array', null], true),
-            'needsRecoveryEmail' => blank($workspace->recovery_email),
+            'needsRecoveryEmail' => $isOwner && blank($workspace->recovery_email),
             'currentRecoveryEmail' => $isOwner ? $workspace->recovery_email : null,
             'storageUsed' => $used,
             'storageCap' => $cap,

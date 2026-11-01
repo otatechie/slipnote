@@ -52,7 +52,8 @@ FROM serversideup/php:8.4.27-fpm-nginx AS runtime
 ENV PHP_OPCACHE_ENABLE=1 \
     SSL_MODE=off \
     AUTORUN_ENABLED=true \
-    AUTORUN_LARAVEL_STORAGE_LINK=true \
+    # No public disk: uploads are private, and a stray file must not become a URL.
+    AUTORUN_LARAVEL_STORAGE_LINK=false \
     # Migrations run from docker/entrypoint.d instead, after a database copy.
     AUTORUN_LARAVEL_MIGRATION=false \
     # Disable build-time route/config/view caching: caches get baked before
@@ -87,6 +88,3 @@ COPY --chown=www-data:www-data . .
 COPY --from=vendor --chown=www-data:www-data /app/vendor ./vendor
 COPY --from=assets --chown=www-data:www-data /app/public/build ./public/build
 COPY --chmod=755 docker/entrypoint.d/ /etc/entrypoint.d/
-
-# storage:link is best-effort; safe to fail if already linked on a redeploy
-RUN php artisan storage:link || true
