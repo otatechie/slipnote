@@ -37,7 +37,8 @@
         (() => {
             const key = 'slipnote-theme'
             const options = new Set(['system', 'light', 'dark'])
-            const saved = localStorage.getItem(key)
+            let saved = null
+            try { saved = localStorage.getItem(key) } catch {}
             const theme = options.has(saved) ? saved : 'system'
             const system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
             const resolved = theme === 'system' ? system : theme
@@ -52,6 +53,10 @@
     @inertiaHead
 </head>
 <body class="m-0 bg-base font-sans text-ink">
-    @inertia
+    {{-- Not @inertia: that writes the page data with plain json_encode, and a
+         filename or search like "<!--<script>" would end the script block early
+         and leave the page blank. --}}
+    <script data-page="app" type="application/json">{!! json_encode($page, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+    <div id="app"></div>
 </body>
 </html>

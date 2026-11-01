@@ -512,8 +512,8 @@ class CourseController extends Controller
     {
         // Drop any path components a client may have sent (basename only).
         $name = basename(str_replace('\\', '/', $name));
-        // Remove control chars incl. CR/LF (header injection) and quotes.
-        $name = preg_replace('/[\x00-\x1F\x7F"\\\\]+/', '', $name);
+        // Remove control chars incl. CR/LF (header injection), quotes and angle brackets.
+        $name = preg_replace('/[\x00-\x1F\x7F"\\\\<>]+/', '', $name);
         $name = trim(preg_replace('/\s+/', ' ', $name));
 
         return $name !== '' ? mb_substr($name, 0, 200) : 'file';
