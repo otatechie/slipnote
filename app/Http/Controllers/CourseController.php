@@ -505,6 +505,11 @@ class CourseController extends Controller
         }
 
         $count = count($created);
+        // One Telegram message for the batch, from plain values: a message per
+        // file trips Telegram's limits, and a model re-fetched after Undo throws.
+        $summary = TelegramNotifier::uploadSummary($created);
+        dispatch(fn () => app(TelegramNotifier::class)->notifyUploads($summary))->afterResponse();
+
         $message = $count === 1 ? 'File added.' : "{$count} files added.";
         if ($duplicate > 0) {
             $message .= $duplicate === 1
@@ -533,11 +538,6 @@ class CourseController extends Controller
             'addedName' => $count === 1 ? $created[0]->displayName() : null,
             'addedCount' => $count,
         ]);
-        // One Telegram message for the batch, from plain values: a message per
-        // file trips Telegram's limits, and a model re-fetched after Undo throws.
-        $summary = TelegramNotifier::uploadSummary($created);
-        dispatch(fn () => app(TelegramNotifier::class)->notifyUploads($summary))->afterResponse();
-
     }
 
     private function sanitizeFilename(string $name): string

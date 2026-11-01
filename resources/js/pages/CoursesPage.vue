@@ -34,8 +34,9 @@ const localSort = ref(props.sort)
 let searchTimer = null
 watch(localSearch, (val) => {
     clearTimeout(searchTimer)
+    const path = window.location.pathname
     searchTimer = setTimeout(() => {
-        router.visit(window.location.pathname, {
+        router.visit(path, {
             data: { search: val, sort: localSort.value },
             preserveState: true,
             replace: true,

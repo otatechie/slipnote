@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Middleware\CaptureReferral;
+use App\Http\Middleware\ClientIpFromHeader;
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveWorkspace;
 use App\Http\Middleware\SecureHeaders;
+use App\Http\Middleware\TallyArrival;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,12 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // proxy trust is only about the client IP, not the scheme.
 
         // First, so sessions and rate limits all see the visitor's address.
-        $middleware->prepend(\App\Http\Middleware\ClientIpFromHeader::class);
+        $middleware->prepend(ClientIpFromHeader::class);
         $middleware->append(SecureHeaders::class);
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \App\Http\Middleware\CaptureReferral::class,
-            \App\Http\Middleware\TallyArrival::class,
+            HandleInertiaRequests::class,
+            CaptureReferral::class,
+            TallyArrival::class,
         ]);
         $middleware->alias([
             'workspace' => ResolveWorkspace::class,

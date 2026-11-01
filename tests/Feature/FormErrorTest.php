@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Tests\TestCase;
@@ -57,7 +58,7 @@ class FormErrorTest extends TestCase
 
     public function test_pages_and_non_inertia_requests_are_left_alone(): void
     {
-        $version = app(\App\Http\Middleware\HandleInertiaRequests::class)->version(request());
+        $version = app(HandleInertiaRequests::class)->version(request());
         $this->withHeaders(['X-Inertia' => 'true', 'X-Inertia-Version' => (string) $version])
             ->get('/_test/broken')->assertStatus(500);
         $this->flushHeaders()->post('/_test/expired')->assertStatus(419);

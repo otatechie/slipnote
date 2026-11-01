@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -149,7 +150,7 @@ class BoardActivityTest extends TestCase
 
     public function test_access_is_scoped_to_the_board_that_was_visited(): void
     {
-        [$other] = \App\Models\Workspace::provision('Other Board');
+        [$other] = Workspace::provision('Other Board');
 
         $this->get('/'.$this->workspace->slug)->assertOk();
 

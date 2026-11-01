@@ -14,7 +14,8 @@ let paused = false
 
 function arm() {
     clearTimeout(timer)
-    if (!paused) timer = setTimeout(() => { text.value = '' }, SHOW_MS)
+    // Longer notices stay longer: no hover to pause on a phone.
+    if (!paused) timer = setTimeout(() => { text.value = '' }, Math.max(SHOW_MS, text.value.length * 70))
 }
 
 watch(() => page.props.flash, (flash) => {

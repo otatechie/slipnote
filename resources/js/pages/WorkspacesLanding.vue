@@ -3,6 +3,7 @@ import { computed, nextTick, ref } from 'vue'
 import { Head, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { vModalFocus } from '@/components/modalFocus'
+import { useSecretFlash } from '@/components/secretFlash'
 
 const props = defineProps({
     recent: { type: Array, default: () => [] },
@@ -12,6 +13,8 @@ const page = usePage()
 
 // Flash data from server
 const flash = computed(() => page.props.flash)
+// The owner receipt: shown once, and gone from history once shown.
+const receipt = useSecretFlash(['ownerUrl', 'createdUrl', 'createdName', 'recovered', 'ownerReset'])
 const errors = computed(() => page.props.errors)
 
 const returning = computed(() => props.recent.length > 0)
@@ -87,7 +90,7 @@ const copied = ref(false)
 const downloaded = ref(false)
 
 function copyOwnerLink() {
-    window.copyText(flash.value.ownerUrl).then(() => {
+    window.copyText(receipt.ownerUrl).then(() => {
         copied.value = true
         saved.value = true
         setTimeout(() => { copied.value = false }, 2000)
@@ -96,18 +99,18 @@ function copyOwnerLink() {
 
 const shareCopied = ref(false)
 function copyShareLink() {
-    window.copyText(flash.value.createdUrl).then(() => {
+    window.copyText(receipt.createdUrl).then(() => {
         shareCopied.value = true
         setTimeout(() => { shareCopied.value = false }, 2000)
     }).catch(() => {})
 }
 
 function downloadTxt() {
-    const name = flash.value.createdName
+    const name = receipt.createdName
     const body =
         'SlipNote owner link for "' + name + '"\n\n' +
-        'OWNER (keep private - controls the board):\n' + flash.value.ownerUrl + '\n\n' +
-        'SHARE WITH CLASSMATES:\n' + flash.value.createdUrl + '\n'
+        'OWNER (keep private - controls the board):\n' + receipt.ownerUrl + '\n\n' +
+        'SHARE WITH CLASSMATES:\n' + receipt.createdUrl + '\n'
     const a = document.createElement('a')
     const blob = new Blob([body], { type: 'text/plain' })
     a.href = URL.createObjectURL(blob)
@@ -120,7 +123,7 @@ function downloadTxt() {
 }
 
 function proceed() {
-    router.visit(flash.value.createdUrl)
+    router.visit(receipt.createdUrl, { replace: true })
 }
 
 const forgetTarget = ref(null)
@@ -139,7 +142,7 @@ function confirmForget() {
 </script>
 
 <template>
-    <Head :title="flash.ownerUrl ? 'Save your owner link' : (returning ? 'Your boards' : 'Create a board')" />
+    <Head :title="receipt.ownerUrl ? 'Save your owner link' : (returning ? 'Your boards' : 'Create a board')" />
     <AppLayout>
         <div class="op mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-8 sm:px-5 sm:py-12">
             <header class="mb-7 text-center">
@@ -148,7 +151,7 @@ function confirmForget() {
                     <img src="/logo-mark.png" alt="" class="size-7 shrink-0">
                     SlipNote
                 </a>
-                <template v-if="flash.ownerUrl">
+                <template v-if="receipt.ownerUrl">
                     <h1 class="op-title text-[2.15rem] font-bold text-ink">Save your owner link</h1>
                     <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
                         It's shown only once — copy it or download it before you continue.
@@ -166,11 +169,11 @@ function confirmForget() {
                 </template>
             </header>
 
-            <template v-if="flash.ownerUrl">
+            <template v-if="receipt.ownerUrl">
                 <div class="op-card p-5 sm:p-6">
-                    <p v-if="flash.recovered" class="text-[15px] font-bold text-teal">Owner access to "{{ flash.createdName }}" is restored</p>
-                    <p v-else-if="flash.ownerReset" class="text-[15px] font-bold text-teal">New owner link for "{{ flash.createdName }}". The old one no longer works.</p>
-                    <p v-else class="text-[15px] font-bold text-teal">"{{ flash.createdName }}" is created 🎉</p>
+                    <p v-if="receipt.recovered" class="text-[15px] font-bold text-teal">Owner access to "{{ receipt.createdName }}" is restored</p>
+                    <p v-else-if="receipt.ownerReset" class="text-[15px] font-bold text-teal">New owner link for "{{ receipt.createdName }}". The old one no longer works.</p>
+                    <p v-else class="text-[15px] font-bold text-teal">"{{ receipt.createdName }}" is created 🎉</p>
 
                     <div class="mt-4">
                         <p class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-danger">
@@ -181,7 +184,7 @@ function confirmForget() {
                             Owner link · keep it private
                         </p>
                         <p class="w-full cursor-text break-all rounded-lg border border-danger/25 bg-danger/5 px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink select-all"
-                           @click="$event.target.select?.() || window.getSelection().selectAllChildren($event.target)">{{ flash.ownerUrl }}</p>
+                           >{{ receipt.ownerUrl }}</p>
                         <p class="mt-1.5 text-[12px] text-muted">Anyone with this link can control or delete the board.</p>
 
                         <div class="mt-3 flex items-center gap-2">
@@ -207,7 +210,7 @@ function confirmForget() {
                             Share link · once it has files
                         </p>
                         <div class="flex items-stretch overflow-hidden rounded-lg border border-sky bg-base">
-                            <span class="min-w-0 flex-1 cursor-text select-all truncate px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink">{{ flash.createdUrl }}</span>
+                            <span class="min-w-0 flex-1 cursor-text select-all truncate px-3 py-2.5 font-mono text-[12px] leading-relaxed text-ink">{{ receipt.createdUrl }}</span>
                             <button type="button" @click="copyShareLink"
                                     class="min-h-11 shrink-0 cursor-pointer border-l border-sky px-4 text-[13px] font-semibold text-neon transition hover:bg-sky/30 sm:min-h-9">
                                 <span v-if="!shareCopied">Copy</span>
@@ -226,7 +229,7 @@ function confirmForget() {
                             class="op-press mt-3 min-h-11 w-full rounded-full text-[15px] font-semibold transition
                                    enabled:cursor-pointer enabled:bg-neon enabled:text-white enabled:shadow-sm
                                    disabled:cursor-not-allowed disabled:bg-sky/50 disabled:text-muted/70">
-                        <template v-if="flash.recovered || flash.ownerReset">Open {{ flash.createdName }}</template>
+                        <template v-if="receipt.recovered || receipt.ownerReset">Open {{ receipt.createdName }}</template>
                         <template v-else>Add your first course</template>
                     </button>
                 </div>

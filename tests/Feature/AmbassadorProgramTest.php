@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Ambassador;
-use App\Models\Course;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;

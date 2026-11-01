@@ -11,8 +11,11 @@ function systemTheme() {
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+// Storage can throw (site data blocked) or be absent (some WebViews); the
+// theme is a convenience, not worth a blank page.
 function storedTheme() {
-    const saved = window.localStorage.getItem(THEME_KEY)
+    let saved = null
+    try { saved = window.localStorage.getItem(THEME_KEY) } catch {}
     return THEME_OPTIONS.includes(saved) ? saved : 'system'
 }
 
@@ -24,7 +27,7 @@ function applyTheme(theme) {
     root.dataset.theme = active
     root.dataset.systemTheme = systemTheme()
     root.style.colorScheme = resolved
-    window.localStorage.setItem(THEME_KEY, active)
+    try { window.localStorage.setItem(THEME_KEY, active) } catch {}
 
     document.querySelectorAll('[data-theme-set]').forEach((button) => {
         button.setAttribute('aria-pressed', String(button.dataset.themeSet === active))
@@ -145,6 +148,27 @@ if (document.getElementById('app')) {
             initThemeToggle()
 
             router.on('navigate', () => initThemeToggle())
+
+            // Every page that isn't the upload form: a dropped connection or
+            // an error page from the proxy shows a notice, not nothing or a
+            // pop-up of raw HTML. Pages that handle it themselves stop it first.
+            router.on('networkError', (event) => {
+                event.preventDefault()
+                showNotice('No connection. Check your signal and try again.')
+            })
+            router.on('httpException', (event) => {
+                event.preventDefault()
+                const status = event.detail.response.status
+                showNotice(status === 404 ? 'That isn’t on the board any more. Reload to see what is.'
+                    : status === 429 ? 'Too many requests from here. Give it a minute.'
+                        : status === 403 ? 'You can’t do that on this board.'
+                            : 'That didn’t go through (error ' + status + '). Please try again.')
+            })
         },
     })
+}
+
+// A notice any page can show the way FlashNotice does: by setting the flash prop.
+function showNotice(text) {
+    router.replaceProp('flash', (flash) => ({ ...flash, notice: text }))
 }

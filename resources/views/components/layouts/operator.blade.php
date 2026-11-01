@@ -11,7 +11,8 @@
         (() => {
             const key = 'slipnote-theme'
             const options = new Set(['system', 'light', 'dark'])
-            const saved = localStorage.getItem(key)
+            let saved = null
+            try { saved = localStorage.getItem(key) } catch {}
             const theme = options.has(saved) ? saved : 'system'
             const system = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
             const resolved = theme === 'system' ? system : theme

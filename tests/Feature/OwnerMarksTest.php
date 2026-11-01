@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Course;
 use App\Models\Material;
 use App\Models\Workspace;
+use App\Tenancy\Tenancy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -199,12 +200,12 @@ class OwnerMarksTest extends TestCase
         $this->edit($m, ['name' => str_repeat('a', 121), 'section' => 'notes'])->assertSessionHasErrors('name');
 
         $other = Workspace::create(['name' => 'Other', 'slug' => 'other-board', 'owner_secret_hash' => 'x']);
-        app(\App\Tenancy\Tenancy::class)->set($other);
+        app(Tenancy::class)->set($other);
         $theirs = Course::create(['code' => 'X 1', 'title' => 'X', 'slug' => 'bio-101']);
         $foreign = $theirs->materials()->create([
             'section' => 'notes', 'original_filename' => 'f.pdf', 'stored_path' => 'materials/f.pdf', 'download_token' => 'dl-f', 'file_size' => 1,
         ]);
-        app(\App\Tenancy\Tenancy::class)->set($this->workspace);
+        app(Tenancy::class)->set($this->workspace);
 
         $this->edit($foreign, ['name' => 'Hacked', 'section' => 'notes'])->assertNotFound();
         $this->assertNull($foreign->fresh()->title);

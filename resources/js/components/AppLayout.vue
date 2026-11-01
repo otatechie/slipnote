@@ -1,12 +1,15 @@
 <script setup>
+import FlashNotice from './FlashNotice.vue'
 import SuggestDialog from './SuggestDialog.vue'
 import { openSuggest } from './suggest'
 
-defineProps({ fabSpace: { type: Boolean, default: false } })
+// A page with a sticky bar places FlashNotice itself, below the bar.
+defineProps({ fabSpace: { type: Boolean, default: false }, ownNotice: { type: Boolean, default: false } })
 </script>
 
 <template>
     <div class="flex min-h-screen flex-col">
+        <FlashNotice v-if="!ownNotice" />
         <slot />
         <footer class="mt-auto border-t border-sky/60 py-6" :class="fabSpace ? 'pb-24 sm:pb-6' : ''">
             <div class="mx-auto flex max-w-3xl flex-col items-center gap-2.5 px-5 text-center">

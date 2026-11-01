@@ -1,9 +1,10 @@
 <script setup>
-import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
+import { computed, ref, watch, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import FlashNotice from '@/components/FlashNotice.vue'
 import { shrinkImage } from '@/components/shrinkImage.js'
+import { useSecretFlash } from '@/components/secretFlash'
 
 const props = defineProps({
     workspace: Object,
@@ -27,6 +28,8 @@ const props = defineProps({
 
 const page = usePage()
 const flash = computed(() => page.props.flash)
+// Undo capabilities: held for this page view only, never in history.
+const undo = useSecretFlash(['manageUrl', 'undoBatch'])
 
 const receiptClosed = ref(false)
 const uploadReceipt = ref(null)
@@ -63,15 +66,19 @@ const whatsAppUrl = computed(() => 'https://wa.me/?text=' + encodeURIComponent(
 const localSearch = ref(props.search)
 const localSort = ref(props.sort)
 
+// The path is taken when the user types, not when the timer fires: a tap on
+// the board link in those 250 ms must not land the search on the board.
 let searchTimer = null
 watch(localSearch, (val) => {
     clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => visitFilter(), 250)
+    const path = window.location.pathname
+    searchTimer = setTimeout(() => visitFilter(path), 250)
 })
-watch(localSort, () => visitFilter())
+watch(localSort, () => visitFilter(window.location.pathname))
+onBeforeUnmount(() => clearTimeout(searchTimer))
 
-function visitFilter() {
-    router.visit(window.location.pathname, {
+function visitFilter(path) {
+    router.visit(path, {
         data: {
             search: localSearch.value,
             sort: localSort.value,
@@ -193,7 +200,8 @@ watch(uploadOpen, (v) => {
     if (v) {
         nextTick(() => {
             const el = document.getElementById('add-file')
-            el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+            const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            el?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' })
         })
     }
 })
@@ -203,9 +211,11 @@ if (props.canUpload && (window.location.hash === '#add-file' || (errors.value &&
     uploadOpen.value = true
 }
 
-window.addEventListener('hashchange', () => {
+function openOnHash() {
     if (props.canUpload && window.location.hash === '#add-file') uploadOpen.value = true
-})
+}
+onMounted(() => window.addEventListener('hashchange', openOnHash))
+onBeforeUnmount(() => window.removeEventListener('hashchange', openOnHash))
 
 async function onFileChange(e) {
     const picked = Array.from(e.target.files)
@@ -276,6 +286,8 @@ const reportReason = ref('')
 const reportNote = ref('')
 const reportSubmitting = ref(false)
 
+// The reason and the note travel as one 280-character string.
+const reportNoteMax = computed(() => 280 - (reportReason.value ? reportReason.value.length + 3 : 0))
 const reportNeedsNote = computed(() =>
     reportReason.value === 'Other' && reportNote.value.trim() === '')
 
@@ -295,7 +307,10 @@ function submitReport() {
         { reason },
         {
             preserveScroll: true,
-            onFinish: () => { reportSubmitting.value = false; reportTarget.value = null },
+            // Closed on success only: offline, the dialog stays so the student
+            // knows it didn't go.
+            onSuccess: () => { reportTarget.value = null },
+            onFinish: () => { reportSubmitting.value = false },
         },
     )
 }
@@ -342,23 +357,23 @@ function submitEdit() {
     )
 }
 
-function askDeleteFile(e) {
-    e.preventDefault()
-    const form = e.target.closest('form')
+function askDeleteFile(material) {
     deleteTarget.value = {
         title: 'Remove this file?',
-        label: form.dataset.name,
+        label: material.displayName,
         detail: 'This removes the file from the board for everyone.',
-        run: () => form.submit(),
+        run: () => router.delete(material.delete_url, { preserveScroll: true }),
     }
 }
 
-const undoForm = ref(null)
 const confirmingUndo = ref(false)
 
 function submitUndo() {
     confirmingUndo.value = false
-    undoForm.value?.submit()
+    router.delete(undo.manageUrl ?? undo.undoBatch.url, {
+        data: undo.undoBatch ? { tokens: undo.undoBatch.tokens } : {},
+        preserveScroll: true,
+    })
 }
 
 function courseListUrl() {
@@ -467,7 +482,7 @@ watch(() => props.materials, () => { selected.value = [] })
 
 <template>
     <Head :title="course.code + ' · ' + workspace.name" />
-    <AppLayout :fab-space="canUpload && !storageFull && resultCount > 0">
+    <AppLayout :fab-space="canUpload && !storageFull && resultCount > 0" own-notice>
         <div class="op mx-auto flex w-full max-w-3xl flex-1 flex-col px-5 pb-6">
 
             <header class="mb-4 flex items-center justify-between gap-4 pt-6 sm:pt-8">
@@ -540,15 +555,12 @@ watch(() => props.materials, () => { selected.value = [] })
                     </span>
                     <div class="min-w-0">
                         <p class="text-[14px] font-semibold text-ink">{{ flash.uploaded }}</p>
-                        <form v-if="flash.manageUrl || flash.undoBatch" ref="undoForm" :action="flash.manageUrl ?? flash.undoBatch.url" method="POST"
-                              class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
-                            <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
-                            <input type="hidden" name="_method" value="DELETE">
-                            <input v-for="t in flash.undoBatch?.tokens ?? []" :key="t" type="hidden" name="tokens[]" :value="t">
+                        <div v-if="undo.manageUrl || undo.undoBatch"
+                             class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
                             <button type="button" @click="confirmingUndo = true"
                                     class="-my-3 inline-flex min-h-11 cursor-pointer items-center font-semibold text-ink underline decoration-muted/50 underline-offset-2 hover:decoration-ink sm:my-0 sm:min-h-0">Undo upload</button>
                             <span>· only until you leave</span>
-                        </form>
+                        </div>
                         <button v-if="canUpload && !storageFull && !uploadOpen" type="button" @click="uploadOpen = true"
                                 class="-my-3 mt-0.5 inline-flex min-h-11 cursor-pointer items-center gap-1 text-[13px] font-semibold text-neon hover:underline sm:my-0 sm:mt-1 sm:min-h-0">
                             <span class="text-base leading-none">+</span> Add more files
@@ -693,7 +705,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                 <span class="relative" v-if="!uploadForm.processing">
                                     {{ uploadForm.files.length > 1 ? `Upload ${uploadForm.files.length} files` : 'Upload' }}
                                 </span>
-                                <span class="relative tabular-nums" v-else-if="uploadForm.progress">
+                                <span class="relative tabular-nums" v-else-if="uploadForm.progress && uploadForm.progress.percentage < 100">
                                     Uploading… {{ uploadForm.progress.percentage }}%
                                 </span>
                                 <span class="relative" v-else>Saving…</span>
@@ -894,17 +906,13 @@ watch(() => props.materials, () => { selected.value = [] })
                                                 class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-ink hover:bg-sky/40 sm:min-h-0">
                                             {{ material.pinned ? 'Unpin' : 'Pin to top' }}
                                         </button>
-                                        <form :action="material.delete_url" method="POST"
-                                              :data-name="material.displayName"
-                                              @submit="askDeleteFile">
-                                            <input type="hidden" name="_token" :value="$page.props.csrf_token ?? ''">
-                                            <input type="hidden" name="_method" value="DELETE">
-                                            <button type="submit"
-                                                    @click="$event.target.closest('details')?.removeAttribute('open')"
+                                        <div>
+                                            <button type="button"
+                                                    @click="$event.target.closest('details')?.removeAttribute('open'); askDeleteFile(material)"
                                                     class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10 sm:min-h-0">
                                                 Delete this file
                                             </button>
-                                        </form>
+                                        </div>
                                     </div>
                                 </details>
                                 <details v-if="!isOwner && !selecting" class="op-menu relative">
@@ -915,7 +923,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <div class="absolute right-full top-1/2 z-20 mr-1 w-44 -translate-y-1/2 rounded-xl bg-surface p-1 text-left shadow-xl ring-1 ring-sky">
                                         <button type="button"
                                                 @click="$event.target.closest('details')?.removeAttribute('open'); openReport(material)"
-                                                class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10">
+                                                class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10 sm:min-h-0">
                                             Report this file
                                         </button>
                                     </div>
@@ -962,7 +970,7 @@ watch(() => props.materials, () => { selected.value = [] })
                     <label for="reportNote" class="mt-3 block text-[13px] font-semibold text-ink">
                         {{ reportReason === 'Other' ? 'What\'s wrong with it?' : 'Add a note (optional)' }}
                     </label>
-                    <textarea id="reportNote" v-model="reportNote" rows="2" maxlength="280"
+                    <textarea id="reportNote" v-model="reportNote" rows="2" :maxlength="reportNoteMax"
                               placeholder="Anything the operator should know"
                               class="mt-1.5 w-full resize-none rounded-xl border border-sky bg-base px-3.5 py-2.5 text-[14px] text-ink shadow-inner placeholder:text-muted"></textarea>
                     <p v-if="reportNote.length > 200" aria-live="polite"
@@ -1043,7 +1051,7 @@ watch(() => props.materials, () => { selected.value = [] })
                 <div class="relative w-full max-w-md rounded-t-2xl bg-surface px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3 shadow-xl sm:rounded-2xl sm:pt-6">
                     <div class="mx-auto mb-3 h-1 w-10 rounded-full bg-muted/30 sm:hidden"></div>
                     <h2 class="text-[15px] font-bold text-ink">Undo this upload?</h2>
-                    <p class="mt-1 text-[13px] text-muted">{{ flash.undoBatch ? `All ${flash.undoBatch.tokens.length} files` : 'The file' }} will be removed from the board. This can't be undone.</p>
+                    <p class="mt-1 text-[13px] text-muted">{{ undo.undoBatch ? `All ${undo.undoBatch.tokens.length} files` : 'The file' }} will be removed from the board. This can't be undone.</p>
 
                     <div class="mt-4 flex items-center justify-end gap-2">
                         <button type="button" @click="confirmingUndo = false"

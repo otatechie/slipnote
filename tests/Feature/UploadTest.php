@@ -7,10 +7,11 @@ use App\Models\Material;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Tests\InteractsWithWorkspace;
 use Tests\TestCase;
@@ -78,7 +79,7 @@ class UploadTest extends TestCase
 
         // Held for the whole wait: the second batch is turned away, not let through.
         $this->freezeTime();
-        \Illuminate\Support\Sleep::fake(syncWithCarbon: true);
+        Sleep::fake(syncWithCarbon: true);
         $this->post($this->uploadUrl(), [
             'section' => 'notes',
             'files' => [UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf')],
