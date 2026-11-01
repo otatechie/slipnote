@@ -133,4 +133,7 @@ Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}/recover/{nonce}', [WorkspaceRecoveryController::class, 'redeem'])
         ->middleware('signed')
         ->name('workspace.recover.redeem');
+    Route::post('/{workspace}/recover/{nonce}', [WorkspaceRecoveryController::class, 'confirm'])
+        ->middleware('signed')
+        ->name('workspace.recover.confirm');
 });

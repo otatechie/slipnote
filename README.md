@@ -97,10 +97,12 @@ bulk-delete files. Course slugs are unique *within* a workspace.
 Lose the owner link and the board is unrecoverable — unless the owner set a
 **recovery email** (encrypted at rest, owner-mode only). Visit
 `/<workspace>/recover`, enter that email, and a signed, single-use restore link
-(valid for an hour) is emailed to the stored address. Opening it rotates the
-owner secret, retires the old link, and shows the new one once. Until it is
-opened nothing changes — so knowing someone's recovery address is not enough
-to revoke their access. Responses are identical whether the email matches or
+(valid for an hour) is emailed to the stored address. Opening it asks first;
+pressing "Get my new owner link" rotates the owner secret, retires the old
+link, and shows the new one once. Until then nothing changes, so a mail
+scanner or link preview that opens the link can't take the board, and knowing
+someone's recovery address is not enough to revoke their access. The link
+is always built on `APP_URL`, never the request's Host header. Responses are identical whether the email matches or
 not (no enumeration), rate-limited, and the feature is hidden when the mail
 driver is `log` or `array`.
 
@@ -110,7 +112,7 @@ driver is `log` or `array`.
   `Hash::check`. Both ways of presenting it — the unlock form and a
   `?owner=` link — share one per-workspace rate limit, so a wrong guess
   costs the same whichever door it comes through. Recovery rotates the
-  secret only when the mailed restore link is used.
+  secret only when the mailed restore link is confirmed.
 - **Two tokens per file.** The public download address (`download_token`) and
   the uploader's private delete capability (`manage_token`) are separate
   columns. The page hands every visitor the former and never the latter.

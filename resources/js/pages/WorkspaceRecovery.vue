@@ -5,6 +5,8 @@ import AppLayout from '@/components/AppLayout.vue'
 
 const props = defineProps({
     workspace: Object,
+    // Set when the mailed link was opened: it takes a press to use it.
+    redeemUrl: { type: String, default: null },
 })
 
 const page = usePage()
@@ -12,6 +14,7 @@ const flash = computed(() => page.props.flash)
 const errors = computed(() => page.props.errors)
 
 const form = useForm({ email: '' })
+const redeemForm = useForm({})
 
 function requestRecovery() {
     form.post('/' + props.workspace.slug + '/recover', {
@@ -34,12 +37,27 @@ function requestRecovery() {
                 <h1 class="op-title text-[2.15rem] font-bold text-ink">Recover owner access</h1>
                 <p class="mx-auto mt-2 max-w-sm text-[15px] text-muted">
                     For <span class="font-semibold text-ink">{{ workspace.name }}</span>.
-                    If a recovery email was set for this board, we'll send a fresh
-                    owner link there.
+                    <template v-if="!redeemUrl">
+                        If a recovery email was set for this board, we'll send a fresh
+                        owner link there.
+                    </template>
                 </p>
             </header>
 
-            <div v-if="flash.done" class="rounded-3xl border border-sky/30 bg-surface p-6 shadow-sm sm:p-7">
+            <form v-if="redeemUrl" @submit.prevent="redeemForm.post(redeemUrl)"
+                  class="rounded-2xl border border-sky/30 bg-surface p-5 shadow-sm sm:p-6">
+                <h2 class="text-[17px] font-semibold tracking-[-0.01em] text-ink">Get a new owner link</h2>
+                <p class="mt-2 text-[14px] leading-relaxed text-muted">
+                    This replaces the old owner link, which stops working. You'll see
+                    the new one on the next screen; save it somewhere safe.
+                </p>
+                <button type="submit" :disabled="redeemForm.processing"
+                        class="mt-4 w-full cursor-pointer rounded-full bg-neon py-3.5 text-[15px] font-bold text-white transition hover:brightness-125 disabled:opacity-60">
+                    Get my new owner link
+                </button>
+            </form>
+
+            <div v-else-if="flash.done" class="rounded-3xl border border-sky/30 bg-surface p-6 shadow-sm sm:p-7">
                 <div class="flex items-center gap-3">
                     <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-teal/10 text-teal">
                         <svg class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

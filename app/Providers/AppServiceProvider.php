@@ -17,6 +17,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Links are built from APP_URL, never the request's Host header: a
+        // forged Host would otherwise end up in the mailed recovery link.
+        if (filled(config('app.url'))) {
+            URL::forceRootUrl(config('app.url'));
+        }
         if (str_starts_with((string) config('app.url'), 'https://')) {
             URL::forceScheme('https');
         }

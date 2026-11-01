@@ -173,7 +173,8 @@ class OwnerRecoveryTest extends TestCase
         $oldSecret = $this->ownerSecret;
         $url = $this->requestRestoreLink();
 
-        $this->get($url)->assertRedirect(route('start'));
+        $this->get($url)->assertOk();
+        $this->post($url)->assertRedirect(route('start'));
 
         $fresh = $this->workspace->fresh();
         $this->assertFalse($fresh->verifyOwner($oldSecret), 'old link retired on redeem');
@@ -189,10 +190,36 @@ class OwnerRecoveryTest extends TestCase
     {
         $url = $this->requestRestoreLink();
 
-        $this->get($url)->assertRedirect(route('start'));
+        $this->post($url)->assertRedirect(route('start'));
+        $this->post($url)
+            ->assertRedirect(route('workspace.recover', $this->wsParams()))
+            ->assertSessionHasErrors('email');
         $this->get($url)
             ->assertRedirect(route('workspace.recover', $this->wsParams()))
             ->assertSessionHasErrors('email');
+    }
+
+    public function test_opening_the_restore_link_only_asks(): void
+    {
+        // A mail scanner or link preview opens it first: nothing may change.
+        $url = $this->requestRestoreLink();
+
+        $this->get($url)->assertOk()->assertInertia(fn ($page) => $page
+            ->component('WorkspaceRecovery')
+            ->where('redeemUrl', $url));
+        $this->get($url)->assertOk();
+
+        $this->assertTrue($this->workspace->fresh()->verifyOwner($this->ownerSecret));
+        $this->assertFalse($this->workspace->fresh()->sessionIsOwner());
+    }
+
+    public function test_the_restore_link_carries_the_real_host_whatever_the_request_said(): void
+    {
+        $this->workspace->setRecoveryEmail('owner@example.com');
+        $this->withServerVariables(['HTTP_HOST' => 'evil.example'])
+            ->post('http://evil.example/'.$this->workspace->slug.'/recover', ['email' => 'owner@example.com']);
+
+        Mail::assertSent(OwnerLinkRecovery::class, fn ($mail) => str_starts_with($mail->restoreUrl, config('app.url').'/'));
     }
 
     public function test_a_tampered_restore_link_is_rejected(): void
@@ -200,6 +227,7 @@ class OwnerRecoveryTest extends TestCase
         $url = $this->requestRestoreLink();
 
         $this->get(str_replace('signature=', 'signature=0', $url))->assertForbidden();
+        $this->post(str_replace('signature=', 'signature=0', $url))->assertForbidden();
     }
 
     public function test_a_restore_link_for_one_board_cannot_redeem_another(): void
@@ -208,7 +236,7 @@ class OwnerRecoveryTest extends TestCase
         [$beta] = Workspace::provision('Beta Board');
 
         // Same nonce, different board in the path: the signature no longer matches.
-        $this->get(str_replace('/'.$this->workspace->slug.'/', '/'.$beta->slug.'/', $url))->assertForbidden();
+        $this->post(str_replace('/'.$this->workspace->slug.'/', '/'.$beta->slug.'/', $url))->assertForbidden();
         $this->assertTrue($this->workspace->fresh()->verifyOwner($this->ownerSecret));
     }
 

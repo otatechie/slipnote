@@ -66,14 +66,28 @@ class WorkspaceRecoveryController extends Controller
         return back()->with('done', true);
     }
 
+    // Opening the mailed link only asks. Mail scanners and link previews open
+    // links too, and one that redeemed it would take the new owner secret.
     public function redeem(Request $request, string $workspaceSlug, string $nonce)
     {
         $workspace = app(Tenancy::class)->current();
 
+        if (Cache::get(self::redeemKey($nonce)) !== $workspace->id) {
+            return self::linkSpent($workspace->slug);
+        }
+
+        return Inertia::render('WorkspaceRecovery', [
+            'workspace' => ['name' => $workspace->name, 'slug' => $workspace->slug],
+            'redeemUrl' => $request->fullUrl(),
+        ]);
+    }
+
+    public function confirm(Request $request, string $workspaceSlug, string $nonce)
+    {
+        $workspace = app(Tenancy::class)->current();
+
         if (Cache::pull(self::redeemKey($nonce)) !== $workspace->id) {
-            return redirect()
-                ->route('workspace.recover', ['workspace' => $workspace->slug])
-                ->withErrors(['email' => 'That link has expired or was already used. Request a new one.']);
+            return self::linkSpent($workspace->slug);
         }
 
         [$secret, $hash] = $workspace->draftOwnerSecretRotation();
@@ -91,6 +105,13 @@ class WorkspaceRecoveryController extends Controller
                 'createdUrl' => route('courses.index', ['workspace' => $workspace->slug]),
                 'ownerUrl' => route('courses.index', ['workspace' => $workspace->slug]).'?owner='.$secret,
             ]);
+    }
+
+    private static function linkSpent(string $slug)
+    {
+        return redirect()
+            ->route('workspace.recover', ['workspace' => $slug])
+            ->withErrors(['email' => 'That link has expired or was already used. Request a new one.']);
     }
 
     private static function redeemKey(string $nonce): string
