@@ -1,6 +1,9 @@
 *.log
 .DS_Store
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/settings.json
+CLAUDE.local.md
 .env
 .env.backup
 .env.production
