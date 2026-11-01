@@ -9,12 +9,16 @@ use App\Services\TelegramNotifier;
 use App\Support\ClientKey;
 use App\Support\LastSeen;
 use App\Support\RecentWorkspaces;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use RuntimeException;
+use Throwable;
 
 class CourseController extends Controller
 {
@@ -372,72 +376,104 @@ class CourseController extends Controller
         $files = $request->file('files');
 
         $title = count($files) === 1 && isset($data['title']) ? strip_tags($data['title']) : null;
+
+        // One batch per board at a time: the caps and the duplicate check read
+        // the board's totals, and two batches at once would both pass them.
+        $lock = Cache::lock('upload:board:'.$workspace->id, 120);
+        try {
+            $lock->block(20);
+        } catch (LockTimeoutException) {
+            return back()->withErrors(['files' => 'Someone else is uploading to this board right now. Try again in a minute.']);
+        }
+
         $byOwner = $this->isOwner();
+        try {
+            $remaining = $workspace->storageRemaining();
+            $filesLeft = $workspace->filesRemaining();
+            $created = [];
+            $skipped = 0;
+            $blocked = 0;
+            $duplicate = 0;
+            $duplicateName = null;
+            $failed = 0;
+            $seenHashes = $course->materials()->whereNotNull('content_hash')->pluck('content_hash')->flip();
 
-        $remaining = $workspace->storageRemaining();
-        $filesLeft = $workspace->filesRemaining();
-        $created = [];
-        $skipped = 0;
-        $blocked = 0;
-        $duplicate = 0;
-        $duplicateName = null;
-        $seenHashes = $course->materials()->whereNotNull('content_hash')->pluck('content_hash')->flip();
+            foreach ($files as $file) {
+                $hash = hash_file('sha256', $file->getRealPath());
 
-        foreach ($files as $file) {
-            $hash = hash_file('sha256', $file->getRealPath());
+                // Refuse files the operator previously removed (exact-content match).
+                if (BlockedUpload::where('content_hash', $hash)->exists()) {
+                    $blocked++;
 
-            // Refuse files the operator previously removed (exact-content match).
-            if (BlockedUpload::where('content_hash', $hash)->exists()) {
-                $blocked++;
+                    continue;
+                }
 
-                continue;
+                if ($seenHashes->has($hash)) {
+                    $duplicate++;
+                    $duplicateName ??= $course->materials()->where('content_hash', $hash)->value('title')
+                        ?? $course->materials()->where('content_hash', $hash)->value('original_filename');
+
+                    continue;
+                }
+
+                $size = (int) $file->getSize();
+                if ($size > $remaining || $filesLeft <= 0) {
+                    $skipped++;
+
+                    continue;
+                }
+                // throw => false on the local disk: a failed write is a false path, not an exception.
+                $path = $file->store('materials', 'local');
+                if ($path === false) {
+                    report(new RuntimeException("An upload to course {$course->id} could not be written to disk."));
+                    $failed++;
+
+                    continue;
+                }
+
+                try {
+                    $material = $course->materials()->create([
+                        'section' => $data['section'],
+                        'title' => $title,
+                        'original_filename' => $this->sanitizeFilename($file->getClientOriginalName()),
+                        'stored_path' => $path,
+                        'by_owner' => $byOwner,
+                        'manage_token' => Str::random(40),
+                        'download_token' => Str::random(40),
+                        'file_size' => $size,
+                        'content_hash' => $hash,
+                    ]);
+                } catch (Throwable $e) {
+                    Storage::disk('local')->delete($path);
+
+                    throw $e;
+                }
+                $remaining -= $size;
+                $filesLeft--;
+                $seenHashes->put($hash, true);
+
+                dispatch(fn () => app(TelegramNotifier::class)->notifyUpload($material))->afterResponse();
+                $created[] = $material;
             }
-
-            if ($seenHashes->has($hash)) {
-                $duplicate++;
-                $duplicateName ??= $course->materials()->where('content_hash', $hash)->value('title')
-                    ?? $course->materials()->where('content_hash', $hash)->value('original_filename');
-
-                continue;
-            }
-
-            $size = (int) $file->getSize();
-            if ($size > $remaining || $filesLeft <= 0) {
-                $skipped++;
-
-                continue;
-            }
-            $remaining -= $size;
-            $filesLeft--;
-            $seenHashes->put($hash, true);
-
-            $material = $course->materials()->create([
-                'section' => $data['section'],
-                'title' => $title,
-                'original_filename' => $this->sanitizeFilename($file->getClientOriginalName()),
-                'stored_path' => $file->store('materials', 'local'),
-                'by_owner' => $byOwner,
-                'manage_token' => Str::random(40),
-                'download_token' => Str::random(40),
-                'file_size' => $size,
-                'content_hash' => $hash,
-            ]);
-
-            dispatch(fn () => app(TelegramNotifier::class)->notifyUpload($material))->afterResponse();
-            $created[] = $material;
+        } finally {
+            $lock->release();
         }
 
         if (count($created) === 0) {
-            if ($blocked > 0 && $skipped === 0 && $duplicate === 0) {
+            if ($blocked > 0 && $skipped === 0 && $duplicate === 0 && $failed === 0) {
                 return back()->withErrors(['files' => 'That file was removed by the site operator and can’t be re-uploaded.']);
             }
 
-            if ($duplicate > 0 && $skipped === 0 && $blocked === 0) {
+            if ($duplicate > 0 && $skipped === 0 && $blocked === 0 && $failed === 0) {
                 $where = $duplicateName ? " as \"{$duplicateName}\"" : '';
 
                 return back()->withErrors(['files' => $duplicate === 1
                     ? "That file is already on this board{$where}."
                     : 'Those files are already on this board.']);
+            }
+
+            if ($failed > 0) {
+                return back()->withErrors(['files' => 'Those files couldn’t be saved. Please try again.']);
             }
 
             return back()->withErrors(['files' => 'This board is full — ask the owner to delete old files.']);
@@ -455,6 +491,9 @@ class CourseController extends Controller
         }
         if ($blocked > 0) {
             $message .= " {$blocked} blocked — removed by the operator.";
+        }
+        if ($failed > 0) {
+            $message .= " {$failed} couldn’t be saved — try those again.";
         }
 
         return back()->with([

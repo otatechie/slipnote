@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\InteractsWithWorkspace;
@@ -53,6 +54,43 @@ class UploadTest extends TestCase
         $this->assertSame('lecture.pdf', $material->original_filename);
         $this->assertFalse($material->by_owner);
         Storage::disk('local')->assertExists($material->stored_path);
+    }
+
+    public function test_a_file_the_disk_refuses_leaves_no_row_behind(): void
+    {
+        // The local disk doesn't throw: a full or read-only disk gives back false.
+        $disk = \Mockery::mock(Storage::disk('local'))->makePartial();
+        $disk->shouldReceive('putFileAs')->andReturn(false);
+        Storage::set('local', $disk);
+
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf')],
+        ])->assertSessionHasErrors(['files' => 'Those files couldn’t be saved. Please try again.']);
+
+        $this->assertSame(0, Material::count());
+    }
+
+    public function test_an_upload_waits_its_turn_behind_another_on_the_same_board(): void
+    {
+        $other = Cache::lock('upload:board:'.$this->workspace->id, 120);
+        $other->get();
+
+        // Held for the whole wait: the second batch is turned away, not let through.
+        $this->freezeTime();
+        \Illuminate\Support\Sleep::fake(syncWithCarbon: true);
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf')],
+        ])->assertSessionHasErrors('files');
+        $this->assertSame(0, Material::count());
+
+        $other->release();
+        $this->post($this->uploadUrl(), [
+            'section' => 'notes',
+            'files' => [UploadedFile::fake()->create('lecture.pdf', 100, 'application/pdf')],
+        ])->assertSessionHasNoErrors();
+        $this->assertSame(1, Material::count());
     }
 
     public function test_a_single_file_upload_returns_a_manage_url_to_delete_it(): void
