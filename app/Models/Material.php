@@ -138,7 +138,8 @@ class Material extends Model
 
     private static function scrubName(string $name): string
     {
-        $clean = preg_replace('/[\x00-\x1f\x7f\/\\:*?"<>|]+/u', ' ', $name);
+        // Four backslashes: single quotes halve them, and the regex needs two.
+        $clean = preg_replace('/[\x00-\x1f\x7f\/\\\\:*?"<>|]+/u', ' ', $name);
 
         return trim(preg_replace('/\s+/u', ' ', $clean));
     }

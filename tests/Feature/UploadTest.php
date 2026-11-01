@@ -237,6 +237,11 @@ class UploadTest extends TestCase
         // scrubbed rather than refused (Symfony rejects "/" in a disposition).
         $this->assertSame('MATH 251 - Week 7 8 notes.pdf',
             $this->downloadNameOf($this->fileNamed('w.pdf', 'Week 7/8 notes')));
+
+        // A backslash too: Windows reads it as a path separator, so a title
+        // like "..\..\x" must not become one inside a zip.
+        $this->assertSame('MATH 251 - .. .. Startup notes.pdf',
+            $this->downloadNameOf($this->fileNamed('s.pdf', '..\\..\\Startup notes')));
     }
 
     public function test_a_long_course_code_is_a_name_and_is_not_prefixed(): void
