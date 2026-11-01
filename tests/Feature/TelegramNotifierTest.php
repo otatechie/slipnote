@@ -95,6 +95,30 @@ class TelegramNotifierTest extends TestCase
         });
     }
 
+    public function test_a_batch_is_one_message_naming_each_file(): void
+    {
+        config(['noteshare.telegram_bot_token' => 'tok', 'noteshare.telegram_chat_id' => '@chan']);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $materials = [];
+        foreach (['Kofi homework', 'Ama homework', 'Yaw homework'] as $title) {
+            $materials[] = $this->course->materials()->create([
+                'section' => 'notes', 'title' => $title, 'original_filename' => 'IMG_1.jpg', 'stored_path' => 'x/'.$title,
+            ]);
+        }
+        $summary = TelegramNotifier::uploadSummary($materials);
+        // Undo already happened: the message still sends, from the summary alone.
+        $this->course->materials()->delete();
+
+        app(TelegramNotifier::class)->notifyUploads($summary);
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) => str_contains($request['text'], '<b>3 files</b>')
+            && str_contains($request['text'], '· Kofi homework')
+            && str_contains($request['text'], '· Yaw homework')
+            && str_contains($request['text'], 'New in <b>PHYS 101</b> · Notes'));
+    }
+
     public function test_message_headlines_the_filename_when_there_is_no_title(): void
     {
         config(['noteshare.telegram_bot_token' => 'tok', 'noteshare.telegram_chat_id' => '@chan']);

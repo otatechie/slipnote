@@ -12,11 +12,43 @@ class TelegramNotifier
 {
     public function notifyUpload(Material $material): void
     {
+        $this->notifyUploads(self::uploadSummary([$material]));
+    }
+
+    /**
+     * What a batch message needs, as plain values: the callback that sends it
+     * runs after the response, when the uploader may already have pressed Undo.
+     *
+     * @param  list<Material>  $materials
+     */
+    public static function uploadSummary(array $materials): array
+    {
+        if ($materials === []) {
+            return [];
+        }
+        $course = $materials[0]->course;
+
+        return [
+            'code' => $course->code,
+            'url' => route('course.show', ['workspace' => $course->workspace->slug, 'slug' => $course->slug]),
+            'files' => array_map(fn (Material $m) => [
+                'section' => $m->section,
+                'title' => $m->title,
+                'filename' => $m->original_filename,
+                'by_owner' => (bool) $m->by_owner,
+                'uploader_name' => $m->uploader_name,
+            ], $materials),
+        ];
+    }
+
+    /** One message for a whole batch. */
+    public function notifyUploads(array $summary): void
+    {
         $token = (string) config('noteshare.telegram_bot_token');
         $chatId = (string) config('noteshare.telegram_chat_id');
 
         // Feature off unless fully configured.
-        if ($token === '' || $chatId === '') {
+        if ($token === '' || $chatId === '' || empty($summary['files'])) {
             return;
         }
 
@@ -25,7 +57,9 @@ class TelegramNotifier
                 ->timeout(5)
                 ->post("https://api.telegram.org/bot{$token}/sendMessage", [
                     'chat_id' => $chatId,
-                    'text' => $this->message($material),
+                    'text' => count($summary['files']) === 1
+                        ? $this->message($summary, $summary['files'][0])
+                        : $this->batchMessage($summary),
                     'parse_mode' => 'HTML',
                     'disable_web_page_preview' => true,
                 ]);
@@ -172,30 +206,19 @@ class TelegramNotifier
         return implode("\n", $lines);
     }
 
-    private function message(Material $material): string
+    private function message(array $summary, array $file): string
     {
-        $course = $material->course;
-        $workspace = $course->workspace;
-        $section = $this->esc(ucfirst($material->section));
-        $code = $this->esc($course->code);
-        $file = $this->esc($material->original_filename);
-        $url = $this->esc(route('course.show', [
-            'workspace' => $workspace->slug,
-            'slug' => $course->slug,
-        ]));
+        $section = $this->esc(ucfirst($file['section']));
+        $code = $this->esc($summary['code']);
+        $name = $this->esc($file['filename']);
+        $url = $this->esc($summary['url']);
 
-        $headline = filled($material->title)
-            ? $this->esc($material->title)
-            : $file;
+        $headline = filled($file['title']) ? $this->esc($file['title']) : $name;
 
         $meta = "New in <b>{$code}</b> · {$section}";
 
-        $detail = filled($material->title) ? "<i>{$file}</i>" : '';
-        $by = match (true) {
-            (bool) $material->by_owner => 'uploaded by the board owner',
-            filled($material->uploader_name) => 'uploaded by '.$this->esc($material->uploader_name),
-            default => '',
-        };
+        $detail = filled($file['title']) ? "<i>{$name}</i>" : '';
+        $by = $this->uploadedBy($file);
         if ($by !== '') {
             $detail = $detail === '' ? $by : "{$detail} — {$by}";
         }
@@ -204,6 +227,35 @@ class TelegramNotifier
             .$meta."\n"
             .($detail !== '' ? $detail."\n" : '')
             ."<a href=\"{$url}\">Browse {$code} →</a>";
+    }
+
+    private function batchMessage(array $summary): string
+    {
+        $files = $summary['files'];
+        $count = count($files);
+        $code = $this->esc($summary['code']);
+        $url = $this->esc($summary['url']);
+        $sections = collect($files)->pluck('section')->unique()->map(fn ($s) => $this->esc(ucfirst($s)))->implode(', ');
+
+        $lines = collect($files)->take(8)->map(fn ($f) => '· '.$this->esc(filled($f['title']) ? $f['title'] : $f['filename']));
+        if ($count > 8) {
+            $lines->push('· and '.($count - 8).' more');
+        }
+        $by = $this->uploadedBy($files[0]);
+
+        return "📄 <b>{$count} files</b>\n"
+            ."New in <b>{$code}</b> · {$sections}".($by !== '' ? " — {$by}" : '')."\n"
+            .$lines->implode("\n")."\n"
+            ."<a href=\"{$url}\">Browse {$code} →</a>";
+    }
+
+    private function uploadedBy(array $file): string
+    {
+        return match (true) {
+            $file['by_owner'] => 'uploaded by the board owner',
+            filled($file['uploader_name']) => 'uploaded by '.$this->esc($file['uploader_name']),
+            default => '',
+        };
     }
 
     /** The operator's "send a test": true when Telegram accepted it, which also clears the failure note. */

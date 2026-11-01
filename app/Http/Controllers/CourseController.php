@@ -450,7 +450,6 @@ class CourseController extends Controller
                 $filesLeft--;
                 $seenHashes->put($hash, true);
 
-                dispatch(fn () => app(TelegramNotifier::class)->notifyUpload($material))->afterResponse();
                 $created[] = $material;
             }
         } finally {
@@ -506,6 +505,11 @@ class CourseController extends Controller
             'addedName' => $count === 1 ? $created[0]->displayName() : null,
             'addedCount' => $count,
         ]);
+        // One Telegram message for the batch, from plain values: a message per
+        // file trips Telegram's limits, and a model re-fetched after Undo throws.
+        $summary = TelegramNotifier::uploadSummary($created);
+        dispatch(fn () => app(TelegramNotifier::class)->notifyUploads($summary))->afterResponse();
+
     }
 
     private function sanitizeFilename(string $name): string
