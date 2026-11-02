@@ -583,125 +583,186 @@
     @if ($tab === 'reported')
     @if ($materials->isNotEmpty())
         <p class="mb-3 text-[13px] text-muted">
-            Most-reported first — work down the list.
+            Serious reasons first, then most reported.
             @if ($reportedTotal > $materials->count())
                 Showing the top {{ $materials->count() }} of {{ $reportedTotal }}; clear these to see the rest.
             @endif
         </p>
-        <div class="op-card overflow-hidden">
-            @foreach ($materials as $material)
+        <div class="space-y-3">
+            @foreach ($reportGroups as $group)
                 @php
-                    $reasons = $material->reports->whereNotNull('reason');
-                    $workspace = $material->course->workspace;
-                    $courseUrl = route('course.show', ['workspace' => $workspace->slug, 'slug' => $material->course->slug]);
+                    $first = $group->first();
+                    $course = $first->course;
+                    $workspace = $course->workspace;
+                    $courseUrl = route('course.show', ['workspace' => $workspace->slug, 'slug' => $course->slug]);
                     $boardUrl = route('courses.index', ['workspace' => $workspace->slug]);
-                    $sectionLabel = \App\Models\Material::SECTIONS[$material->section] ?? $material->section;
-                    $reviewUrl = $material->previewUrl() ?? $material->downloadUrl();
-                    $reviewLabel = $material->previewUrl() ? 'Review file' : 'Download to review';
-                    $latest = $reasons->first();
-                    $context = $material->course->code.' · '.$material->displayName();
+                    $groupKey = $course->id.'-'.(int) $first->serious_report;
+                    $allReports = $group->flatMap(fn ($m) => $m->reports);
+                    $reasonsHere = $allReports->pluck('reason')->unique();
+                    // Five files flagged for one reason need saying once.
+                    $sharedReason = $group->count() > 1 && $reasonsHere->count() === 1 ? $reasonsHere->first() : null;
+                    $canDismissAll = $group->count() > 1 && ! $first->serious_report;
                 @endphp
-                <div class="op-row flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
-                    <div class="min-w-0 flex-1">
-                        <p class="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-ink">
-                            <span class="truncate">{{ $context }}</span>
-                            <span class="shrink-0 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-danger"
-                                  title="{{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}">
-                                {{ $material->reports_count }}
-                            </span>
-                        </p>
-                        <p class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-muted">
-                            <a href="{{ $boardUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:text-ink hover:decoration-ink/40">{{ $workspace->name }}</a>
-                            <span aria-hidden="true" class="text-muted/50">·</span>
-                            <a href="{{ $courseUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:text-ink hover:decoration-ink/40">{{ $material->course->code }}</a>
-                            <span aria-hidden="true" class="text-muted/50">·</span>
-                            <span>{{ $sectionLabel }}</span>
-                            @if ($reviewUrl)
+                <section class="op-card overflow-hidden">
+                    <div class="flex flex-col gap-2 border-b border-sky/40 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                        <div class="min-w-0">
+                            <p class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] font-semibold text-ink">
+                                <a href="{{ $boardUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $workspace->name }}</a>
                                 <span aria-hidden="true" class="text-muted/50">·</span>
-                                <a href="{{ $reviewUrl }}" class="op-review">
-                                    <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z"/><circle cx="10" cy="10" r="2.5"/></svg>
-                                    {{ $reviewLabel }}
-                                </a>
+                                <a href="{{ $courseUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $course->code }}</a>
+                                <span aria-hidden="true" class="text-muted/50">·</span>
+                                <span class="font-medium {{ $first->serious_report ? 'text-danger' : 'text-muted' }}">{{ $group->count() }} {{ Str::plural('file', $group->count()) }} reported</span>
+                            </p>
+                            @if ($sharedReason)
+                                <p class="mt-1 text-[13px] leading-snug text-muted">
+                                    “{{ $sharedReason }}”
+                                    {{ $allReports->max('created_at')->diffForHumans() }}
+                                </p>
                             @endif
-                        </p>
-
-                        @if ($reasons->isNotEmpty())
-                            <details class="group mt-2.5">
-                                <summary class="flex cursor-pointer list-none items-center gap-1.5 text-[13px] leading-snug text-muted marker:hidden">
-                                    <span class="line-clamp-2 min-w-0 flex-1 sm:truncate">
-                                        “{{ \Illuminate\Support\Str::limit($latest->reason, 80) }}”
-                                        <span class="text-muted">{{ $latest->created_at->diffForHumans() }}</span>
-                                    </span>
-                                    @if ($reasons->count() > 1)
-                                        <span class="shrink-0 text-muted">+{{ $reasons->count() - 1 }} more</span>
-                                    @endif
-                                    <svg class="size-3 shrink-0 transition-transform duration-150 group-open:rotate-180" style="transition-timing-function: var(--ease-out)" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                </summary>
-                                <ul class="mt-1.5 space-y-1 border-l-2 border-sky/60 pl-3">
-                                    @foreach ($reasons as $report)
-                                        <li class="text-[12px] text-ink/90">
-                                            <span class="text-muted">{{ $report->created_at->diffForHumans() }}:</span>
-                                            {{ $report->reason }}
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </details>
+                        </div>
+                        @if ($canDismissAll)
+                            <button type="button" data-dialog-open="dismiss-all-{{ $groupKey }}"
+                                    class="op-press inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-ink sm:h-8 sm:text-[12px]">
+                                Dismiss all {{ $group->count() }}
+                            </button>
+                            <dialog id="dismiss-all-{{ $groupKey }}"
+                                    class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
+                                <div class="px-6 py-6">
+                                    <h2 class="text-[16px] font-bold tracking-tight text-ink">Dismiss all {{ $group->count() }}?</h2>
+                                    <p class="mt-1 text-[13px] text-muted">{{ $course->code }} · {{ $workspace->name }}</p>
+                                    <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This clears the reports on these files. They stay up and visible to everyone. You can undo for a few minutes after.</p>
+                                    <div class="mt-5 flex items-center justify-end gap-2">
+                                        <button type="button" data-dialog-close
+                                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
+                                        <form method="POST" action="{{ route('operator.dismiss-many') }}">
+                                            @csrf
+                                            @foreach ($group as $material)
+                                                <input type="hidden" name="ids[]" value="{{ $material->id }}">
+                                            @endforeach
+                                            <button type="submit"
+                                                    class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
+                                                Dismiss reports
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </dialog>
                         @endif
                     </div>
 
-                    <div class="grid shrink-0 grid-cols-2 items-center gap-2.5 sm:flex sm:justify-end">
-                        <button type="button" data-dialog-open="dismiss-{{ $material->id }}"
-                                title="Clear the reports — the file stays up"
-                                class="op-press inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:w-auto sm:text-[12px]">
-                            Dismiss
-                        </button>
-                        <button type="button" data-dialog-open="remove-{{ $material->id }}"
-                                title="Delete the file and block re-upload"
-                                class="op-press btn-danger inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full px-3.5 text-[13px] font-semibold sm:h-8 sm:w-auto sm:text-[12px]">
-                            Remove
-                        </button>
-                    </div>
+                    @foreach ($group as $material)
+                        @php
+                            $reasons = $material->reports->whereNotNull('reason');
+                            $sectionLabel = \App\Models\Material::SECTIONS[$material->section] ?? $material->section;
+                            $reviewUrl = $material->previewUrl() ?? $material->downloadUrl();
+                            $reviewLabel = $material->previewUrl() ? 'Review file' : 'Download to review';
+                            $latest = $reasons->first();
+                            $context = $course->code.' · '.$material->displayName();
+                        @endphp
+                        <div class="op-row flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
+                            <div class="min-w-0 flex-1">
+                                <p class="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-ink">
+                                    <span class="truncate">{{ $material->displayName() }}</span>
+                                    <span class="shrink-0 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-danger"
+                                          title="{{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}">
+                                        {{ $material->reports_count }}
+                                    </span>
+                                </p>
+                                <p class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-muted">
+                                    <span>{{ $sectionLabel }}</span>
+                                    @if ($reviewUrl)
+                                        <span aria-hidden="true" class="text-muted/50">·</span>
+                                        <a href="{{ $reviewUrl }}" class="op-review">
+                                            <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 10S4.5 4 10 4s8.5 6 8.5 6-3 6-8.5 6-8.5-6-8.5-6Z"/><circle cx="10" cy="10" r="2.5"/></svg>
+                                            {{ $reviewLabel }}
+                                        </a>
+                                    @endif
+                                </p>
 
-                    <dialog id="dismiss-{{ $material->id }}"
-                            class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
-                        <div class="px-6 py-6">
-                            <h2 class="text-[16px] font-bold tracking-tight text-ink">Dismiss the reports?</h2>
-                            <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
-                            <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This clears the reports on this file. The file stays up and visible to everyone. You can undo for a few minutes after.</p>
-                            <div class="mt-5 flex items-center justify-end gap-2">
-                                <button type="button" data-dialog-close
-                                        class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
-                                <form method="POST" action="{{ route('operator.dismiss', $material->id) }}">
-                                    @csrf
-                                    <button type="submit"
-                                            class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
-                                        Dismiss reports
-                                    </button>
-                                </form>
+                                @if ($reasons->count() === 1 && ! $sharedReason)
+                                    <p class="mt-2.5 text-[13px] leading-snug text-muted">
+                                        “{{ $latest->reason }}”
+                                        {{ $latest->created_at->diffForHumans() }}
+                                    </p>
+                                @elseif ($reasons->count() > 1)
+                                    <details class="group mt-2.5">
+                                        <summary class="flex cursor-pointer list-none items-center gap-1.5 text-[13px] leading-snug text-muted marker:hidden">
+                                            <span class="line-clamp-2 min-w-0 flex-1 sm:truncate">
+                                                “{{ \Illuminate\Support\Str::limit($latest->reason, 80) }}”
+                                                <span class="text-muted">{{ $latest->created_at->diffForHumans() }}</span>
+                                            </span>
+                                            <span class="shrink-0 text-muted">+{{ $reasons->count() - 1 }} more</span>
+                                            <svg class="size-3 shrink-0 transition-transform duration-150 group-open:rotate-180" style="transition-timing-function: var(--ease-out)" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </summary>
+                                        <ul class="mt-1.5 space-y-1 border-l-2 border-sky/60 pl-3">
+                                            @foreach ($reasons as $report)
+                                                <li class="text-[12px] text-ink/90">
+                                                    <span class="text-muted">{{ $report->created_at->diffForHumans() }}:</span>
+                                                    {{ $report->reason }}
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </details>
+                                @endif
                             </div>
-                        </div>
-                    </dialog>
 
-                    <dialog id="remove-{{ $material->id }}"
-                            class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
-                        <div class="px-6 py-6">
-                            <h2 class="text-[16px] font-bold tracking-tight text-ink">Remove this file?</h2>
-                            <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
-                            <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This deletes the file and its reports, and blocks these exact bytes from being uploaded again. You can undo for a few minutes after.</p>
-                            <div class="mt-5 flex items-center justify-end gap-2">
-                                <button type="button" data-dialog-close
-                                        class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
-                                <form method="POST" action="{{ route('operator.remove', $material->id) }}">
-                                    @csrf
-                                    <button type="submit"
-                                            class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 text-[14px] font-semibold">
-                                        Remove file
-                                    </button>
-                                </form>
+                            <div class="grid shrink-0 grid-cols-2 items-center gap-2.5 sm:flex sm:justify-end">
+                                <button type="button" data-dialog-open="dismiss-{{ $material->id }}"
+                                        title="Clear the reports — the file stays up"
+                                        class="op-press inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface px-3.5 text-[13px] font-semibold text-muted sm:h-8 sm:w-auto sm:text-[12px]">
+                                    Dismiss
+                                </button>
+                                <button type="button" data-dialog-open="remove-{{ $material->id }}"
+                                        title="Delete the file"
+                                        class="op-press inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-full border border-danger/40 bg-surface px-3.5 text-[13px] font-semibold text-danger sm:h-8 sm:w-auto sm:text-[12px]">
+                                    Remove
+                                </button>
                             </div>
+
+                            <dialog id="dismiss-{{ $material->id }}"
+                                    class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
+                                <div class="px-6 py-6">
+                                    <h2 class="text-[16px] font-bold tracking-tight text-ink">Dismiss the reports?</h2>
+                                    <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
+                                    <p class="mt-3 text-[13px] leading-relaxed text-ink/80">This clears the reports on this file. The file stays up and visible to everyone. You can undo for a few minutes after.</p>
+                                    <div class="mt-5 flex items-center justify-end gap-2">
+                                        <button type="button" data-dialog-close
+                                                class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
+                                        <form method="POST" action="{{ route('operator.dismiss', $material->id) }}">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full bg-neon px-5 text-[14px] font-semibold text-white">
+                                                Dismiss reports
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </dialog>
+
+                            <dialog id="remove-{{ $material->id }}"
+                                    class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
+                                <div class="px-6 py-6">
+                                    <h2 class="text-[16px] font-bold tracking-tight text-ink">Remove this file?</h2>
+                                    <p class="mt-1 text-[13px] text-muted">{{ $context }} · {{ $workspace->name }}</p>
+                                    <p class="mt-3 text-[13px] leading-relaxed text-ink/80">Both options delete the file and its reports. Blocking also stops these exact bytes being uploaded again, so keep it for harmful files. You can undo for a few minutes after.</p>
+                                    <form method="POST" action="{{ route('operator.remove', $material->id) }}" class="mt-5 grid gap-2">
+                                        @csrf
+                                        <button type="submit" name="allow_reupload" value="1"
+                                                class="op-press inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface px-5 text-[14px] font-semibold text-ink">
+                                            Remove, allow re-upload
+                                        </button>
+                                        <button type="submit"
+                                                class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full px-5 text-[14px] font-semibold">
+                                            Remove and block
+                                        </button>
+                                        <button type="button" data-dialog-close
+                                                class="op-press inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
+                                    </form>
+                                </div>
+                            </dialog>
                         </div>
-                    </dialog>
-                </div>
+                    @endforeach
+                </section>
             @endforeach
         </div>
     @else

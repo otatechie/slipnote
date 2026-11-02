@@ -386,6 +386,84 @@ class OperatorTest extends TestCase
         $this->assertSame(0, $this->material->reports()->count()); // reports cleared
     }
 
+    private function reportedFile(string $name, string $reason, ?Course $course = null): Material
+    {
+        $course ??= $this->material->course;
+        $material = $course->materials()->create(['section' => 'notes', 'title' => $name, 'original_filename' => "{$name}.pdf",
+            'stored_path' => "materials/{$name}.pdf", 'download_token' => "dl-{$name}"]);
+        $material->reports()->create(['reason' => $reason]);
+
+        return $material;
+    }
+
+    public function test_reports_group_by_course_with_serious_ones_first_and_apart(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $this->material->reports()->delete();
+        $this->material->reports()->create(['reason' => 'Not my notes / wrong file']);
+        $this->reportedFile('photo-two', 'Not my notes / wrong file');
+        $this->reportedFile('nasty', 'Inappropriate or offensive');
+
+        $html = $this->withSession($session)->get(route('operator.dashboard'))->assertOk()->getContent();
+
+        $this->assertLessThan(strpos($html, 'photo-two'), strpos($html, 'nasty'));
+        $this->assertSame(1, substr_count($html, 'Dismiss all 2?'));
+        // The reason both files share is said once, in the group's header.
+        $this->assertSame(1, substr_count($html, 'Not my notes / wrong file'));
+    }
+
+    public function test_dismiss_all_clears_a_batch_and_can_be_undone(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $one = $this->reportedFile('photo-one', 'Not my notes / wrong file');
+        $two = $this->reportedFile('photo-two', 'Not my notes / wrong file');
+
+        $this->withSession($session)->post(route('operator.dismiss-many'), ['ids' => [$one->id, $two->id]])
+            ->assertRedirect(route('operator.dashboard'));
+        $this->assertSame(0, $one->reports()->count() + $two->reports()->count());
+        $this->assertSame(2, Material::whereIn('id', [$one->id, $two->id])->count());
+
+        $this->post(route('operator.undo'))->assertRedirect(route('operator.dashboard'));
+        $this->assertSame(1, $one->reports()->count());
+        $this->assertSame(1, $two->reports()->count());
+    }
+
+    public function test_dismiss_all_never_clears_a_serious_report(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $wrong = $this->reportedFile('photo-one', 'Not my notes / wrong file');
+        $serious = $this->reportedFile('pirated', 'Copyright — shouldn\'t be shared');
+
+        $this->withSession($session)->post(route('operator.dismiss-many'), ['ids' => [$wrong->id, $serious->id]]);
+
+        $this->assertSame(0, $wrong->reports()->count());
+        $this->assertSame(1, $serious->reports()->count());
+    }
+
+    public function test_dismiss_all_needs_an_operator_session(): void
+    {
+        $this->post(route('operator.dismiss-many'), ['ids' => [$this->material->id]])->assertForbidden();
+        $this->assertSame(1, $this->material->reports()->count());
+    }
+
+    public function test_a_removed_file_can_stay_uploadable(): void
+    {
+        $path = $this->material->stored_path;
+        $id = $this->material->id;
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->post(route('operator.remove', $id), ['allow_reupload' => 1])
+            ->assertRedirect(route('operator.dashboard'));
+
+        $this->assertSame(0, Material::count());
+        Storage::disk('local')->assertMissing($path);
+        $this->assertDatabaseCount('blocked_uploads', 0);
+
+        $this->post(route('operator.undo'));
+        $this->assertSame($id, Material::first()->id);
+        Storage::disk('local')->assertExists($path);
+    }
+
     public function test_remove_is_blocked_without_an_operator_session(): void
     {
         $this->post(route('operator.remove', $this->material->id))->assertForbidden();

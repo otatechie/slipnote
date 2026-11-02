@@ -87,10 +87,14 @@ class OperatorController extends Controller
         $materials = Material::query()
             ->whereHas('reports')
             ->withCount('reports')
+            ->withExists(['reports as serious_report' => fn ($q) => self::seriousReason($q)])
             ->with(['reports' => fn ($q) => $q->latest()->limit(20), 'course.workspace'])
+            ->orderByDesc('serious_report')
             ->orderByDesc('reports_count')
             ->limit(50)
             ->get();
+        // Serious files stay apart from the rest of their course, so "Dismiss all" can't reach them.
+        $reportGroups = $materials->groupBy(fn (Material $m) => $m->course_id.'-'.(int) $m->serious_report)->values();
 
         // Usage stats: is anyone actually using this thing?
         $stats = [
@@ -139,6 +143,7 @@ class OperatorController extends Controller
 
         return view('operator.dashboard', [
             'materials' => $materials,
+            'reportGroups' => $reportGroups,
             'reportedTotal' => $reportedTotal,
             'stats' => $stats,
             'recent' => $recent,
@@ -234,6 +239,12 @@ class OperatorController extends Controller
             $ws->top_country = $topCountry->get($ws->id);
             $ws->message_count = (int) $messages->get($ws->slug, 0);
         });
+    }
+
+    /** Reports a person must read: the two reasons that can mean real harm. */
+    private static function seriousReason($query): void
+    {
+        $query->where(fn ($q) => $q->where('reason', 'like', 'Copyright%')->orWhere('reason', 'like', 'Inappropriate%'));
     }
 
     /** The window the Visitors tab covers. Long enough to span a teaching block. */
@@ -471,20 +482,24 @@ class OperatorController extends Controller
         $hash = null;
         $trashPath = null;
         $createdBlock = false;
+        // A wrong file isn't a harmful one: the right person may upload it again.
+        $allowReupload = $request->boolean('allow_reupload');
 
         if (Storage::disk('local')->exists($material->stored_path)) {
-            // Older rows predate content_hash; hash those from the stream.
-            $hash = $material->content_hash
-                ?? hash_file('sha256', Storage::disk('local')->path($material->stored_path));
             $trashPath = 'operator-undo/'.$material->id.'-'.Str::random(12);
             if (! Storage::disk('local')->copy($material->stored_path, $trashPath)) {
                 $trashPath = null;
             }
 
-            $createdBlock = BlockedUpload::query()
-                ->where('content_hash', $hash)
-                ->doesntExist();
-            BlockedUpload::firstOrCreate(['content_hash' => $hash]);
+            if (! $allowReupload) {
+                // Older rows predate content_hash; hash those from the stream.
+                $hash = $material->content_hash
+                    ?? hash_file('sha256', Storage::disk('local')->path($material->stored_path));
+                $createdBlock = BlockedUpload::query()
+                    ->where('content_hash', $hash)
+                    ->doesntExist();
+                BlockedUpload::firstOrCreate(['content_hash' => $hash]);
+            }
         }
 
         $material->delete();
@@ -501,7 +516,9 @@ class OperatorController extends Controller
             'created_block' => $createdBlock,
         ]);
 
-        return $this->dashboardRedirect($request)->with('done', 'File removed. Same bytes can’t be re-uploaded.');
+        return $this->dashboardRedirect($request)->with('done', $allowReupload
+            ? 'File removed. It can be uploaded again.'
+            : 'File removed. Same bytes can’t be re-uploaded.');
     }
 
     /** Clear a file's reports without deleting it (a false alarm). */
@@ -521,6 +538,38 @@ class OperatorController extends Controller
         $material->reports()->delete();
 
         return $this->dashboardRedirect($request)->with('done', 'Reports dismissed.');
+    }
+
+    /** Clear a batch of false alarms in one go. Serious reports are read one at a time. */
+    public function dismissMany(Request $request)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $data = $request->validate(['ids' => 'required|array|max:50', 'ids.*' => 'integer']);
+        $materials = Material::query()
+            ->whereIn('id', $data['ids'])
+            ->whereHas('reports')
+            ->whereDoesntHave('reports', fn ($q) => self::seriousReason($q))
+            ->get();
+
+        if ($materials->isEmpty()) {
+            return $this->dashboardRedirect($request);
+        }
+
+        $this->commitUndo();
+
+        $this->stashUndo([
+            'action' => 'dismiss_many',
+            'label' => $materials->count().' files',
+            'files' => $materials->map(fn (Material $m) => [
+                'material_id' => $m->id,
+                'reports' => $this->snapshotReports($m),
+            ])->all(),
+        ]);
+
+        Report::query()->whereIn('material_id', $materials->pluck('id'))->delete();
+
+        return $this->dashboardRedirect($request)->with('done', 'Reports dismissed on '.$materials->count().' files.');
     }
 
     public function saveNote(Request $request, Workspace $board)
@@ -588,6 +637,10 @@ class OperatorController extends Controller
 
         if ($undo['action'] === 'dismiss') {
             $this->restoreDismiss($undo);
+        } elseif ($undo['action'] === 'dismiss_many') {
+            foreach ($undo['files'] ?? [] as $file) {
+                $this->restoreDismiss($file);
+            }
         } elseif ($undo['action'] === 'remove') {
             $this->restoreRemove($undo);
         } elseif ($undo['action'] === 'suggestion') {

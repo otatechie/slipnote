@@ -96,6 +96,7 @@ Route::post('/operator/logout', [OperatorController::class, 'logout'])->name('op
 Route::post('/operator/telegram-test', [OperatorController::class, 'telegramTest'])->name('operator.telegram-test');
 Route::post('/operator/material/{material}/remove', [OperatorController::class, 'remove'])->name('operator.remove');
 Route::post('/operator/material/{material}/dismiss', [OperatorController::class, 'dismiss'])->name('operator.dismiss');
+Route::post('/operator/reports/dismiss', [OperatorController::class, 'dismissMany'])->name('operator.dismiss-many');
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');
 Route::post('/operator/suggestions/{suggestion}/delete', [OperatorController::class, 'deleteSuggestion'])->name('operator.suggestions.delete');
 Route::post('/operator/boards/{board}/note', [OperatorController::class, 'saveNote'])->name('operator.boards.note');
