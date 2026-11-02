@@ -557,7 +557,6 @@
                             </button>
                         </div>
                     </form>
-                    </div>
                 </div>
             </dialog>
         @empty

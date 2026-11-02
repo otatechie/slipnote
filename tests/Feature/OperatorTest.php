@@ -233,6 +233,28 @@ class OperatorTest extends TestCase
         $this->assertStringNotContainsString('teacher@example.com', $html);
     }
 
+    public function test_every_tab_closes_the_tags_it_opens(): void
+    {
+        // A stray </div> once spilled every board after the first out of the
+        // list; string assertions never noticed. Count the tags on each tab.
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        [$ws] = Workspace::provision('Tag Balance');
+        $ws->forceFill(['operator_note' => 'hi', 'operator_note_at' => now()])->saveQuietly();
+        $this->reportedFile('photo-one', 'Not my notes / wrong file');
+        $this->reportedFile('photo-two', 'Not my notes / wrong file');
+
+        foreach (['reported', 'boards', 'visitors', 'suggestions', 'ambassadors'] as $tab) {
+            $html = $this->withSession($session)->get(route('operator.dashboard', ['tab' => $tab, 'empty' => 1]))->assertOk()->getContent();
+            foreach (['div', 'dialog', 'form', 'section', 'details', 'ul', 'li', 'p', 'a', 'button'] as $tag) {
+                $this->assertSame(
+                    preg_match_all("/<{$tag}[\\s>]/", $html),
+                    preg_match_all("/<\\/{$tag}>/", $html),
+                    "<{$tag}> is unbalanced on the {$tab} tab",
+                );
+            }
+        }
+    }
+
     public function test_a_board_row_shows_its_share_of_the_storage_limit(): void
     {
         config(['noteshare.workspace_storage_bytes' => 10 * 1_048_576]);
