@@ -228,9 +228,42 @@ class OperatorTest extends TestCase
         $this->assertStringNotContainsString('Nigeria', $row);
         $this->assertStringContainsString('owner uploads only', $row);
         $this->assertStringContainsString('via kwame', $row);
-        $this->assertStringContainsString('2 messages', $row);
+        $this->assertStringContainsString('2 suggestions', $row);
         $this->assertStringContainsString('can be emailed', $row);
         $this->assertStringNotContainsString('teacher@example.com', $html);
+    }
+
+    public function test_a_board_row_shows_its_share_of_the_storage_limit(): void
+    {
+        config(['noteshare.workspace_storage_bytes' => 10 * 1_048_576]);
+        $rowFor = function (string $name, float $megabytes, string $slug) {
+            [$ws] = Workspace::provision($name);
+            $this->actingInWorkspace($ws);
+            Course::create(['code' => 'X', 'title' => 'X', 'slug' => $slug])->materials()->create([
+                'section' => 'notes', 'original_filename' => 'a.pdf', 'stored_path' => "materials/{$slug}.pdf",
+                'download_token' => "dl-{$slug}", 'file_size' => (int) ($megabytes * 1_048_576),
+            ]);
+
+            return $name;
+        };
+        $rowFor('Roomy Board', 5, 'roomy');
+        $rowFor('Nearly Full Board', 8.5, 'nearly');
+        $rowFor('Full Board', 10, 'full');
+
+        $html = $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'boards']))->assertOk()->getContent();
+        $row = function (string $name) use ($html) {
+            $start = strpos($html, $name) - 500;
+
+            return substr($html, $start, strpos($html, '<details', $start) - $start);
+        };
+
+        $this->assertStringContainsString('5.0 MB · 50%', $row('Roomy Board'));
+        $this->assertStringNotContainsString('text-amber-600', $row('Roomy Board'));
+        $this->assertStringContainsString('8.5 MB · 85%', $row('Nearly Full Board'));
+        $this->assertStringContainsString('text-amber-600', $row('Nearly Full Board'));
+        $this->assertStringContainsString('10.0 MB · 100%', $row('Full Board'));
+        $this->assertStringContainsString('text-danger', $row('Full Board'));
     }
 
     public function test_a_note_returns_to_the_same_list_and_reopens_on_an_error(): void

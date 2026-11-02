@@ -381,6 +381,9 @@
                 $size = $bytes >= 1_048_576
                     ? number_format($bytes / 1_048_576, 1).' MB'
                     : number_format($bytes / 1024).' KB';
+                $storageCap = (int) config('noteshare.workspace_storage_bytes');
+                $storagePct = $storageCap > 0 ? (int) round($bytes / $storageCap * 100) : 0;
+                $storageTone = $storagePct >= 100 ? 'font-semibold text-danger' : ($storagePct >= 80 ? 'font-semibold text-amber-600' : 'text-muted');
                 // Files but nobody besides the owner in 30 days: made and never shared.
                 $unvisited = $ws->materials_count > 0 && (int) $ws->recent_arrivals === 0;
             @endphp
@@ -405,9 +408,6 @@
                             @php $daysLeft = max(0, (int) ceil(now()->diffInDays($ws->removalDueAt(), false))); @endphp
                             · <span title="Empty boards nobody opens for 30 days are removed">{{ $daysLeft > 0 ? 'removed in '.$daysLeft.' '.Str::plural('day', $daysLeft).' if still empty' : 'removed at the next cleanup' }}{{ $ws->abandon_warned_at ? ', owner warned' : '' }}</span>
                         @endif
-                        @if ($ws->reported_count > 0)
-                            · <span class="font-semibold text-danger">{{ $ws->reported_count }} reported</span>
-                        @endif
                     </p>
                     <p class="mt-0.5 text-[12px] text-muted">
                         made {{ $ws->created_at->diffForHumans(null, true) }} ago
@@ -423,17 +423,28 @@
                         @if ($ws->referrer)
                             · <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}" class="relative z-10 hover:underline">via {{ $ws->referrer }}</a>
                         @endif
-                        @if ($ws->message_count > 0)
-                            · <a href="{{ route('operator.dashboard', ['tab' => 'suggestions']) }}" class="relative z-10 font-semibold text-neon hover:underline">{{ $ws->message_count }} {{ Str::plural('message', $ws->message_count) }}</a>
-                        @endif
                         @if (filled($ws->recovery_email))
                             · <span title="The owner set a recovery email">can be emailed</span>
                         @endif
                     </p>
+                    @if ($ws->reported_count > 0 || $ws->message_count > 0 || $ws->operator_note)
+                        {{-- What's waiting on this board, in one place. --}}
+                        <p class="mt-0.5 flex flex-wrap gap-x-2 text-[12px] font-semibold">
+                            @if ($ws->reported_count > 0)
+                                <span class="text-danger">{{ $ws->reported_count }} reported</span>
+                            @endif
+                            @if ($ws->message_count > 0)
+                                <a href="{{ route('operator.dashboard', ['tab' => 'suggestions']) }}" class="relative z-10 text-neon hover:underline">{{ $ws->message_count }} {{ Str::plural('suggestion', $ws->message_count) }}</a>
+                            @endif
+                            @if ($ws->operator_note)
+                                <span class="text-neon" @if ($ws->operator_note_seen_at) title="Owner opened the board {{ $ws->operator_note_seen_at->diffForHumans() }}" @endif>{{ $ws->operator_note_seen_at ? 'Note seen' : 'Note left' }}</span>
+                            @endif
+                        </p>
+                    @endif
                 </div>
                 <div class="flex shrink-0 flex-wrap items-center gap-x-1.5 text-[12px] sm:block sm:text-right">
                     @if ($ws->materials_count > 0)
-                        <p class="text-[12px] tabular-nums text-muted">{{ $size }}</p>
+                        <p class="text-[12px] tabular-nums {{ $storageTone }}" title="Share of the {{ number_format($storageCap / 1_048_576) }} MB board limit">{{ $size }}@if ($storagePct > 0) · {{ $storagePct }}%@endif</p>
                     @endif
                     @if ($ws->materials_count > 0 && $ws->last_accessed_at)
                         <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
@@ -442,12 +453,6 @@
                         <p class="text-[12px] tabular-nums text-ink/80" title="Last opened {{ $ws->last_accessed_at }}">
                             opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
                         </p>
-                    @endif
-                    @if ($ws->operator_note)
-                        @if ($ws->materials_count > 0 || $ws->last_accessed_at)
-                            <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
-                        @endif
-                        <p class="text-[12px] font-semibold text-neon" @if ($ws->operator_note_seen_at) title="Owner opened the board {{ $ws->operator_note_seen_at->diffForHumans() }}" @endif>{{ $ws->operator_note_seen_at ? 'Note seen' : 'Note left' }}</p>
                     @endif
                 </div>
                 <details class="op-menu absolute right-1.5 top-1.5 z-10 sm:relative sm:right-auto sm:top-auto sm:shrink-0">
