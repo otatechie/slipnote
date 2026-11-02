@@ -362,7 +362,7 @@
     </form>
 
     @php
-        $shortSort = ['visited' => 'Visited', 'newest' => 'Newest', 'opened' => 'Opened', 'largest' => 'Largest'];
+        $shortSort = ['visited' => 'Visited', 'newest' => 'Newest', 'opened' => 'Opened', 'largest' => 'Largest', 'archived' => 'Archived'];
     @endphp
     <nav aria-label="Sort boards" class="mb-4 flex items-center gap-0.5 overflow-x-auto text-[13px] sm:gap-1.5">
         <span class="mr-1 shrink-0 text-muted">Sort</span>
@@ -427,9 +427,12 @@
                             · <span title="The owner set a recovery email">can be emailed</span>
                         @endif
                     </p>
-                    @if ($ws->reported_count > 0 || $ws->message_count > 0 || $ws->operator_note)
+                    @if ($ws->archived_at || $ws->reported_count > 0 || $ws->message_count > 0 || $ws->operator_note)
                         {{-- What's waiting on this board, in one place. --}}
                         <p class="mt-0.5 flex flex-wrap gap-x-2 text-[12px] font-semibold">
+                            @if ($ws->archived_at)
+                                <span class="text-amber-600" title="Archived {{ $ws->archived_at->diffForHumans() }}">Archived</span>
+                            @endif
                             @if ($ws->reported_count > 0)
                                 <span class="text-danger">{{ $ws->reported_count }} reported</span>
                             @endif
@@ -466,6 +469,12 @@
                             {{ $ws->operator_note ? 'Edit note to owner' : 'Note to owner' }}
                         </button>
                         <span class="my-1 block h-px bg-sky/60"></span>
+                        <form method="POST" action="{{ route($ws->archived_at ? 'operator.boards.unarchive' : 'operator.boards.archive', $ws->id) }}">
+                            @csrf
+                            <button type="submit" class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-muted hover:bg-sky/30 sm:min-h-0">
+                                {{ $ws->archived_at ? 'Unarchive board' : 'Archive board' }}
+                            </button>
+                        </form>
                         <button type="button" data-dialog-open="delete-board-{{ $ws->id }}"
                                 class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10 sm:min-h-0">
                             Delete board…
@@ -517,6 +526,7 @@
             </dialog>
 
             <dialog id="delete-board-{{ $ws->id }}" aria-labelledby="delete-title-{{ $ws->id }}"
+                    @if ((int) session('deleteFor') === $ws->id) data-dialog-autoopen @endif
                     class="op-dialog mb-0 mt-auto w-full max-w-none rounded-t-2xl p-0 shadow-2xl sm:m-auto sm:w-[calc(100%-2rem)] sm:max-w-sm sm:rounded-2xl">
                 <div class="px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6">
                     <h2 id="delete-title-{{ $ws->id }}" class="text-[16px] font-bold tracking-tight text-ink wrap-anywhere">Delete “{{ $ws->name }}”?</h2>
@@ -528,16 +538,25 @@
                         @endif
                         The board's link and its owner link stop working. This can't be undone.
                     </p>
-                    <div class="mt-5 flex items-center justify-end gap-2">
-                        <button type="button" data-dialog-close
+                    <form method="POST" action="{{ route('operator.boards.delete', $ws->id) }}" class="mt-4">
+                        @csrf
+                        <label for="delete-secret-{{ $ws->id }}" class="mb-1.5 block text-[13px] font-semibold text-ink">Type the operator secret to confirm</label>
+                        <input id="delete-secret-{{ $ws->id }}" name="secret" type="password" required autocomplete="off"
+                               class="block min-h-11 w-full rounded-xl border border-sky bg-base px-3.5 text-[15px] text-ink shadow-inner">
+                        @if ((int) session('deleteFor') === $ws->id)
+                            @error('deleteSecret')
+                                <span role="alert" class="mt-1.5 block text-[13px] text-danger">{{ $message }}</span>
+                            @enderror
+                        @endif
+                        <div class="mt-5 flex items-center justify-end gap-2">
+                            <button type="button" data-dialog-close
                                 class="op-press inline-flex min-h-11 cursor-pointer items-center rounded-full px-4 text-[14px] font-semibold text-muted">Cancel</button>
-                        <form method="POST" action="{{ route('operator.boards.delete', $ws->id) }}">
-                            @csrf
                             <button type="submit"
                                     class="op-press btn-danger inline-flex min-h-11 cursor-pointer items-center rounded-full px-5 text-[14px] font-semibold">
                                 Delete board
                             </button>
-                        </form>
+                        </div>
+                    </form>
                     </div>
                 </div>
             </dialog>
@@ -551,7 +570,7 @@
                 @if ($boardQuery !== '')
                     {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }} {{ Str::plural('board', $recent->total()) }} matching “{{ $boardQuery }}”.
                 @else
-                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}{{ $showEmpty ? '' : ' with files' }}, {{ ['newest' => 'newest first', 'visited' => 'most visited first (30 days)', 'opened' => 'most recently opened first', 'largest' => 'largest first'][$boardSort] }}.
+                    {{ $recent->firstItem() }}–{{ $recent->lastItem() }} of {{ number_format($recent->total()) }}{{ $showEmpty ? '' : ' with files' }}, {{ ['archived' => 'latest archived first', 'newest' => 'newest first', 'visited' => 'most visited first (30 days)', 'opened' => 'most recently opened first', 'largest' => 'largest first'][$boardSort] }}.
                 @endif
                 @if ($stats['empty_boards'] > 0 && ($showEmpty || $boardQuery !== ''))
                     <span class="opacity-70">Faded = no files yet ({{ $stats['empty_boards'] }} of {{ number_format($stats['workspaces']) }} overall).</span>

@@ -30,6 +30,7 @@ class Workspace extends Model
         'operator_note_at' => 'datetime',
         'operator_note_seen_at' => 'datetime',
         'abandon_warned_at' => 'datetime',
+        'archived_at' => 'datetime',
         'uploads_owner_only' => 'boolean',
     ];
 
@@ -93,6 +94,7 @@ class Workspace extends Model
 
         static::query()
             ->whereDoesntHave('materials')
+            ->whereNull('archived_at') // kept on purpose, however quiet
             ->whereRaw('COALESCE(last_accessed_at, created_at) < ?', [$warnFrom])
             ->each(function (self $board) use ($mailOn, &$removed, &$warned) {
                 try {

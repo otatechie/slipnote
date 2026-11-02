@@ -16,7 +16,7 @@ class WorkspacesController extends Controller
     public function index(Request $request)
     {
         $recent = RecentWorkspaces::read($request);
-        $boards = Workspace::whereIn('slug', array_column($recent, 'slug'))
+        $boards = Workspace::whereNull('archived_at')->whereIn('slug', array_column($recent, 'slug'))
             ->withCount(['courses', 'materials'])
             ->get()
             ->keyBy('slug');

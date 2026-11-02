@@ -296,7 +296,7 @@ class OperatorTest extends TestCase
         [$other] = Workspace::provision('Keep Me');
 
         $this->withSession($session)->withHeader('referer', $from)
-            ->post(route('operator.boards.delete', $this->workspace->id))
+            ->post(route('operator.boards.delete', $this->workspace->id), ['secret' => 'op-secret'])
             ->assertRedirect($from)
             ->assertSessionHas('done', 'Deleted “Test Workspace” and its 1 file.');
 
@@ -305,6 +305,81 @@ class OperatorTest extends TestCase
         $this->assertNull(Material::find($this->material->id));
         Storage::disk('local')->assertMissing($path);
         $this->assertNotNull(Workspace::find($other->id));
+    }
+
+    public function test_deleting_a_board_needs_the_operator_secret(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $from = route('operator.dashboard', ['tab' => 'boards']);
+
+        foreach ([[], ['secret' => 'wrong']] as $input) {
+            $this->withSession($session)->withHeader('referer', $from)
+                ->post(route('operator.boards.delete', $this->workspace->id), $input)
+                ->assertRedirect($from)
+                ->assertSessionHasErrors('deleteSecret')
+                ->assertSessionHas('deleteFor', $this->workspace->id);
+        }
+
+        $this->assertNotNull(Workspace::find($this->workspace->id));
+        $this->assertNotNull(Material::find($this->material->id));
+    }
+
+    public function test_an_archived_board_is_closed_and_comes_back_whole(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $slug = $this->workspace->slug;
+        $download = '/download/'.$this->material->download_token;
+        Storage::disk('local')->put($this->material->stored_path, 'pdf');
+
+        $this->withSession($session)->post(route('operator.boards.archive', $this->workspace->id))->assertRedirect();
+
+        // Everyone else, including the owner: closed.
+        $this->flushSession();
+        $this->get('/'.$slug)->assertStatus(410);
+        $this->get('/'.$slug.'/c/math-251')->assertStatus(410);
+        $this->get($download)->assertStatus(410);
+        Storage::disk('local')->assertExists($this->material->stored_path);
+
+        $boards = $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards']))->assertOk();
+        $boards->assertDontSee('Test Workspace</a>', false);
+        $this->get(route('operator.dashboard', ['tab' => 'boards', 'sort' => 'archived']))
+            ->assertOk()->assertSee('Test Workspace')->assertSee('Unarchive board');
+        $this->get(route('operator.dashboard', ['tab' => 'boards', 'q' => 'Test Workspace']))
+            ->assertOk()->assertSee('Archived');
+
+        // The operator can still look, but not change anything.
+        $this->withSession($session)->get('/'.$slug)->assertOk();
+        $this->withSession($session)->get($download)->assertOk();
+        $this->withSession($session)->post(route('courses.store', ['workspace' => $slug]), ['code' => 'X', 'title' => 'X'])->assertStatus(410);
+
+        $this->withSession($session)->post(route('operator.boards.unarchive', $this->workspace->id))->assertRedirect();
+        $this->flushSession();
+        $this->get('/'.$slug)->assertOk();
+        $this->get($download)->assertOk();
+    }
+
+    public function test_the_archived_page_is_slipnotes_own(): void
+    {
+        $this->workspace->forceFill(['archived_at' => now()])->saveQuietly();
+
+        $this->get('/'.$this->workspace->slug)->assertStatus(410)
+            ->assertSee('This board is archived')->assertSee('/logo-mark.png', false)->assertDontSee('Illuminate');
+    }
+
+    public function test_cleanup_leaves_an_empty_archived_board_alone(): void
+    {
+        [$ws] = Workspace::provision('Quiet Archive');
+        $ws->forceFill(['archived_at' => now(), 'created_at' => now()->subYear(), 'last_accessed_at' => now()->subYear()])->saveQuietly();
+
+        Workspace::pruneAbandoned();
+
+        $this->assertNotNull(Workspace::find($ws->id));
+    }
+
+    public function test_only_the_operator_can_archive_a_board(): void
+    {
+        $this->post(route('operator.boards.archive', $this->workspace->id))->assertForbidden();
+        $this->assertNull($this->workspace->fresh()->archived_at);
     }
 
     public function test_only_the_operator_can_delete_a_board(): void

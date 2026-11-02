@@ -10,6 +10,7 @@ use App\Http\Controllers\WorkspacesController;
 use App\Models\Material;
 use App\Models\Workspace;
 use App\Support\ClientKey;
+use App\Support\OperatorSession;
 use App\Support\VisitTally;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -47,6 +48,7 @@ Route::view('/lecturers', 'lecturers')->name('lecturers');
 Route::get('/download/{token}', function (Request $request, string $token) {
     $material = Material::where('download_token', $token)->firstOrFail();
     abort_unless($material->course()->exists(), 404);
+    abort_if($material->course->workspace->archived_at !== null && ! OperatorSession::isActive(), 410);
     abort_unless(Storage::disk('local')->exists($material->stored_path), 404);
 
     if (! VisitTally::isBot($request)) {
@@ -72,6 +74,7 @@ Route::delete('/materials/{material}/{token}', function (Material $material, str
     abort_unless($material->course()->exists(), 404);
 
     $workspace = $material->course->workspace;
+    abort_if($workspace->archived_at !== null, 410);
 
     $byToken = filled($material->manage_token)
         && hash_equals($material->manage_token, $token);
@@ -100,6 +103,8 @@ Route::post('/operator/reports/dismiss', [OperatorController::class, 'dismissMan
 Route::post('/operator/undo', [OperatorController::class, 'undo'])->name('operator.undo');
 Route::post('/operator/suggestions/{suggestion}/delete', [OperatorController::class, 'deleteSuggestion'])->name('operator.suggestions.delete');
 Route::post('/operator/boards/{board}/note', [OperatorController::class, 'saveNote'])->name('operator.boards.note');
+Route::post('/operator/boards/{board}/archive', [OperatorController::class, 'archiveBoard'])->name('operator.boards.archive');
+Route::post('/operator/boards/{board}/unarchive', [OperatorController::class, 'unarchiveBoard'])->name('operator.boards.unarchive');
 Route::post('/operator/boards/{board}/delete', [OperatorController::class, 'deleteBoard'])->name('operator.boards.delete');
 Route::post('/operator/ambassadors', [OperatorController::class, 'storeAmbassador'])->name('operator.ambassadors.store');
 Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::class, 'retireAmbassador'])->name('operator.ambassadors.retire');

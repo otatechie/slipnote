@@ -124,7 +124,10 @@ class OperatorController extends Controller
             ->when($boardQuery !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$boardQuery}%")
                 ->orWhere('slug', 'like', '%'.Str::slug($boardQuery).'%')))
-            ->when($boardQuery === '' && ! $showEmpty, fn ($q) => $q->whereHas('materials'))
+            ->when($boardSort === 'archived', fn ($q) => $q->whereNotNull('archived_at'))
+            // A search still finds an archived board; the other lists leave them out.
+            ->when($boardSort !== 'archived' && $boardQuery === '', fn ($q) => $q->whereNull('archived_at'))
+            ->when($boardSort !== 'archived' && $boardQuery === '' && ! $showEmpty, fn ($q) => $q->whereHas('materials'))
             ->withCount([
                 'courses',
                 'materials',
@@ -135,6 +138,7 @@ class OperatorController extends Controller
             ->when($boardSort === 'visited', fn ($q) => $q->orderByDesc('recent_arrivals')->orderByDesc('materials_count'))
             ->when($boardSort === 'opened', fn ($q) => $q->orderByRaw('last_accessed_at IS NULL')->orderByDesc('last_accessed_at'))
             ->when($boardSort === 'largest', fn ($q) => $q->orderByDesc('materials_sum_file_size'))
+            ->when($boardSort === 'archived', fn ($q) => $q->orderByDesc('archived_at'))
             ->latest()
             ->latest('id')
             ->paginate(20)
@@ -256,6 +260,7 @@ class OperatorController extends Controller
         'newest' => 'Newest',
         'opened' => 'Recently opened',
         'largest' => 'Largest',
+        'archived' => 'Archived',
     ];
 
     /** The boards that matter are the ones classmates open, so those come first. */
@@ -593,13 +598,47 @@ class OperatorController extends Controller
             ->with('done', $note !== '' ? "Note left for the owner of “{$board->name}”." : 'Note removed.');
     }
 
+    /** Closes the board to everyone and keeps every file, until unarchived. */
+    public function archiveBoard(Request $request, Workspace $board)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $board->forceFill(['archived_at' => now()])->saveQuietly();
+
+        return redirect($this->boardsListUrl($request))->with('done', "Archived “{$board->name}”. Find it under Archived.");
+    }
+
+    public function unarchiveBoard(Request $request, Workspace $board)
+    {
+        abort_unless($this->enabled() && $this->authed(), 403);
+
+        $board->forceFill(['archived_at' => null])->saveQuietly();
+
+        return redirect($this->boardsListUrl($request))->with('done', "“{$board->name}” is back.");
+    }
+
+    /** The one operator action nothing can undo, so it asks for the secret again. */
     public function deleteBoard(Request $request, Workspace $board)
     {
         abort_unless($this->enabled() && $this->authed(), 403);
 
+        $back = $this->boardsListUrl($request);
+
+        // Shares the login budget: a wrong guess here costs the same as one there.
+        $key = 'operator_login:'.ClientKey::of($request);
+        $refuse = fn (string $message) => redirect($back)->withErrors(['deleteSecret' => $message])->with('deleteFor', $board->id);
+        if (RateLimiter::tooManyAttempts($key, 5)) {
+            return $refuse('Too many attempts. Try again in a few minutes.');
+        }
+        if (! hash_equals((string) config('noteshare.operator_secret'), (string) $request->input('secret', ''))) {
+            RateLimiter::hit($key, 600);
+
+            return $refuse('That isn’t the operator secret. The board wasn’t deleted.');
+        }
+        RateLimiter::clear($key);
+
         $this->commitUndo(); // a removed file can't go back onto a board that's gone
 
-        $back = $this->boardsListUrl($request);
         $name = $board->name;
         $files = $board->materials()->count();
         $board->purge();
