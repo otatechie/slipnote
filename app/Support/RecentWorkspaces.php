@@ -10,7 +10,9 @@ class RecentWorkspaces
 {
     private const COOKIE = 'recent_workspaces';
 
-    private const MAX_ITEMS = 5;
+    // One teacher runs a board per class. Slugs only: the cookie is encrypted,
+    // browsers cap it at 4 KB, and the name comes from the database anyway.
+    private const MAX_ITEMS = 20;
 
     private const TTL_MINUTES = 60 * 24 * 365; // 1 year
 
@@ -28,10 +30,10 @@ class RecentWorkspaces
             return [];
         }
 
+        // Older cookies carry a name beside the slug; it's ignored.
         return array_values(array_filter($decoded, fn ($item) => is_array($item)
-            && isset($item['slug'], $item['name'])
-            && is_string($item['slug'])
-            && is_string($item['name'])));
+            && isset($item['slug'])
+            && is_string($item['slug'])));
     }
 
     public static function add(Request $request, Workspace $workspace): Cookie
@@ -41,11 +43,11 @@ class RecentWorkspaces
         // Dedupe by slug so the workspace floats to the top.
         $list = array_values(array_filter($list, fn ($item) => $item['slug'] !== $workspace->slug));
 
-        array_unshift($list, ['slug' => $workspace->slug, 'name' => $workspace->name]);
+        array_unshift($list, ['slug' => $workspace->slug]);
 
         $list = array_slice($list, 0, self::MAX_ITEMS);
 
-        return self::makeCookie(json_encode($list));
+        return self::makeCookie(json_encode(array_map(fn ($item) => ['slug' => $item['slug']], $list)));
     }
 
     public static function touch(Request $request, Workspace $workspace): ?Cookie
@@ -59,7 +61,7 @@ class RecentWorkspaces
     {
         $list = array_values(array_filter(self::read($request), fn ($item) => $item['slug'] !== $slug));
 
-        return self::makeCookie(json_encode($list));
+        return self::makeCookie(json_encode(array_map(fn ($item) => ['slug' => $item['slug']], $list)));
     }
 
     private static function makeCookie(string $value): Cookie

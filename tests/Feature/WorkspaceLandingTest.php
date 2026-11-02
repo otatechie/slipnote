@@ -133,9 +133,40 @@ class WorkspaceLandingTest extends TestCase
             ->get('/'.$b->slug)
             ->assertOk()
             ->assertCookie('recent_workspaces', json_encode([
-                ['slug' => $b->slug, 'name' => 'Board B'],
-                ['slug' => $a->slug, 'name' => 'Board A'],
+                ['slug' => $b->slug],
+                ['slug' => $a->slug],
             ]));
+    }
+
+    public function test_start_keeps_twenty_boards_within_one_cookie(): void
+    {
+        // A teacher with a board per class, every one named at the 60-character limit.
+        $boards = collect(range(1, 21))->map(fn ($i) => Workspace::provision(str_pad("Class {$i} ", 60, 'x'))[0]);
+        $cookie = json_encode($boards->take(19)->map(fn ($ws) => ['slug' => $ws->slug])->all());
+
+        $twentieth = $boards[19];
+        $response = $this->withCookie('recent_workspaces', $cookie)
+            ->withSession([$twentieth->ownerSessionKey() => $twentieth->ownerSessionValue()])
+            ->get('/'.$twentieth->slug)
+            ->assertOk();
+
+        $set = collect($response->baseResponse->headers->getCookies())->first(fn ($c) => $c->getName() === 'recent_workspaces');
+        $this->assertNotNull($set);
+        // Encrypted on the wire; browsers drop a cookie past 4096 bytes.
+        $this->assertLessThan(3800, strlen((string) $set));
+        $response->assertCookie('recent_workspaces', json_encode(
+            collect([$twentieth])->concat($boards->take(19))->map(fn ($ws) => ['slug' => $ws->slug])->values()->all()
+        ));
+
+        // The 21st pushes the oldest off the end.
+        $cookie = json_encode($boards->take(20)->reverse()->values()->map(fn ($ws) => ['slug' => $ws->slug])->all());
+        $last = $boards[20];
+        $this->withCookie('recent_workspaces', $cookie)
+            ->withSession([$last->ownerSessionKey() => $last->ownerSessionValue()])
+            ->get('/'.$last->slug)
+            ->assertCookie('recent_workspaces', json_encode(
+                collect([$last])->concat($boards->take(20)->reverse()->take(19))->map(fn ($ws) => ['slug' => $ws->slug])->values()->all()
+            ));
     }
 
     public function test_a_visitor_opening_a_board_does_not_reorder_start(): void
