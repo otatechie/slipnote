@@ -20,14 +20,15 @@
                 <li>Don't upload other people's personal, private, or confidential information without their consent.</li>
                 <li>Don't upload malware, or files designed to harm, deceive, or exploit anyone who downloads them.</li>
                 <li>Don't upload illegal content or anything that could harm other users.</li>
-                <li>The site operator may remove any content or board that violates these terms, without notice.</li>
+                <li>The site operator may remove any content, or remove or archive any board, that violates these terms, without notice. An archived board is closed to everyone, including its owner, but its files are kept and it can be restored.</li>
+                <li>A board used by children under 13 must be run by a teacher, with uploads locked so only the teacher adds files.</li>
                 <li>A board with no files that nobody opens for 30 days is removed. Owners with a recovery email are warned a week before; opening the board keeps it.</li>
             </ul>
         </section>
 
         <section>
             <h2 class="mb-2 text-[16px] font-semibold text-ink">No accounts, no recovery guarantees</h2>
-            <p class="text-[14px] text-ink">SlipNote has no accounts. Access is controlled by capability URLs and secrets (the board link, the owner link or owner key, and per-file delete tokens). If you lose owner access and haven't set an opt-in recovery email, that access is gone. If recovery is enabled and a matching recovery email is on file, SlipNote can issue a fresh owner link; the previous owner link stops working once the replacement has been sent successfully.</p>
+            <p class="text-[14px] text-ink">SlipNote has no accounts. Access is controlled by capability URLs and secrets (the board link, the owner link or owner key, and per-file delete tokens). If you lose owner access and haven't set an opt-in recovery email, that access is gone. If recovery is enabled and a matching recovery email is on file, SlipNote can issue a fresh owner link; the previous owner link stops working once you confirm the new one from the email.</p>
         </section>
 
         <section>

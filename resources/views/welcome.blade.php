@@ -145,7 +145,7 @@
                         <p class="mt-2 max-w-sm text-[16px] leading-7 text-muted">One person sets the board up. Everyone else only needs the link.</p>
 
                         {{-- What a course looks like once the class has used it for a few weeks. --}}
-                        <figure role="img" aria-label="A course page on a board: ECON 201 Microeconomics, with files under Past papers, Slides and Notes."
+                        <figure role="img" aria-label="A course page on a board: ECON 201 Microeconomics, with files from classmates and the lecturer under Notes, Slides and Past papers."
                                 class="mt-6 w-full max-w-sm overflow-hidden rounded-2xl bg-surface">
                             <div class="flex items-center justify-between gap-3 px-4 pb-2.5 pt-3.5">
                                 <div class="min-w-0">
@@ -154,18 +154,21 @@
                                 </div>
                                 <span class="shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-semibold text-teal">14 files</span>
                             </div>
+                            {{-- Mirrors a real course page: section order, type badge (tablet up, as there) and who · when · size. --}}
                             @foreach ([
-                                ['Past papers', [['2024 end of semester', 'PDF · 1.2 MB'], ['2023 end of semester', 'PDF · 980 KB']]],
-                                ['Slides', [['Week 3 — Elasticity', 'PPTX · 4.1 MB'], ['Week 2 — Supply and demand', 'PPTX · 3.6 MB']]],
-                                ['Notes', [['Ama’s notes, weeks 1–3', 'PDF · 640 KB']]],
+                                ['Notes', [['Ama’s notes, weeks 1–3', 'PDF', 'Ama · 2h ago · 640 KB']]],
+                                ['Slides', [['Week 3 — Elasticity', 'PPTX', 'Dr. Owusu · 2d ago · 4.1 MB'], ['Week 2 — Supply and demand', 'PPTX', 'Dr. Owusu · 1w ago · 3.6 MB']]],
+                                ['Past papers', [['2024 end of semester', 'PDF', 'Kofi · 3w ago · 1.2 MB'], ['2023 end of semester', 'PDF', 'Yaw · 1mo ago · 980 KB']]],
                             ] as [$section, $files])
                                 <div class="border-t border-sky/70">
                                     <p class="px-4 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">{{ $section }}</p>
-                                    @foreach ($files as [$name, $meta])
-                                        <div class="flex items-center gap-2.5 px-4 py-1.5">
-                                            <svg aria-hidden="true" class="size-4 shrink-0 text-neon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15"/></svg>
-                                            <p class="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">{{ $name }}</p>
-                                            <p class="shrink-0 text-[10.5px] tabular-nums text-muted">{{ $meta }}</p>
+                                    @foreach ($files as [$name, $type, $meta])
+                                        <div class="flex items-start gap-2.5 px-4 py-1.5">
+                                            <span class="mt-[2px] hidden w-9 shrink-0 rounded-[5px] bg-sky/40 py-px text-center text-[9px] font-semibold uppercase leading-4 tracking-wide text-muted sm:inline-block">{{ $type }}</span>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-[12.5px] font-medium text-ink">{{ $name }}</p>
+                                                <p class="truncate text-[10.5px] tabular-nums text-muted">{{ $meta }}</p>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -175,9 +178,9 @@
 
                     <ol>
                         @foreach ([
-                            ['link', 'Name the board', 'Name it after your class, like ECON Level 200. That name becomes the link. You also get a private owner link for managing the board.'],
-                            ['courses', 'Add your courses', 'Add a course for each subject, like ECON 201. Each one has a place for notes, slides and past papers.'],
-                            ['share', 'Share the link', 'Post it in your WhatsApp group or show its QR code in a lecture. Classmates can read, download and add files.'],
+                            ['link', 'Name the board', 'Name it after your class, like ECON Level 200. You get two links: the board’s link, and a private owner link to keep safe.'],
+                            ['courses', 'Add your courses', 'Add a course for each subject, like ECON 201. Each gets a place for notes, slides and past papers.'],
+                            ['share', 'Share the link', 'Post the board’s link in your WhatsApp group or show its QR code in class. Keep the owner link to yourself. Classmates can read, download and add files.'],
                         ] as $i => [$kind, $title, $body])
                             <li class="relative flex gap-5 {{ $loop->last ? '' : 'pb-10' }}">
                                 @unless ($loop->last)
@@ -188,25 +191,14 @@
                                     <h3 class="text-[17px] font-semibold text-ink">{{ $title }}</h3>
                                     <p class="mt-1.5 max-w-md text-[15px] leading-6 text-muted">{{ $body }}</p>
 
-                                    <div aria-hidden="true" class="mt-3">
-                                        @if ($kind === 'link')
-                                            <p class="inline-flex max-w-full items-center gap-1.5 text-[14px] text-muted">
-                                                <svg class="size-4 shrink-0 text-neon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                                                <span class="truncate">{{ $howHost }}/<span class="font-medium text-ink">econ-level-200</span></span>
-                                            </p>
-                                        @elseif ($kind === 'courses')
-                                            <span class="inline-flex items-center gap-1.5 rounded-full border border-dashed border-muted/40 px-3 py-1.5 text-[13px] font-semibold text-muted">
-                                                <svg class="size-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
-                                                New course
-                                            </span>
-                                        @else
+                                    @if ($kind === 'share')
+                                        <div aria-hidden="true" class="mt-3">
                                             <div class="inline-flex max-w-full items-center gap-3 rounded-xl bg-surface py-2 pl-3 pr-2 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
-                                                <span class="truncate text-[13px] text-muted">{{ $howHost }}/<span class="font-medium text-ink">econ-level-200</span></span>
-                                                <span class="shrink-0 rounded-full bg-neon px-2.5 py-1 text-[11px] font-semibold text-white">Copy link</span>
+                                                <span class="truncate text-[13px] text-muted">{{ $howHost }}/<span class="font-medium text-ink">econ-level-200-k7q2xm</span></span>
                                                 <svg class="size-8 shrink-0 text-ink" viewBox="0 0 21 21" fill="currentColor"><path d="M0 0h7v7H0zM2 2v3h3V2zM14 0h7v7h-7zm2 2v3h3V2zM0 14h7v7H0zm2 2v3h3v-3zM9 0h2v2H9zm0 3h3v3H9zm4 5h3v2h-3zm-4 1h2v3H9zm0 4h3v2H9zm5 1h2v2h-2zm3-1h4v2h-4zM9 17h2v4H9zm3 0h2v2h-2zm3 2h6v2h-6zm0-4h2v2h-2zM0 9h2v3H0zm3 0h3v2H3zm15 0h3v3h-3z"/></svg>
                                             </div>
-                                        @endif
-                                    </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </li>
                         @endforeach
@@ -248,7 +240,8 @@
                             <tr>
                                 <th scope="col" class="hidden pb-5 align-bottom text-[13px] font-medium text-muted sm:table-cell sm:w-[40%]">What you want to do</th>
                                 @foreach ($columns as $col)
-                                    <th scope="col" class="px-2 pb-5 pt-5 text-center align-bottom font-normal sm:px-5 sm:pt-6 {{ $col['pick'] ? $pickCell.' sm:rounded-t-2xl' : '' }}">
+                                    {{-- On phones each task gets its own row, so the names stay pinned while the rows scroll past. --}}
+                                    <th scope="col" class="sticky top-16 z-10 bg-base px-2 pb-3 pt-3 text-center align-bottom font-normal sm:static sm:px-5 sm:pb-5 sm:pt-6 {{ $col['pick'] ? $pickCell.' sm:rounded-t-2xl' : 'sm:bg-transparent' }}">
                                         <span class="flex flex-col items-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-2">
                                             <span class="text-[14px] font-semibold leading-5 sm:text-[16px] {{ $col['pick'] ? 'text-neon' : 'text-ink' }}"><span class="sm:hidden">{{ $col['short'] }}</span><span class="hidden sm:inline">{{ $col['name'] }}</span></span>
                                         </span>
@@ -278,13 +271,17 @@
             </section>
 
             @php
-                $capMb = (int) round(config('noteshare.workspace_storage_bytes') / 1_048_576);
+                $capBytes = (int) config('noteshare.workspace_storage_bytes');
+                $capLabel = $capBytes >= 1_073_741_824
+                    ? rtrim(rtrim(number_format($capBytes / 1_073_741_824, 1), '0'), '.').' GB'
+                    : (int) round($capBytes / 1_048_576).' MB';
                 $faqs = [
-                    ['Is SlipNote free?', 'Yes.', 'There is no paid plan and no limit on how many classmates use a board.'],
+                    ['Is SlipNote free?', 'Yes, for every class.', 'Anyone can make a board, and there is no limit on how many classmates use it.'],
                     ['Do my classmates need an account?', 'No.', 'Nobody does, including you. Anyone with the link can open the board, download files and add files.'],
                     ['Can I stop others adding files?', 'Yes.', 'The owner can lock uploads so only they add files. Everyone else can still open and download. Teachers and lecturers running a board for a class they teach usually do this.'],
+                    ['Is it only for universities?', 'No.', 'Teachers use it too: one board per class, a course for each subject, and uploads locked so only they add files. Their students just need the link.', ['Want one space for your whole school? Talk to us.', route('schools').'#ask']],
                     ['Who can see the files on a board?', 'Anyone with the link.', 'Boards are hidden from search engines and the links cannot be guessed, but a link can be passed on. Don’t upload anything you wouldn’t want a stranger to read.'],
-                    ['What files can I upload?', 'PDF, Word, PowerPoint and images (PNG or JPG), up to 25 MB each.', "A board holds up to {$capMb} MB, more than a semester needs."],
+                    ['What files can I upload?', 'PDF, Word, PowerPoint and images (PNG or JPG), up to 25 MB each.', "A board holds up to {$capLabel} in all. Deleting old files frees the space."],
                     ['Who can delete a file?', 'The person who uploaded it, and whoever set up the board.', 'After you upload, you get a link to delete your file. The person who set up the board can remove any file with their owner link. Everyone else can only read and add.'],
                     ['What if I lose my owner link?', 'We can email you a new one.', 'Add a recovery email on the board while you still have the owner link. Without one, the board stays up but can’t be managed.'],
                     ['What does SlipNote collect about me?', 'Almost nothing.', 'No accounts, no advertising and no tracking of individuals. It keeps the files you upload and a daily count of visits by country. The privacy page lists everything.'],
@@ -298,11 +295,15 @@
                     <h2 class="text-[26px] font-bold tracking-[-0.02em] text-ink sm:text-[32px]">Questions</h2>
 
                     <dl class="mt-10 grid gap-x-12 gap-y-9 md:grid-cols-2">
-                        @foreach ($faqs as [$q, $lead, $rest])
+                        @foreach ($faqs as $faq)
+                            @php [$q, $lead, $rest] = $faq; $more = $faq[3] ?? null; @endphp
                             <div>
                                 <dt class="text-[16px] font-semibold leading-6 text-ink">{{ $q }}</dt>
                                 <dd class="mt-2 max-w-prose text-[15px] leading-6 text-muted">
                                     <span class="font-medium text-ink">{{ $lead }}</span> {{ $rest }}
+                                    @if ($more)
+                                        <a href="{{ $more[1] }}" class="font-medium text-ink underline decoration-muted/50 underline-offset-4 hover:decoration-ink">{{ $more[0] }}</a>
+                                    @endif
                                 </dd>
                             </div>
                         @endforeach
@@ -310,13 +311,13 @@
 
                     @php $faqLink = 'font-medium text-ink underline decoration-muted/50 underline-offset-4 hover:decoration-ink'; @endphp
                     <p class="mt-10 text-[15px] leading-6 text-muted">
-                        Didn’t find your answer?
+                        @if ($askWhatsApp || $askEmail)
+                            Didn’t find your answer?
+                        @endif
                         @if ($askWhatsApp)
                             <a href="https://wa.me/{{ $askWhatsApp }}" class="{{ $faqLink }}" target="_blank" rel="noopener noreferrer">Ask on WhatsApp<span class="sr-only"> (opens in a new tab)</span></a>@if ($askEmail) or <a href="mailto:{{ $askEmail }}" class="{{ $faqLink }}">email us</a>@endif.
                         @elseif ($askEmail)
                             <a href="mailto:{{ $askEmail }}" class="{{ $faqLink }}">Email us</a>.
-                        @else
-                            <a href="https://github.com/otatechie/slipnote/issues" class="{{ $faqLink }}" target="_blank" rel="noopener noreferrer">Ask on GitHub<span class="sr-only"> (opens in a new tab)</span></a>.
                         @endif
                         <span class="whitespace-nowrap">See also the <a href="{{ route('privacy') }}" class="{{ $faqLink }}">privacy page</a> and <a href="{{ route('terms') }}" class="{{ $faqLink }}">terms</a>.</span>
                     </p>

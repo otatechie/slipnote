@@ -4,6 +4,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CoursesController;
 use App\Http\Controllers\ManifestController;
 use App\Http\Controllers\OperatorController;
+use App\Http\Controllers\SchoolInquiryController;
 use App\Http\Controllers\SuggestionController;
 use App\Http\Controllers\WorkspaceRecoveryController;
 use App\Http\Controllers\WorkspacesController;
@@ -43,6 +44,8 @@ Route::view('/privacy', 'legal.privacy')->name('privacy');
 Route::get('/manifest.webmanifest', [ManifestController::class, 'site'])->name('manifest');
 Route::view('/terms', 'legal.terms')->name('terms');
 Route::view('/lecturers', 'lecturers')->name('lecturers');
+Route::get('/schools', [SchoolInquiryController::class, 'show'])->name('schools');
+Route::post('/schools', [SchoolInquiryController::class, 'store'])->name('schools.store');
 
 // By the random download_token, never the id, so files can't be enumerated.
 Route::get('/download/{token}', function (Request $request, string $token) {

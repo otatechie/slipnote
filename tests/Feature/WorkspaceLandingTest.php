@@ -194,6 +194,78 @@ class WorkspaceLandingTest extends TestCase
         $this->get('/lecturers')->assertOk()->assertSee('For lecturers');
     }
 
+    public function test_the_landing_page_states_the_board_size_it_really_has(): void
+    {
+        config(['noteshare.workspace_storage_bytes' => 1_073_741_824]);
+        $this->get('/')->assertOk()
+            ->assertSee('A board holds up to 1 GB in all.')
+            ->assertDontSee('1024 MB')
+            ->assertDontSee('more than a semester needs');
+
+        config(['noteshare.workspace_storage_bytes' => 500 * 1_048_576]);
+        $this->get('/')->assertOk()->assertSee('A board holds up to 500 MB in all.');
+    }
+
+    public function test_the_landing_page_speaks_to_school_teachers_too(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('Is it only for universities?')
+            ->assertSee('Teachers use it too');
+    }
+
+    public function test_how_it_works_says_which_link_to_share(): void
+    {
+        // The owner link controls the board; posted in a class group, everyone could delete.
+        // The example link carries the code real links get, so nobody expects a bare name.
+        $this->get('/')->assertOk()
+            ->assertSee('You get two links')
+            ->assertSee('Keep the owner link to yourself.')
+            ->assertSee('econ-level-200-k7q2xm');
+    }
+
+    public function test_the_legal_pages_describe_what_the_operator_can_really_do(): void
+    {
+        // Removal can leave a file re-uploadable, and other boards' copies stay up.
+        $this->get('/lecturers')->assertOk()
+            ->assertDontSee('can\'t be uploaded again anywhere', false)
+            ->assertSee('Copies already on other boards need their own report');
+
+        // Archiving exists, and the old owner link lasts until the new one is confirmed.
+        $this->get('/terms')->assertOk()
+            ->assertSee('remove or archive any board')
+            ->assertSee('once you confirm the new one from the email')
+            ->assertDontSee('once the replacement has been sent');
+        $this->get('/privacy')->assertOk()->assertSee('The operator can also archive a board');
+    }
+
+    public function test_schools_find_their_page_from_the_homepage(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('href="'.route('schools').'"', false)
+            ->assertSee('Want one space for your whole school? Talk to us.');
+    }
+
+    public function test_free_is_promised_per_class_not_as_no_paid_plan_ever(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('Yes, for every class.')
+            ->assertDontSee('There is no paid plan');
+    }
+
+    public function test_the_landing_page_only_offers_help_it_can_give(): void
+    {
+        // Students don't have GitHub accounts: with no contact set, say nothing.
+        config(['noteshare.feedback_whatsapp' => '', 'noteshare.feedback_email' => null]);
+        $this->get('/')->assertOk()
+            ->assertDontSee('Ask on GitHub')
+            ->assertDontSee('Didn’t find your answer?', false);
+
+        config(['noteshare.feedback_whatsapp' => '233200000000']);
+        $this->get('/')->assertOk()
+            ->assertSee('Didn’t find your answer?', false)
+            ->assertSee('https://wa.me/233200000000', false);
+    }
+
     public function test_the_landing_page_tells_teachers_uploads_can_be_locked(): void
     {
         $this->get('/')->assertOk()

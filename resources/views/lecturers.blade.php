@@ -33,7 +33,7 @@
         <ol class="mt-3 space-y-2 text-[15px] text-ink">
             <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">1</span><span>Open the file on the board your students use.</span></li>
             <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">2</span><span>Tap <strong class="font-semibold">⋯</strong> → <strong class="font-semibold">Report this file</strong> → <strong class="font-semibold">Copyright</strong>.</span></li>
-            <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">3</span><span>We review it within {{ config('noteshare.takedown_turnaround') }}. Once removed, it can't be uploaded again anywhere on SlipNote.</span></li>
+            <li class="flex gap-3"><span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sky/60 text-[12px] font-semibold tabular-nums">3</span><span>We review it within {{ config('noteshare.takedown_turnaround') }}. Removed for copyright, the same file can’t be uploaded to SlipNote again. Copies already on other boards need their own report, so tell us where they are.</span></li>
         </ol>
         @if (filled(config('noteshare.contact_email')))
             <p class="mt-4 text-[13px] text-muted">
