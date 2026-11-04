@@ -38,9 +38,13 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
   `TELEGRAM_CHAT_ID` to post a one-line notice on every upload. Outbound only,
   sent after the response and failure-swallowed. Empty = disabled.
 - **Reporting & operator moderation** — every file has a Report button; reports
-  surface on an operator dashboard at `/operator` (gated by `OPERATOR_SECRET`).
-  The operator can **Remove** any file (blocklisting its content hash) or
-  **Dismiss** false reports.
+  surface on an operator dashboard at `/operator` (gated by `OPERATOR_SECRET`),
+  grouped by course with copyright and inappropriate reports first. The
+  operator can **Dismiss** false reports (one file or a whole group, undoable
+  for a few minutes) or **Remove** a file, either blocklisting its content
+  hash or leaving it free to re-upload. Boards can be **archived** (closed to
+  everyone, nothing deleted, back in one click) or deleted, which asks for
+  `OPERATOR_SECRET` again because nothing can undo it.
 - **Anonymous download** — files grouped by section with file-type icons,
   addressed by an unguessable per-file token (not a sequential id).
 - **Download a whole section** — one streamed zip per section (Notes / Slides /
@@ -64,7 +68,7 @@ Built with Laravel 13 + Inertia + Vue 3, Tailwind v4, SQLite.
 ## Requirements
 
 - PHP 8.3+, Composer
-- Node 18+ / npm
+- Node 20.19+ or 22.12+ / npm (Vite 8)
 - SQLite (default; no DB server needed)
 
 ## Setup
@@ -86,11 +90,14 @@ php artisan serve
 
 ## Workspaces & courses
 
-The site root (`/`) is the workspace landing: **create** a workspace (save the
-one-time owner link) or **open** an existing one by name. Create and manage
+The site root (`/`) explains SlipNote; `/start` is the workspace landing:
+**create** a workspace (save the one-time owner link) or **open** an existing
+one by name. Create and manage
 courses in **owner mode** (`/<workspace>?owner=SECRET`): add, edit code/title
 (the slug stays fixed so shared `/c/<slug>` links keep working), reorder, and
-bulk-delete files. Course slugs are unique *within* a workspace.
+bulk-delete files. Course slugs are unique *within* a workspace. `/start`
+also lists the last twenty boards opened as owner on this device, from a
+cookie of slugs, so a teacher with a board per class finds them all.
 
 ### Owner recovery (opt-in)
 
@@ -110,9 +117,10 @@ driver is `log` or `array`.
 
 - **Owner secret** stored only as a bcrypt hash; checks are timing-safe via
   `Hash::check`. Both ways of presenting it — the unlock form and a
-  `?owner=` link — share one per-workspace rate limit, so a wrong guess
-  costs the same whichever door it comes through. Recovery rotates the
-  secret only when the mailed restore link is confirmed.
+  `?owner=` link — share one rate limit per client and board, so a wrong
+  guess costs the same whichever door it comes through, and nobody who
+  merely knows a board's address can lock its owner out. Recovery rotates
+  the secret only when the mailed restore link is confirmed.
 - **Two tokens per file.** The public download address (`download_token`) and
   the uploader's private delete capability (`manage_token`) are separate
   columns. The page hands every visitor the former and never the latter.
@@ -133,10 +141,12 @@ driver is `log` or `array`.
   reports, section ZIPs and operator login; a fail-closed host-disk check; and
   a content-hash blocklist refusing re-upload of operator-removed files.
   Per-IP means the IP the app believes, so **set `TRUSTED_PROXIES`** to the
-  proxy actually in front (Cloudflare's ranges, or `127.0.0.1` for a local
-  reverse proxy). Left empty, `X-Forwarded-For` is ignored and every client
-  behind a proxy shares the proxy's address; set to `*` — never do this — any
-  client could pick its own.
+  proxy actually in front: behind Dokploy's Traefik that is its Docker network
+  (`10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`), plus `CLIENT_IP_HEADER=CF-Connecting-IP`
+  when Cloudflare sits in front of that; `127.0.0.1` for a local reverse proxy.
+  Left empty, `X-Forwarded-For` is ignored and every client behind a proxy
+  shares the proxy's address; set to `*` — never do this — any client could
+  pick its own.
 - **Upload hardening** — files are validated by real content type (`mimetypes`,
   via magic bytes) as well as extension, so a renamed executable is rejected;
   client filenames are sanitised before storage (no control chars / header
