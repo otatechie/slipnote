@@ -24,6 +24,7 @@ const props = defineProps({
     resultCount: Number,
     search: String,
     sort: String,
+    arranged: Boolean,  // the owner has put some of this course's files in order
 })
 
 const page = usePage()
@@ -74,7 +75,15 @@ watch(localSearch, (val) => {
     const path = window.location.pathname
     searchTimer = setTimeout(() => visitFilter(path), 250)
 })
-watch(localSort, () => visitFilter(window.location.pathname))
+// The server can change the sort itself (the first arrangement makes board
+// order the default); follow it without asking for the page again.
+let requestedSort = props.sort
+watch(() => props.sort, (s) => { requestedSort = s; localSort.value = s })
+watch(localSort, (s) => {
+    if (s === requestedSort) return
+    requestedSort = s
+    visitFilter(window.location.pathname)
+})
 onBeforeUnmount(() => clearTimeout(searchTimer))
 
 function visitFilter(path) {
@@ -111,6 +120,7 @@ const fold = computed(() => isPhone.value ? { rows: 5, over: 7 } : { rows: 15, o
 const expanded = ref(new Set())
 
 function visibleMaterials(key) {
+    if (reordering.value || savingOrder.value > 0) return arrangement.value[key] ?? []
     const all = materialsBySection.value[key]
     if (all.length <= fold.value.over || expanded.value.has(key) || isFiltered.value || selecting.value) {
         return all
@@ -451,6 +461,84 @@ function toggleSelectAll() {
     }
 }
 
+// Reorder: the owner puts each section's files in order, and that order is
+// what the class sees first. Only from that order itself, with nothing searched.
+const canReorder = computed(() => props.isOwner && props.resultCount > 1 && !isFiltered.value
+    && (props.sort === 'board' || (props.sort === 'newest' && !props.arranged)))
+const reordering = ref(false)
+watch(canReorder, (ok) => { if (!ok) reordering.value = false })
+
+const arrangement = ref({})
+function resetArrangement() {
+    arrangement.value = Object.fromEntries(
+        Object.entries(materialsBySection.value).map(([key, rows]) => [key, [...rows]]))
+}
+watch(() => props.materials, resetArrangement, { immediate: true })
+
+const idsIn = (key) => arrangement.value[key].map(m => m.id).join()
+// Pinned files lead every order, so they aren't moved and nothing goes above them.
+const pinnedLead = (key) => arrangement.value[key].filter(m => m.pinned).length
+const anyPinned = computed(() => Object.values(props.pinnedCounts ?? {}).some(n => n > 0))
+
+function placeFile(key, from, to) {
+    const rows = [...arrangement.value[key]]
+    rows.splice(to, 0, rows.splice(from, 1)[0])
+    arrangement.value = { ...arrangement.value, [key]: rows }
+}
+
+function moveFile(key, idx, dir) {
+    const to = idx + dir
+    if (to < pinnedLead(key) || to >= arrangement.value[key].length) return
+    const id = arrangement.value[key][idx].id
+    placeFile(key, idx, to)
+    saveArrangement(key)
+    // The row moved, so the arrow lost focus; give it back, or the other one at an end.
+    nextTick(() => {
+        const row = document.querySelector(`[data-material="${id}"]`)
+        const same = row?.querySelector(`[data-move="${dir}"]`)
+        ;(same && !same.disabled ? same : row?.querySelector(`[data-move="${-dir}"]`))?.focus()
+    })
+}
+
+let dragFrom = null
+function onFileDragStart(e, key, material) {
+    dragFrom = { key, id: material.id, order: idsIn(key) }
+    e.dataTransfer.effectAllowed = 'move'
+}
+function onFileDragOver(e, key, material) {
+    if (!dragFrom || dragFrom.key !== key || material.pinned) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (material.id === dragFrom.id) return
+    const rows = arrangement.value[key]
+    placeFile(key, rows.findIndex(m => m.id === dragFrom.id), rows.findIndex(m => m.id === material.id))
+}
+// On dragend, not drop: a drag let go between rows fires no drop.
+function onFileDragEnd() {
+    const from = dragFrom
+    dragFrom = null
+    if (from && idsIn(from.key) !== from.order) saveArrangement(from.key)
+}
+
+// Until every save is back, the list keeps the order being saved: tapping
+// Done mid-save would otherwise show the last saved order, then jump.
+const savingOrder = ref(0)
+
+function saveArrangement(key) {
+    router.post('/' + props.workspace.slug + '/c/' + props.course.slug + '/reorder', {
+        section: key,
+        ids: arrangement.value[key].map(m => m.id),
+    }, {
+        preserveScroll: true,
+        onStart: () => { savingOrder.value++ },
+        onFinish: () => { savingOrder.value-- },
+        // Back to the saved order; the app-wide handler says what went wrong.
+        onError: resetArrangement,
+        onHttpException: () => { resetArrangement() },
+        onNetworkError: () => { resetArrangement() },
+    })
+}
+
 const bulkForm = useForm({})
 
 function askBulkDelete() {
@@ -510,10 +598,15 @@ watch(() => props.materials, () => { selected.value = [] })
             <div v-if="isOwner" class="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1">
                 <p class="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted">
                     Owner
-                    <template v-if="resultCount > 1 && !selecting">
+                    <template v-if="resultCount > 1 && !selecting && !reordering">
                         <span aria-hidden="true" class="text-muted/50">&middot;</span>
                         <button type="button" @click="selecting = true"
                                 class="-my-3 inline-flex min-h-11 cursor-pointer items-center px-1 font-semibold text-ink transition hover:text-neon sm:my-0 sm:min-h-0">Select files</button>
+                        <template v-if="canReorder">
+                            <span aria-hidden="true" class="text-muted/50">&middot;</span>
+                            <button type="button" @click="reordering = true"
+                                    class="-my-3 inline-flex min-h-11 cursor-pointer items-center px-1 font-semibold text-ink transition hover:text-neon sm:my-0 sm:min-h-0">Reorder files</button>
+                        </template>
                     </template>
                 </p>
                 <div v-if="storageUsed > 0 && storagePct < 90" class="flex items-center gap-2">
@@ -753,6 +846,7 @@ watch(() => props.materials, () => { selected.value = [] })
                     <div class="relative w-full sm:w-auto">
                         <select v-model="localSort" aria-label="Sort files"
                                 class="op-pill box-border w-full appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-10 text-[14px] font-medium text-ink shadow-sm">
+                            <option v-if="arranged" value="board">Board order</option>
                             <option value="newest">Newest first</option>
                             <option value="oldest">Oldest first</option>
                             <option value="az">A–Z</option>
@@ -818,6 +912,18 @@ watch(() => props.materials, () => { selected.value = [] })
                 </div>
             </div>
 
+            <div v-if="reordering"
+                 :class="resultCount > 6 ? 'sm:top-18' : 'sm:top-2'"
+                 class="sticky top-2 z-20 mb-4 flex items-center justify-between gap-3 rounded-xl border border-sky bg-surface px-4 py-2.5 shadow-sm">
+                <p class="text-[13px] text-muted">
+                    Use the arrows<span class="hidden sm:inline"> or drag</span> to put files in order. Saved as you go.<template v-if="anyPinned"> Pinned files stay on top.</template>
+                </p>
+                <button type="button" @click="reordering = false"
+                        class="op-press inline-flex min-h-11 shrink-0 cursor-pointer items-center rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:min-h-0 sm:py-1.5">
+                    Done
+                </button>
+            </div>
+
             <template v-for="(label, key) in sections" :key="key">
                 <template v-if="materialsBySection[key]?.length > 0">
                     <section :id="'sec-' + key" tabindex="-1" class="op-card mb-4 scroll-mt-4 outline-none sm:scroll-mt-36">
@@ -835,10 +941,33 @@ watch(() => props.materials, () => { selected.value = [] })
                                 Download all ({{ sectionCounts[key] }})
                             </a>
                         </div>
-                        <div v-for="material in visibleMaterials(key)" :key="material.id" :data-material="material.id"
+                        <div v-for="(material, idx) in visibleMaterials(key)" :key="material.id" :data-material="material.id"
+                             :draggable="reordering && !material.pinned"
+                             @dragstart="reordering && onFileDragStart($event, key, material)"
+                             @dragover="reordering && onFileDragOver($event, key, material)"
+                             @drop="reordering && $event.preventDefault()"
+                             @dragend="reordering && onFileDragEnd()"
                              class="op-row flex items-center justify-between gap-2 last:rounded-b-[var(--op-radius)] sm:gap-3"
                              :class="isSelected(material.id) ? 'bg-teal/5' : ''">
                             <div class="flex min-w-0 items-start gap-2.5 sm:gap-3">
+                                <div v-if="reordering" class="-my-1 flex w-9 shrink-0 flex-col items-center sm:w-6">
+                                    <template v-if="!material.pinned && arrangement[key].length - pinnedLead(key) > 1">
+                                        <button type="button" data-move="-1" @click="moveFile(key, idx, -1)"
+                                                :disabled="idx <= pinnedLead(key)" :aria-label="`Move ${material.displayName} up`"
+                                                class="flex h-11 w-9 items-center justify-center rounded-full text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
+                                            <svg aria-hidden="true" class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l4-4 4 4" /></svg>
+                                        </button>
+                                        <svg aria-hidden="true" class="my-0.5 hidden size-3.5 cursor-grab text-muted/40 active:cursor-grabbing sm:block" viewBox="0 0 16 16" fill="currentColor">
+                                            <rect x="4" y="3" width="2" height="2" rx="1" /><rect x="10" y="3" width="2" height="2" rx="1" />
+                                            <rect x="4" y="7" width="2" height="2" rx="1" /><rect x="10" y="7" width="2" height="2" rx="1" />
+                                        </svg>
+                                        <button type="button" data-move="1" @click="moveFile(key, idx, 1)"
+                                                :disabled="idx === arrangement[key].length - 1" :aria-label="`Move ${material.displayName} down`"
+                                                class="flex h-11 w-9 items-center justify-center rounded-full text-muted transition enabled:cursor-pointer enabled:hover:bg-sky/40 enabled:hover:text-neon disabled:opacity-30 sm:size-6">
+                                            <svg aria-hidden="true" class="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4" /></svg>
+                                        </button>
+                                    </template>
+                                </div>
                                 <label v-if="isOwner && selecting"
                                        class="-my-2 flex h-11 w-9 shrink-0 cursor-pointer items-center justify-center sm:my-0 sm:mt-1 sm:size-4">
                                     <input type="checkbox"
@@ -877,14 +1006,14 @@ watch(() => props.materials, () => { selected.value = [] })
                                     <div class="mt-0.5 flex min-w-0 items-center gap-1 text-[12px] text-muted">
                                         <span v-if="material.is_new" class="shrink-0 rounded-full bg-neon/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.06em] text-neon">New</span>
                                         <span class="min-w-0 truncate"><template v-if="material.uploader_name">{{ material.uploader_name }} · </template>{{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template></span>
-                                        <button v-if="isOwner && !selecting && !material.title" type="button" @click.stop="openEdit(material)"
+                                        <button v-if="isOwner && !selecting && !reordering && !material.title" type="button" @click.stop="openEdit(material)"
                                                 class="shrink-0 cursor-pointer font-semibold text-neon hover:underline"
                                                 title="Still named by its file. Give it a name the class will recognise.">· Rename</button>
                                     </div>
                                 </div>
                             </div>
                             <div class="flex shrink-0 items-center gap-1">
-                                <details v-if="isOwner && !selecting" class="op-menu relative">
+                                <details v-if="isOwner && !selecting && !reordering" class="op-menu relative">
                                     <summary :aria-label="`More actions for ${material.displayName}`" title="More"
                                              class="flex size-10 shrink-0 cursor-pointer list-none items-center justify-center rounded-full text-muted transition hover:bg-sky/40 hover:text-ink marker:hidden sm:size-9">
                                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
@@ -928,7 +1057,7 @@ watch(() => props.materials, () => { selected.value = [] })
                                         </button>
                                     </div>
                                 </details>
-                                <a v-if="!selecting && material.download_url" :href="material.download_url"
+                                <a v-if="!selecting && !reordering && material.download_url" :href="material.download_url"
                                    aria-label="Download" title="Download"
                                    class="op-pill op-press flex size-10 items-center justify-center gap-1.5 rounded-full border border-sky bg-base text-ink transition hover:bg-sky/40 sm:h-auto sm:w-auto sm:px-3.5 sm:py-2">
                                     <svg aria-hidden="true" class="size-4 sm:hidden" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

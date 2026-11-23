@@ -13,6 +13,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -41,7 +42,12 @@ class CourseController extends Controller
         }
 
         $search = $this->searchInput($request);
-        $sort = $request->input('sort', 'newest');
+        // Once the owner has arranged files, their order is what the class sees first.
+        $arranged = $course->materials()->whereNotNull('position')->exists();
+        $sort = $request->input('sort', $arranged ? 'board' : 'newest');
+        if ($sort === 'board' && ! $arranged) {
+            $sort = 'newest';
+        }
 
         $query = $course->materials();
         if ($search) {
@@ -53,6 +59,9 @@ class CourseController extends Controller
         match ($sort) {
             'oldest' => $query->oldest(),
             'az' => $query->orderByRaw('COALESCE(title, original_filename) collate nocase asc'),
+            // Files added since the owner last arranged have no place yet:
+            // they lead, newest first, so the class sees what's new.
+            'board' => $query->orderByRaw('position IS NOT NULL')->orderBy('position')->latest(),
             default => $query->latest(),
         };
 
@@ -103,7 +112,35 @@ class CourseController extends Controller
             'resultCount' => $course->materials()->count(),
             'search' => $search,
             'sort' => $sort,
+            'arranged' => $arranged,
         ]);
+    }
+
+    /** The owner's order for one section's files, top to bottom. */
+    public function reorder(Request $request, string $workspaceSlug, string $slug)
+    {
+        $workspace = $this->workspace();
+        abort_unless($this->isOwner(), 403);
+
+        $course = Course::where('slug', $slug)->firstOrFail();
+        $data = $request->validate([
+            'section' => 'required|in:'.implode(',', array_keys(Material::SECTIONS)),
+            'ids' => 'required|array',
+            'ids.*' => 'integer|distinct',
+        ]);
+
+        // Only this section's files; an id from anywhere else is skipped.
+        $here = array_flip($course->materials()->where('section', $data['section'])->pluck('id')->all());
+        $ids = array_values(array_filter($data['ids'], fn ($id) => isset($here[$id])));
+
+        DB::transaction(function () use ($course, $ids) {
+            foreach ($ids as $position => $id) {
+                $course->materials()->whereKey($id)->update(['position' => $position]);
+            }
+        });
+
+        // The clean URL: no search, and the default sort is now the board order.
+        return redirect()->route('course.show', ['workspace' => $workspace->slug, 'slug' => $course->slug]);
     }
 
     public function downloadSection(Request $request, string $workspaceSlug, string $slug, string $section)
@@ -283,6 +320,10 @@ class CourseController extends Controller
         $unpinned = $moved && $material->pinned_at !== null
             && $course->materials()->where('section', $data['section'])->whereNotNull('pinned_at')->count() >= Material::MAX_PINNED_PER_SECTION;
         $material->section = $data['section'];
+        if ($moved) {
+            // Its place was in the old section; in the new one it leads, like a new file.
+            $material->position = null;
+        }
         if ($unpinned) {
             $material->pinned_at = null;
         }
