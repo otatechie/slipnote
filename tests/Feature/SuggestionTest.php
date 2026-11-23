@@ -88,6 +88,37 @@ class SuggestionTest extends TestCase
         $this->assertSame(0, Suggestion::count());
     }
 
+    public function test_the_operator_sees_which_board_a_suggestion_came_from_and_can_reply(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        [$a] = Workspace::provision('Nursing Level 200');
+        [$b] = Workspace::provision('Other Board');
+        $a->courses()->create(['code' => 'NUR 201', 'title' => 'Adult health', 'slug' => 'nur-201']);
+        $b->courses()->create(['code' => 'BIO 210', 'title' => 'Microbiology', 'slug' => 'bio-210']);
+
+        Suggestion::create(['message' => 'From a course page', 'reply_to' => 'ama@example.com', 'page' => '/'.$a->slug.'/c/nur-201']);
+        // The course slug belongs to the other board: the board is named, never the other board's course.
+        Suggestion::create(['message' => 'Course from elsewhere', 'page' => '/'.$a->slug.'/c/bio-210']);
+        Suggestion::create(['message' => 'From the start page', 'reply_to' => '0241 234 567', 'page' => '/start']);
+        Suggestion::create(['message' => 'From a deleted board', 'reply_to' => 'my insta @kofi', 'page' => '/gone-board-abc123']);
+
+        $html = $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'suggestions']))
+            ->assertOk()
+            ->assertSee('Nursing Level 200, NUR 201')
+            ->assertSee('href="'.route('course.show', ['workspace' => $a->slug, 'slug' => 'nur-201']).'"', false)
+            ->assertSee('href="mailto:ama@example.com"', false)
+            ->assertSee('from the Start page')
+            ->assertSee('href="tel:0241234567"', false)
+            ->assertSee('from /gone-board-abc123')
+            ->assertSee('my insta @kofi')
+            ->assertDontSee('BIO 210')
+            ->getContent();
+
+        // The board's own page link, for the suggestion whose course didn't match.
+        $this->assertStringContainsString('href="'.route('courses.index', ['workspace' => $a->slug]).'"', $html);
+    }
+
     public function test_a_deleted_suggestion_can_be_undone(): void
     {
         config(['noteshare.operator_secret' => 'op-secret']);
@@ -128,20 +159,20 @@ class SuggestionTest extends TestCase
         $this->assertNull($ws->fresh()->operator_note_seen_at);
         $operator = fn () => $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
             ->get(route('operator.dashboard', ['tab' => 'boards', 'empty' => 1]));
-        $operator()->assertSee('Note left')->assertDontSee('Note seen');
+        $operator()->assertSee('note left')->assertDontSee('note seen');
 
         // The owner sees it, and the operator sees that they did.
         $this->withSession([$ws->ownerSessionKey() => $ws->ownerSessionValue()])
             ->get('/'.$ws->slug)
             ->assertInertia(fn ($page) => $page->where('operatorNote.text', 'Could we ask you two questions?'));
         $this->assertNotNull($ws->fresh()->operator_note_seen_at);
-        $operator()->assertSee('Note seen')->assertDontSee('Note left');
+        $operator()->assertSee('note seen')->assertDontSee('note left');
 
         // A new note starts over.
         $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
             ->post(route('operator.boards.note', $ws->id), ['note' => 'One more thing.']);
         $this->assertNull($ws->fresh()->operator_note_seen_at);
-        $operator()->assertSee('Note left');
+        $operator()->assertSee('note left');
     }
 
     public function test_an_empty_note_removes_it_and_only_the_operator_can_set_one(): void

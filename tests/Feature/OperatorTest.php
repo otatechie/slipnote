@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Course;
 use App\Models\Material;
+use App\Models\Report;
 use App\Models\Suggestion;
 use App\Models\Workspace;
 use App\Services\TelegramNotifier;
@@ -187,8 +188,14 @@ class OperatorTest extends TestCase
 
         $html = $this->withSession($session)->get(route('operator.dashboard', ['tab' => 'boards']))->assertOk()->getContent();
 
-        $sharedRow = substr($html, strpos($html, 'Shared Board') - 500, 1500);
-        $unsharedRow = substr($html, strpos($html, 'Unshared Board') - 500, 1500);
+        // Each row runs from just before its name to its actions menu.
+        $row = function (string $name) use ($html) {
+            $start = strpos($html, $name) - 500;
+
+            return substr($html, $start, strpos($html, '<details', $start) - $start);
+        };
+        $sharedRow = $row('Shared Board');
+        $unsharedRow = $row('Unshared Board');
         $this->assertStringContainsString('4 visits', $sharedRow);
         $this->assertStringNotContainsString('op-faded', $sharedRow);
         $this->assertStringContainsString('no visitors in 30 days', $unsharedRow);
@@ -507,6 +514,29 @@ class OperatorTest extends TestCase
         $this->assertSame(1, substr_count($html, 'Dismiss all 2?'));
         // The reason both files share is said once, in the group's header.
         $this->assertSame(1, substr_count($html, 'Not my notes / wrong file'));
+    }
+
+    public function test_serious_reports_are_a_list_of_their_own(): void
+    {
+        $session = ['operator_fp' => hash('sha256', 'op-secret')];
+        $this->reportedFile('nasty', 'Inappropriate or offensive — A face on page two.');
+
+        $html = $this->withSession($session)->get(route('operator.dashboard'))->assertOk()->getContent();
+
+        // setUp's file was reported as spam, so it's under the second heading.
+        $this->assertLessThan(strpos($html, 'nasty'), strpos($html, 'Copyright or harm'));
+        $this->assertLessThan(strpos($html, 'Other reports'), strpos($html, 'nasty'));
+        $this->assertLessThan(strpos($html, '“spam”'), strpos($html, 'Other reports'));
+        // The reason picked and the reporter's note are told apart.
+        $this->assertStringContainsString('<span class="font-medium text-ink">Inappropriate or offensive</span> “A face on page two.”', $html);
+    }
+
+    public function test_a_report_reason_splits_into_the_reason_picked_and_the_note(): void
+    {
+        $this->assertSame(["Copyright — shouldn't be shared", 'From the textbook.'], Report::splitReason("Copyright — shouldn't be shared — From the textbook."));
+        $this->assertSame(['Spam', null], Report::splitReason('Spam'));
+        $this->assertSame([null, 'spam'], Report::splitReason('spam'));
+        $this->assertSame([null, null], Report::splitReason(null));
     }
 
     public function test_dismiss_all_clears_a_batch_and_can_be_undone(): void

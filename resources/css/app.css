@@ -408,6 +408,13 @@ select.op-pill option {
 .op-review svg {
     transition: transform 160ms var(--ease-out);
 }
+/* A fingertip-sized target on a phone, without moving anything around it. */
+@media (max-width: 639px) {
+    .op-review {
+        padding-block: 0.8rem;
+        margin-block: -0.8rem;
+    }
+}
 @media (hover: hover) and (pointer: fine) {
     .op-review:hover svg {
         transform: translateY(-1px);

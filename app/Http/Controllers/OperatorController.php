@@ -161,7 +161,7 @@ class OperatorController extends Controller
             'ambassadors' => $ambassadors = Ambassador::query()->orderBy('name')->get(),
             'ambassadorRows' => $this->ambassadorRows($ambassadors),
             'visitors' => $this->tab($request) === 'visitors' ? $this->visitorStats() : null,
-            'suggestions' => $this->tab($request) === 'suggestions' ? Suggestion::latest()->limit(100)->get() : collect(),
+            'suggestions' => $this->tab($request) === 'suggestions' ? $this->describeSuggestions(Suggestion::latest()->limit(100)->get()) : collect(),
             'suggestionsWeek' => Suggestion::where('created_at', '>=', now()->subDays(7))->count(),
             'setupWarnings' => $this->setupWarnings($request),
             'telegramFailed' => (bool) Cache::get(TelegramNotifier::FAILED_KEY),
@@ -242,6 +242,35 @@ class OperatorController extends Controller
         $boards->each(function (Workspace $ws) use ($topCountry, $messages) {
             $ws->top_country = $topCountry->get($ws->id);
             $ws->message_count = (int) $messages->get($ws->slug, 0);
+        });
+    }
+
+    /** Site pages a suggestion can be sent from, by path. */
+    private const SITE_PAGES = ['/' => 'the home page', '/start' => 'the Start page', '/schools' => 'the schools form'];
+
+    /** Where each suggestion came from, as a person would say it: a board (and course), or a site page. */
+    private function describeSuggestions($suggestions)
+    {
+        // A board page is /{board}, /{board}/c/{course}, or something else under /{board}.
+        $parts = $suggestions->mapWithKeys(fn (Suggestion $s) => [$s->id => explode('/', trim((string) $s->page, '/'))]);
+
+        $boards = Workspace::query()
+            ->whereIn('slug', $parts->pluck(0)->filter()->unique())
+            ->get(['id', 'name', 'slug'])
+            ->keyBy('slug');
+
+        // Matched on board and slug together, so a course on another board never stands in.
+        $courses = Course::withoutWorkspaceScope()
+            ->whereIn('workspace_id', $boards->pluck('id'))
+            ->whereIn('slug', $parts->filter(fn ($p) => ($p[1] ?? null) === 'c')->pluck(2)->filter()->unique())
+            ->get(['workspace_id', 'slug', 'code'])
+            ->keyBy(fn (Course $c) => $c->workspace_id.'/'.$c->slug);
+
+        return $suggestions->each(function (Suggestion $s) use ($parts, $boards, $courses) {
+            $p = $parts[$s->id];
+            $s->site_page = self::SITE_PAGES[$s->page] ?? null;
+            $s->board = $s->site_page === null ? $boards->get($p[0]) : null;
+            $s->course = $s->board && ($p[1] ?? null) === 'c' ? $courses->get($s->board->id.'/'.($p[2] ?? '')) : null;
         });
     }
 

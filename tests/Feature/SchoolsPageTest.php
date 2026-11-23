@@ -54,6 +54,31 @@ class SchoolsPageTest extends TestCase
             ->assertDontSee('higher or further education');
     }
 
+    public function test_the_operator_sees_a_school_s_request_as_an_enquiry(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        $this->post('/schools', $this->form());
+
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'suggestions']))
+            ->assertOk()
+            ->assertSee('St. Mary’s Basic School · Mrs Asante, Head of English · 12 classes')
+            ->assertSee('We have three Grade 5 classes on boards already.')
+            ->assertSee('school enquiry')
+            ->assertSee('href="tel:+233200000000"', false)
+            ->assertDontSee('School: St. Mary’s');
+    }
+
+    public function test_a_school_enquiry_splits_back_into_its_fields(): void
+    {
+        $only = new Suggestion(['message' => 'School: Hilltop Academy', 'page' => '/schools']);
+        $this->assertSame(['school' => 'Hilltop Academy', 'from' => null, 'classes' => null, 'message' => ''], $only->schoolEnquiry());
+
+        // An ordinary suggestion, even one sent from /schools, isn't an enquiry.
+        $this->assertNull((new Suggestion(['message' => 'Nice page', 'page' => '/schools']))->schoolEnquiry());
+        $this->assertNull((new Suggestion(['message' => 'School: X', 'page' => '/start']))->schoolEnquiry());
+    }
+
     public function test_a_school_s_request_lands_with_the_suggestions(): void
     {
         $this->post('/schools', $this->form())

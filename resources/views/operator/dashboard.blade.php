@@ -72,15 +72,16 @@
            class="op-press">
             <span class="sm:hidden">Ideas</span><span class="hidden sm:inline">Suggestions</span>
             @if ($suggestionsWeek > 0)
-                <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted" title="This week">{{ $suggestionsWeek }}</span>
+                <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted max-sm:hidden" title="This week">{{ $suggestionsWeek }}</span>
             @endif
         </a>
         <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}"
            @if ($tab === 'ambassadors') aria-current="page" @endif
            class="op-press">
-            Ambassadors
+            {{-- Five tabs fit a 320px phone only with short labels and the Reports count alone. --}}
+            <span class="sm:hidden">Refs</span><span class="hidden sm:inline">Ambassadors</span>
             @if ($ambassadors->whereNull('retired_at')->count() > 0)
-                <span class="rounded-full bg-base/80 px-1.5 text-[11px] font-semibold tabular-nums text-muted">{{ $ambassadors->whereNull('retired_at')->count() }}</span>
+                <span class="rounded-full bg-base/80 px-1.5 max-sm:hidden text-[11px] font-semibold tabular-nums text-muted">{{ $ambassadors->whereNull('retired_at')->count() }}</span>
             @endif
         </a>
     </div>
@@ -206,12 +207,12 @@
                         </summary>
                         <div class="absolute right-0 top-full z-20 mt-1 w-56 rounded-xl border border-sky bg-surface p-1 text-left shadow-xl">
                             <button type="button" data-copy="{{ $amb->link() }}"
-                                    class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-muted hover:bg-sky/30 hover:text-ink">Copy link</button>
+                                    class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left sm:min-h-0 text-[13px] font-semibold text-muted hover:bg-sky/30 hover:text-ink">Copy link</button>
                             <button type="button" data-copy="{{ $amb->inviteMessage() }}"
-                                    class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-muted hover:bg-sky/30 hover:text-ink">Copy invite message</button>
+                                    class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left sm:min-h-0 text-[13px] font-semibold text-muted hover:bg-sky/30 hover:text-ink">Copy invite message</button>
                             <span class="my-1 block h-px bg-sky/60"></span>
                             <button type="button" data-dialog-open="retire-{{ $amb->id }}"
-                                    class="block w-full cursor-pointer rounded-lg px-3 py-2 text-left text-[13px] font-semibold text-danger hover:bg-danger/10">Retire</button>
+                                    class="block min-h-11 w-full cursor-pointer rounded-lg px-3 py-2 text-left sm:min-h-0 text-[13px] font-semibold text-danger hover:bg-danger/10">Retire</button>
                         </div>
                     </details>
                     <dialog id="retire-{{ $amb->id }}" class="op-dialog m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl p-0 shadow-2xl">
@@ -316,6 +317,16 @@
     @endif
     @endif
 
+    @php
+        // "26m ago" and "2h ago" under a day; longer spans in words ("3 days ago").
+        $ago = function (string $label, $time, string $title = ''): \Illuminate\Support\HtmlString {
+            $title = $title !== '' ? ' title="'.e($title).'"' : '';
+            $when = $time->diffForHumans(null, true, $time->gt(now()->subDay()));
+
+            return new \Illuminate\Support\HtmlString('<span'.$title.'>'.e(trim("{$label} {$when} ago")).'</span>');
+        };
+    @endphp
+
     @if ($tab === 'suggestions')
     @if ($suggestions->isEmpty())
         <div class="op-card px-5 py-4">
@@ -324,13 +335,45 @@
     @else
         <div class="op-card overflow-hidden">
             @foreach ($suggestions as $s)
+                @php
+                    $school = $s->schoolEnquiry();
+                    $email = filter_var($s->reply_to, FILTER_VALIDATE_EMAIL) ?: null;
+                    $phone = ! $email && preg_match('/^\+?[\d\s().-]{7,20}$/', (string) $s->reply_to) ? preg_replace('/[^\d+]/', '', $s->reply_to) : null;
+                @endphp
                 <div class="op-row flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <p class="whitespace-pre-line break-words text-[14px] text-ink">{{ $s->message }}</p>
-                        <p class="mt-1 text-[12px] text-muted">
-                            {{ $s->created_at->diffForHumans() }}
-                            @if ($s->page) · from <span class="font-medium text-ink">{{ $s->page }}</span> @endif
-                            @if ($s->reply_to) · reply to <span class="select-all font-medium text-ink">{{ $s->reply_to }}</span> @endif
+                        @if ($school)
+                            {{-- A pilot-school lead: who it is first, then what they wrote. --}}
+                            <p class="break-words text-[14px] font-semibold text-ink">{{ collect([$school['school'], $school['from'], $school['classes'] ? $school['classes'].' '.Str::plural('class', $school['classes']) : null])->filter()->implode(' · ') }}</p>
+                            @if ($school['message'] !== '')
+                                <p class="mt-0.5 whitespace-pre-line break-words text-[14px] text-ink">{{ $school['message'] }}</p>
+                            @endif
+                        @else
+                            <p class="whitespace-pre-line break-words text-[14px] text-ink">{{ $s->message }}</p>
+                        @endif
+                        {{-- Only what you'd act on stands out: the board it came from and the way to reply. --}}
+                        <p class="mt-1 text-[12px] text-muted wrap-anywhere [&>span]:whitespace-nowrap">
+                            {{ $ago('', $s->created_at, $s->created_at->toDayDateTimeString()) }}
+                            @if ($school)
+                                · <span class="font-semibold text-neon">school enquiry</span>
+                            @elseif ($s->board)
+                                · from <a href="{{ $s->course ? route('course.show', ['workspace' => $s->board->slug, 'slug' => $s->course->slug]) : route('courses.index', ['workspace' => $s->board->slug]) }}"
+                                          class="py-2 font-medium text-ink hover:underline">{{ $s->board->name }}{{ $s->course ? ', '.$s->course->code : '' }}</a>
+                            @elseif ($s->site_page)
+                                · from {{ $s->site_page }}
+                            @elseif ($s->page)
+                                · from {{ $s->page }}
+                            @endif
+                            @if ($s->reply_to)
+                                · reply to
+                                @if ($email)
+                                    <a href="mailto:{{ $email }}" class="py-2 font-medium text-ink hover:underline">{{ $s->reply_to }}</a>
+                                @elseif ($phone)
+                                    <a href="tel:{{ $phone }}" class="whitespace-nowrap py-2 font-medium text-ink hover:underline">{{ $s->reply_to }}</a>
+                                @else
+                                    <span class="select-all font-medium text-ink">{{ $s->reply_to }}</span>
+                                @endif
+                            @endif
                         </p>
                     </div>
                     <form method="POST" action="{{ route('operator.suggestions.delete', $s->id) }}" class="shrink-0">
@@ -364,7 +407,7 @@
     @php
         $shortSort = ['visited' => 'Visited', 'newest' => 'Newest', 'opened' => 'Opened', 'largest' => 'Largest', 'archived' => 'Archived'];
     @endphp
-    <nav aria-label="Sort boards" class="mb-4 flex items-center gap-0.5 overflow-x-auto text-[13px] sm:gap-1.5">
+    <nav aria-label="Sort boards" class="mb-4 flex flex-wrap items-center gap-0.5 text-[13px] sm:flex-nowrap sm:gap-1.5">
         <span class="mr-1 shrink-0 text-muted">Sort</span>
         @foreach ($boardSorts as $key => $label)
             <a href="{{ route('operator.dashboard', array_filter(['tab' => 'boards', 'q' => $boardQuery, 'sort' => $key === $defaultSort ? null : $key, 'empty' => $showEmpty ? 1 : null])) }}"
@@ -387,38 +430,62 @@
                 // Files but nobody besides the owner in 30 days: made and never shared.
                 $unvisited = $ws->materials_count > 0 && (int) $ws->recent_arrivals === 0;
             @endphp
-            <div class="op-row relative flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3 {{ $ws->materials_count === 0 || $unvisited ? 'op-faded' : '' }}">
-                <div class="min-w-0 sm:flex-1">
-                    <p class="truncate pr-10 text-[14px] font-semibold tracking-tight text-ink sm:pr-0">
+            {{-- Name, then the numbers, then the details. On wider screens the numbers move to a right-aligned column, so they read down the page. --}}
+            <div class="op-row relative flex flex-col gap-1 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-3 sm:gap-y-1 {{ $ws->materials_count === 0 || $unvisited ? 'op-faded' : '' }}">
+                {{-- A report is the one thing to act on, so it alone sits beside the name. --}}
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 pr-12 sm:col-start-1 sm:row-start-1 sm:pr-0">
+                    <p class="min-w-0 max-w-full truncate text-[14px] font-semibold tracking-tight text-ink">
                         <a href="{{ route('courses.index', ['workspace' => $ws->slug]) }}" class="decoration-muted/60 underline-offset-4 after:absolute after:inset-y-0 after:left-0 after:right-14 hover:underline">{{ $ws->name }}</a>
                     </p>
-                    <p class="mt-0.5 text-[12px] text-muted">
-                        @if ($ws->courses_count === 0 && $ws->materials_count === 0)
-                            Nothing added yet
-                        @else
-                            {{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }} ·
-                            {{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}
+                    @if ($ws->reported_count > 0)
+                        <span class="shrink-0 text-[12px] font-semibold text-danger">{{ $ws->reported_count }} reported</span>
+                    @endif
+                </div>
+                <div class="flex flex-wrap items-center gap-x-1.5 whitespace-nowrap text-[12px] tabular-nums sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:block sm:text-right">
+                    @if ($ws->recent_arrivals > 0)
+                        <p class="text-[13px] font-semibold text-ink" title="Arrivals in the last 30 days">{{ number_format($ws->recent_arrivals) }} {{ Str::plural('visit', $ws->recent_arrivals) }}</p>
+                    @elseif ($unvisited)
+                        <p class="font-semibold text-muted" title="Opened only by its owner, if at all">no visitors in 30 days</p>
+                    @endif
+                    @if ($ws->materials_count > 0)
+                        @if ($ws->recent_arrivals > 0 || $unvisited)
+                            <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
                         @endif
-                        @if ($ws->recent_arrivals > 0)
-                            · <span class="font-semibold text-ink">{{ number_format($ws->recent_arrivals) }} {{ Str::plural('visit', $ws->recent_arrivals) }}</span> in 30 days
-                        @elseif ($unvisited)
-                            · <span class="font-semibold" title="Opened only by its owner, if at all">no visitors in 30 days</span>
+                        <p class="sm:mt-0.5 {{ $storageTone }}" title="Share of the {{ number_format($storageCap / 1_048_576) }} MB board limit">{{ $size }}@if ($storagePct > 0) · {{ $storagePct }}%@endif</p>
+                    @endif
+                </div>
+                {{-- A line breaks between facts, never inside one. --}}
+                <div class="text-[12px] text-muted sm:col-start-1 sm:row-start-2">
+                    <p class="[&>a]:whitespace-nowrap [&>span]:whitespace-nowrap">
+                        {{-- Files and size say how much is on it; courses only matter while there are no files. --}}
+                        @if ($ws->materials_count > 0)
+                            <span>{{ $ws->materials_count }} {{ Str::plural('file', $ws->materials_count) }}</span>
+                        @elseif ($ws->courses_count > 0)
+                            <span>{{ $ws->courses_count }} {{ Str::plural('course', $ws->courses_count) }}, no files yet</span>
+                        @else
+                            <span>Nothing added yet</span>
+                        @endif
+                        @if ($ws->materials_max_created_at)
+                            · {{ $ago('last file', \Illuminate\Support\Carbon::parse($ws->materials_max_created_at)) }}
+                        @endif
+                        @if ($ws->last_accessed_at)
+                            · {{ $ago('opened', $ws->last_accessed_at, 'Last opened '.$ws->last_accessed_at) }}
+                        @endif
+                        @if ($ws->message_count > 0)
+                            · <a href="{{ route('operator.dashboard', ['tab' => 'suggestions']) }}" class="relative z-10 hover:underline">{{ $ws->message_count }} {{ Str::plural('suggestion', $ws->message_count) }}</a>
                         @endif
                         @if ($ws->materials_count === 0)
                             @php $daysLeft = max(0, (int) ceil(now()->diffInDays($ws->removalDueAt(), false))); @endphp
-                            · <span title="Empty boards nobody opens for 30 days are removed">{{ $daysLeft > 0 ? 'removed in '.$daysLeft.' '.Str::plural('day', $daysLeft).' if still empty' : 'removed at the next cleanup' }}{{ $ws->abandon_warned_at ? ', owner warned' : '' }}</span>
+                            · <span class="!whitespace-normal" title="Empty boards nobody opens for 30 days are removed">{{ $daysLeft > 0 ? 'removed in '.$daysLeft.' '.Str::plural('day', $daysLeft).' if still empty' : 'removed at the next cleanup' }}{{ $ws->abandon_warned_at ? ', owner warned' : '' }}</span>
                         @endif
                     </p>
-                    <p class="mt-0.5 text-[12px] text-muted">
-                        made {{ $ws->created_at->diffForHumans(null, true) }} ago
-                        @if ($ws->materials_max_created_at)
-                            · last file {{ \Illuminate\Support\Carbon::parse($ws->materials_max_created_at)->diffForHumans(null, true) }} ago
+                    <p class="mt-0.5 [&>a]:whitespace-nowrap [&>span]:whitespace-nowrap">
+                        {{ $ago('made', $ws->created_at) }}
+                        @if ($ws->archived_at)
+                            · {{ $ago('archived', $ws->archived_at) }}
                         @endif
                         @if ($ws->top_country)
                             · <span title="Most visits in 30 days came from here">{{ $ws->top_country }}</span>
-                        @endif
-                        @if ($ws->uploads_owner_only)
-                            · <span class="font-medium text-ink" title="Only the owner can add files: usually a teacher">owner uploads only</span>
                         @endif
                         @if ($ws->referrer)
                             · <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}" class="relative z-10 hover:underline">via {{ $ws->referrer }}</a>
@@ -426,40 +493,16 @@
                         @if (filled($ws->recovery_email))
                             · <span title="The owner set a recovery email">can be emailed</span>
                         @endif
+                        @if ($ws->uploads_owner_only)
+                            · <span class="font-medium text-ink" title="Only the owner can add files: usually a teacher">owner uploads only</span>
+                        @endif
+                        @if ($ws->operator_note)
+                            · <span @if ($ws->operator_note_seen_at) title="Owner opened the board {{ $ws->operator_note_seen_at->diffForHumans() }}" @endif>{{ $ws->operator_note_seen_at ? 'note seen' : 'note left' }}</span>
+                        @endif
                     </p>
-                    @if ($ws->archived_at || $ws->reported_count > 0 || $ws->message_count > 0 || $ws->operator_note)
-                        {{-- What's waiting on this board, in one place. --}}
-                        <p class="mt-0.5 flex flex-wrap gap-x-2 text-[12px] font-semibold">
-                            @if ($ws->archived_at)
-                                <span class="text-amber-600" title="Archived {{ $ws->archived_at->diffForHumans() }}">Archived</span>
-                            @endif
-                            @if ($ws->reported_count > 0)
-                                <span class="text-danger">{{ $ws->reported_count }} reported</span>
-                            @endif
-                            @if ($ws->message_count > 0)
-                                <a href="{{ route('operator.dashboard', ['tab' => 'suggestions']) }}" class="relative z-10 text-neon hover:underline">{{ $ws->message_count }} {{ Str::plural('suggestion', $ws->message_count) }}</a>
-                            @endif
-                            @if ($ws->operator_note)
-                                <span class="text-neon" @if ($ws->operator_note_seen_at) title="Owner opened the board {{ $ws->operator_note_seen_at->diffForHumans() }}" @endif>{{ $ws->operator_note_seen_at ? 'Note seen' : 'Note left' }}</span>
-                            @endif
-                        </p>
-                    @endif
                 </div>
-                <div class="flex shrink-0 flex-wrap items-center gap-x-1.5 text-[12px] sm:block sm:text-right">
-                    @if ($ws->materials_count > 0)
-                        <p class="text-[12px] tabular-nums {{ $storageTone }}" title="Share of the {{ number_format($storageCap / 1_048_576) }} MB board limit">{{ $size }}@if ($storagePct > 0) · {{ $storagePct }}%@endif</p>
-                    @endif
-                    @if ($ws->materials_count > 0 && $ws->last_accessed_at)
-                        <span aria-hidden="true" class="text-muted/60 sm:hidden">·</span>
-                    @endif
-                    @if ($ws->last_accessed_at)
-                        <p class="text-[12px] tabular-nums text-ink/80" title="Last opened {{ $ws->last_accessed_at }}">
-                            opened {{ $ws->last_accessed_at->diffForHumans(null, true) }} ago
-                        </p>
-                    @endif
-                </div>
-                <details class="op-menu absolute right-1.5 top-1.5 z-10 sm:relative sm:right-auto sm:top-auto sm:shrink-0">
-                    <summary aria-label="Actions for {{ $ws->name }}" title="More"
+                <details class="op-menu absolute right-1.5 top-1.5 z-10 sm:relative sm:right-auto sm:top-auto sm:col-start-3 sm:row-span-2 sm:row-start-1">
+                    <summary aria-label="Actions for {{ $ws->name }}"
                              class="op-press flex size-11 cursor-pointer list-none items-center justify-center rounded-full text-muted marker:hidden hover:bg-sky/40 hover:text-ink sm:size-9">
                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.6"/><circle cx="10" cy="10" r="1.6"/><circle cx="16" cy="10" r="1.6"/></svg>
                     </summary>
@@ -600,14 +643,31 @@
 
     @if ($tab === 'reported')
     @if ($materials->isNotEmpty())
-        <p class="mb-3 text-[13px] text-muted">
-            Serious reasons first, then most reported.
-            @if ($reportedTotal > $materials->count())
-                Showing the top {{ $materials->count() }} of {{ $reportedTotal }}; clear these to see the rest.
-            @endif
-        </p>
-        <div class="space-y-3">
-            @foreach ($reportGroups as $group)
+        @if ($reportedTotal > $materials->count())
+            <p class="mb-3 text-[13px] text-muted">Showing the top {{ $materials->count() }} of {{ $reportedTotal }}; clear these to see the rest.</p>
+        @endif
+        @php
+            // Copyright and harm are a list of their own, read first. A course can appear in both,
+            // because "Dismiss all" must never reach a serious report.
+            $reportSections = $reportGroups->groupBy(fn ($g) => $g->first()->serious_report ? 'serious' : 'other');
+            // The reason picked stands out; the reporter's own words follow in quotes.
+            $reasonText = function (?string $reason, ?int $limit = null): \Illuminate\Support\HtmlString {
+                [$label, $note] = \App\Models\Report::splitReason($reason);
+                $note = $note !== null && $limit ? Str::limit($note, $limit) : $note;
+
+                return new \Illuminate\Support\HtmlString(implode(' ', array_filter([
+                    $label !== null ? '<span class="font-medium text-ink">'.e($label).'</span>' : null,
+                    $note !== null && $note !== '' ? '“'.e($note).'”' : null,
+                ])));
+            };
+        @endphp
+        <div class="space-y-6">
+        @foreach (['serious' => 'Copyright or harm', 'other' => 'Other reports'] as $sectionKey => $sectionTitle)
+            @continue(! $reportSections->has($sectionKey))
+            <div>
+            <h3 class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{{ $sectionTitle }}</h3>
+            <div class="space-y-3">
+            @foreach ($reportSections[$sectionKey] as $group)
                 @php
                     $first = $group->first();
                     $course = $first->course;
@@ -625,16 +685,17 @@
                     <div class="flex flex-col gap-2 border-b border-sky/40 px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                         <div class="min-w-0">
                             <p class="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] font-semibold text-ink">
-                                <a href="{{ $boardUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $workspace->name }}</a>
+                                <a href="{{ $boardUrl }}" class="underline-offset-4 hover:underline">{{ $workspace->name }}</a>
                                 <span aria-hidden="true" class="text-muted/50">·</span>
-                                <a href="{{ $courseUrl }}" class="underline decoration-muted/40 underline-offset-4 hover:decoration-ink/40">{{ $course->code }}</a>
-                                <span aria-hidden="true" class="text-muted/50">·</span>
-                                <span class="font-medium {{ $first->serious_report ? 'text-danger' : 'text-muted' }}">{{ $group->count() }} {{ Str::plural('file', $group->count()) }} reported</span>
+                                <a href="{{ $courseUrl }}" class="underline-offset-4 hover:underline">{{ $course->code }}</a>
+                                @if ($group->count() > 1)
+                                    <span aria-hidden="true" class="text-muted/50">·</span>
+                                    <span class="font-medium text-muted">{{ $group->count() }} files</span>
+                                @endif
                             </p>
                             @if ($sharedReason)
                                 <p class="mt-1 text-[13px] leading-snug text-muted">
-                                    “{{ $sharedReason }}”
-                                    {{ $allReports->max('created_at')->diffForHumans() }}
+                                    {{ $reasonText($sharedReason) }} · {{ $ago('', $allReports->max('created_at')) }}
                                 </p>
                             @endif
                         </div>
@@ -679,15 +740,13 @@
                         @endphp
                         <div class="op-row flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
                             <div class="min-w-0 flex-1">
-                                <p class="flex items-center gap-2 text-[15px] font-semibold tracking-tight text-ink">
-                                    <span class="truncate">{{ $material->displayName() }}</span>
-                                    <span class="shrink-0 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-danger"
-                                          title="{{ $material->reports_count }} {{ $material->reports_count === 1 ? 'report' : 'reports' }}">
-                                        {{ $material->reports_count }}
-                                    </span>
-                                </p>
+                                <p class="truncate text-[15px] font-semibold tracking-tight text-ink">{{ $material->displayName() }}</p>
                                 <p class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12px] text-muted">
                                     <span>{{ $sectionLabel }}</span>
+                                    @if ($material->reports_count > 1)
+                                        <span aria-hidden="true" class="text-muted/50">·</span>
+                                        <span>{{ $material->reports_count }} reports</span>
+                                    @endif
                                     @if ($reviewUrl)
                                         <span aria-hidden="true" class="text-muted/50">·</span>
                                         <a href="{{ $reviewUrl }}" class="op-review">
@@ -699,24 +758,21 @@
 
                                 @if ($reasons->count() === 1 && ! $sharedReason)
                                     <p class="mt-2.5 text-[13px] leading-snug text-muted">
-                                        “{{ $latest->reason }}”
-                                        {{ $latest->created_at->diffForHumans() }}
+                                        {{ $reasonText($latest->reason) }} · {{ $ago('', $latest->created_at) }}
                                     </p>
                                 @elseif ($reasons->count() > 1)
                                     <details class="group mt-2.5">
-                                        <summary class="flex cursor-pointer list-none items-center gap-1.5 text-[13px] leading-snug text-muted marker:hidden">
-                                            <span class="line-clamp-2 min-w-0 flex-1 sm:truncate">
-                                                “{{ \Illuminate\Support\Str::limit($latest->reason, 80) }}”
-                                                <span class="text-muted">{{ $latest->created_at->diffForHumans() }}</span>
-                                            </span>
-                                            <span class="shrink-0 text-muted">+{{ $reasons->count() - 1 }} more</span>
+                                        {{-- Only the reason is cut short; the time always shows. On a phone the reason gets the full width and the rest goes under it. --}}
+                                        <summary class="flex cursor-pointer list-none flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] leading-snug text-muted marker:hidden sm:flex-nowrap">
+                                            <span class="line-clamp-2 min-w-0 basis-full sm:basis-auto sm:truncate">{{ $reasonText($latest->reason, 70) }}</span>
+                                            <span class="shrink-0 whitespace-nowrap"><span class="max-sm:hidden">· </span>{{ $ago('', $latest->created_at) }}</span>
+                                            <span class="shrink-0 whitespace-nowrap font-medium text-ink/80">+{{ $reasons->count() - 1 }} more</span>
                                             <svg class="size-3 shrink-0 transition-transform duration-150 group-open:rotate-180" style="transition-timing-function: var(--ease-out)" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                         </summary>
                                         <ul class="mt-1.5 space-y-1 border-l-2 border-sky/60 pl-3">
                                             @foreach ($reasons as $report)
-                                                <li class="text-[12px] text-ink/90">
-                                                    <span class="text-muted">{{ $report->created_at->diffForHumans() }}:</span>
-                                                    {{ $report->reason }}
+                                                <li class="text-[12px] text-muted">
+                                                    {{ $reasonText($report->reason) }} · {{ $ago('', $report->created_at) }}
                                                 </li>
                                             @endforeach
                                         </ul>
@@ -782,6 +838,9 @@
                     @endforeach
                 </section>
             @endforeach
+            </div>
+            </div>
+        @endforeach
         </div>
     @else
         <div class="op-card flex items-center gap-3 px-5 py-4">
