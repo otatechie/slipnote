@@ -225,7 +225,9 @@ class CoursesController extends Controller
             }
         }
 
-        return response()->noContent();
+        // An Inertia page, not 204: the app reads any other reply as a failure
+        // and told the owner "That didn't go through" after the order saved.
+        return redirect()->route('courses.index', ['workspace' => $workspace->slug]);
     }
 
     public function store(Request $request)

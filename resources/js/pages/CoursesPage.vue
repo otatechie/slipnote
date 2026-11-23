@@ -341,9 +341,11 @@ const dragList = ref([...props.courses])
 watch(() => props.courses, (v) => { dragList.value = [...v] })
 
 let dragSrcId = null
+let orderBeforeDrag = ''
 
 function onDragStart(e, id) {
     dragSrcId = id
+    orderBeforeDrag = dragList.value.map(c => c.id).join()
     e.dataTransfer.effectAllowed = 'move'
 }
 
@@ -359,8 +361,11 @@ function onDragOver(e, id) {
     dragList.value = reordered
 }
 
-function onDrop() {
-    persistOrder()
+// On dragend, not drop: a drag let go between rows moved the list but
+// never fired drop, so the new order showed and wasn't saved.
+function onDragEnd() {
+    dragSrcId = null
+    if (dragList.value.map(c => c.id).join() !== orderBeforeDrag) persistOrder()
 }
 
 function moveCourse(index, dir) {
@@ -373,12 +378,22 @@ function moveCourse(index, dir) {
     persistOrder()
 }
 
+// Until every save is back, the list keeps the order being saved: tapping
+// Done mid-save would otherwise show the last saved order, then jump.
+const savingOrder = ref(0)
+const listed = computed(() => (draggable.value || savingOrder.value > 0) && props.courses.length > 1 ? dragList.value : props.courses)
+
 function persistOrder() {
     router.post('/' + props.workspace.slug + '/courses/reorder', {
         ids: dragList.value.map(c => c.id),
     }, {
         preserveScroll: true,
+        onStart: () => { savingOrder.value++ },
+        onFinish: () => { savingOrder.value-- },
+        // Back to the saved order; the app-wide handler says what went wrong.
         onError: () => { dragList.value = [...props.courses] },
+        onHttpException: () => { dragList.value = [...props.courses] },
+        onNetworkError: () => { dragList.value = [...props.courses] },
     })
 }
 </script>
@@ -575,11 +590,12 @@ function persistOrder() {
                 </p>
 
                 <div v-else class="op-card overflow-hidden">
-                    <div v-for="(course, idx) in ((draggable && courses.length > 1) ? dragList : courses)"
+                    <div v-for="(course, idx) in listed"
                         :key="course.id" :draggable="draggable && courses.length > 1"
                         @dragstart="draggable && courses.length > 1 && onDragStart($event, course.id)"
                         @dragover="draggable && courses.length > 1 && onDragOver($event, course.id)"
-                        @drop="draggable && courses.length > 1 && onDrop()"
+                        @drop="draggable && $event.preventDefault()"
+                        @dragend="draggable && courses.length > 1 && onDragEnd()"
                         class="op-row group flex items-start gap-3 sm:gap-4">
 
                         <div v-if="draggable && courses.length > 1" class="-my-1 flex shrink-0 flex-col items-center">
