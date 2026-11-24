@@ -30,6 +30,7 @@ class Suggestion extends Model
             'school' => $fields['School'] ?? '',
             'from' => ($fields['From'] ?? '') ?: null,
             'classes' => isset($fields['Classes']) ? (int) $fields['Classes'] : null,
+            'ref' => ($fields['Ref'] ?? '') ?: null,
             'message' => trim($body),
         ];
     }

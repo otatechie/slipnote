@@ -118,6 +118,25 @@ class WorkspaceLandingTest extends TestCase
                 ->where('recent.0.files', 1));
     }
 
+    public function test_start_mentions_school_spaces_only_to_someone_running_several_boards(): void
+    {
+        $boards = collect(['Grade 5 B', 'Grade 5 D', 'Grade 5 F'])->map(fn ($n) => Workspace::provision($n)[0]);
+        $cookie = fn ($list) => json_encode($list->map(fn ($ws) => ['slug' => $ws->slug])->values()->all());
+
+        $this->withCookie('recent_workspaces', $cookie($boards->take(2)))->get('/start')
+            ->assertInertia(fn ($page) => $page->where('severalBoards', false));
+        $this->flushHeaders();
+
+        $this->withCookie('recent_workspaces', $cookie($boards))->get('/start')
+            ->assertInertia(fn ($page) => $page->where('severalBoards', true));
+        $this->flushHeaders();
+
+        // Archived or deleted boards don't count towards it.
+        $boards[2]->forceFill(['archived_at' => now()])->save();
+        $this->withCookie('recent_workspaces', $cookie($boards))->get('/start')
+            ->assertInertia(fn ($page) => $page->where('severalBoards', false));
+    }
+
     public function test_opening_a_board_as_owner_moves_it_to_the_top_of_start(): void
     {
         [$a] = Workspace::provision('Board A');

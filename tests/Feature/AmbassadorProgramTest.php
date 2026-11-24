@@ -80,6 +80,37 @@ class AmbassadorProgramTest extends TestCase
         $this->assertNull(Workspace::firstOrFail()->referrer);
     }
 
+    // --- Channels: the operator's own via- refs ---
+
+    public function test_the_operators_own_channels_are_counted_apart_and_never_flagged_or_paid(): void
+    {
+        Ambassador::create(['name' => 'Kwame', 'slug' => 'kwame']);
+        foreach (['via-whatsapp', 'via-whatsapp', 'kwame', 'kwmae'] as $ref) {
+            $this->withCookie('slipnote_ref', $ref)->post(route('workspaces.store'), ['name' => 'Board '.Str::random(4)]);
+            $this->flushHeaders();
+        }
+
+        $html = $this->asOperator()->get(route('operator.dashboard', ['tab' => 'ambassadors']))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/data-ref="via-whatsapp" data-boards="2"/', $html);
+        // Your channels, then the typos: and only the typo is called an unknown ref.
+        $channels = strpos($html, 'Your channels');
+        $this->assertNotFalse($channels);
+        $this->assertLessThan(strpos($html, 'data-ref="via-whatsapp"'), $channels);
+        $this->assertLessThan(strpos($html, 'Refs nobody owns'), strpos($html, 'data-ref="via-whatsapp"'));
+        $this->assertSame(1, substr_count($html, '>unknown ref<'));
+        $this->assertStringContainsString('?ref=via-whatsapp', $html);
+    }
+
+    public function test_an_ambassador_cannot_take_a_channel_ref(): void
+    {
+        $this->asOperator()
+            ->post(route('operator.ambassadors.store'), ['name' => 'Ama', 'slug' => 'via-ama'])
+            ->assertSessionHasErrors('slug');
+
+        $this->assertSame(0, Ambassador::count());
+    }
+
     // --- The operator tab ---
 
     public function test_operator_can_add_an_ambassador_and_the_slug_is_normalised(): void

@@ -92,6 +92,19 @@ class CoursesController extends Controller
         ]);
     }
 
+    /** A printable A4 poster for a classroom wall: the board's name and a QR code that opens it. */
+    public function poster()
+    {
+        $workspace = $this->workspace();
+
+        return Inertia::render('BoardPoster', [
+            'workspace' => ['name' => $workspace->name, 'slug' => $workspace->slug],
+            // Printed and pinned up, so from APP_URL like every link, never the Host header.
+            'url' => route('courses.index', ['workspace' => $workspace->slug]),
+            'uploadsOpen' => ! $workspace->uploads_owner_only,
+        ]);
+    }
+
     public function unlock(Request $request)
     {
         $workspace = $this->workspace();

@@ -13,6 +13,9 @@ use Inertia\Inertia;
 
 class WorkspacesController extends Controller
 {
+    /** Boards on one device that make it worth mentioning school spaces. */
+    public const SEVERAL_BOARDS = 3;
+
     public function index(Request $request)
     {
         $recent = RecentWorkspaces::read($request);
@@ -21,16 +24,21 @@ class WorkspacesController extends Controller
             ->get()
             ->keyBy('slug');
 
+        $list = collect($recent)
+            ->filter(fn ($item) => $boards->has($item['slug']))
+            ->map(fn ($item) => [
+                'slug' => $item['slug'],
+                'name' => $boards[$item['slug']]->name,
+                'courses' => $boards[$item['slug']]->courses_count,
+                'files' => $boards[$item['slug']]->materials_count,
+            ])
+            ->values();
+
         return Inertia::render('WorkspacesLanding', [
-            'recent' => collect($recent)
-                ->filter(fn ($item) => $boards->has($item['slug']))
-                ->map(fn ($item) => [
-                    'slug' => $item['slug'],
-                    'name' => $boards[$item['slug']]->name,
-                    'courses' => $boards[$item['slug']]->courses_count,
-                    'files' => $boards[$item['slug']]->materials_count,
-                ])
-                ->values(),
+            'recent' => $list,
+            // This list only holds boards this device has owned: three or more
+            // is a teacher running several classes, who is who /schools is for.
+            'severalBoards' => $list->count() >= self::SEVERAL_BOARDS,
         ]);
     }
 

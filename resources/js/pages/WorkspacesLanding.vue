@@ -7,7 +7,18 @@ import { useSecretFlash } from '@/components/secretFlash'
 
 const props = defineProps({
     recent: { type: Array, default: () => [] },
+    severalBoards: Boolean,  // this device runs enough boards to be a school's
 })
+
+// The school-spaces card, until this device says "Not now".
+const SCHOOLS_KEY = 'slipnote-schools-card-dismissed'
+let schoolsDismissed = false
+try { schoolsDismissed = window.localStorage.getItem(SCHOOLS_KEY) === '1' } catch { }
+const showSchools = ref(props.severalBoards && !schoolsDismissed)
+function dismissSchools() {
+    showSchools.value = false
+    try { window.localStorage.setItem(SCHOOLS_KEY, '1') } catch { }
+}
 
 const page = usePage()
 
@@ -269,6 +280,25 @@ function confirmForget() {
                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
                         New board
                     </button>
+
+                    <aside v-if="showSchools && !creating" aria-labelledby="schools-card-title"
+                           class="mt-6 rounded-2xl border border-sky bg-surface px-5 py-4">
+                        <h2 id="schools-card-title" class="text-[15px] font-semibold text-ink">Running several classes?</h2>
+                        <p class="mt-1 text-[13px] leading-relaxed text-muted">
+                            SlipNote for schools puts every class on one page, gives each teacher their own link,
+                            and keeps the school in control when staff change. Boards stay free. Pilot schools get a lower price for life.
+                        </p>
+                        <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <a href="/schools?ref=via-start#ask"
+                               class="inline-flex min-h-11 items-center text-[13px] font-semibold text-neon hover:underline sm:min-h-0">
+                                Become a pilot school
+                            </a>
+                            <button type="button" @click="dismissSchools"
+                                    class="inline-flex min-h-11 cursor-pointer items-center text-[13px] font-medium text-muted hover:text-ink sm:min-h-0">
+                                Not now
+                            </button>
+                        </div>
+                    </aside>
                 </template>
 
                 <form v-if="creating" @submit.prevent="create" class="op-card p-5 sm:p-6" :class="returning ? 'mt-3.5' : ''">

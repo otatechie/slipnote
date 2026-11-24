@@ -115,6 +115,7 @@ Route::post('/operator/ambassadors/{ambassador}/retire', [OperatorController::cl
 Route::middleware('workspace')->group(function () {
     Route::get('/{workspace}', [CoursesController::class, 'index'])->name('courses.index');
     Route::get('/{workspace}/manifest.webmanifest', [ManifestController::class, 'board'])->name('workspace.manifest');
+    Route::get('/{workspace}/poster', [CoursesController::class, 'poster'])->name('courses.poster');
     Route::post('/{workspace}/courses', [CoursesController::class, 'store'])->name('courses.store');
     Route::post('/{workspace}/courses/reorder', [CoursesController::class, 'reorder'])->name('courses.reorder');
     Route::put('/{workspace}/c/{slug}', [CoursesController::class, 'update'])->name('courses.update');

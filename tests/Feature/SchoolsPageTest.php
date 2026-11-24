@@ -72,11 +72,36 @@ class SchoolsPageTest extends TestCase
     public function test_a_school_enquiry_splits_back_into_its_fields(): void
     {
         $only = new Suggestion(['message' => 'School: Hilltop Academy', 'page' => '/schools']);
-        $this->assertSame(['school' => 'Hilltop Academy', 'from' => null, 'classes' => null, 'message' => ''], $only->schoolEnquiry());
+        $this->assertSame(['school' => 'Hilltop Academy', 'from' => null, 'classes' => null, 'ref' => null, 'message' => ''], $only->schoolEnquiry());
 
         // An ordinary suggestion, even one sent from /schools, isn't an enquiry.
         $this->assertNull((new Suggestion(['message' => 'Nice page', 'page' => '/schools']))->schoolEnquiry());
         $this->assertNull((new Suggestion(['message' => 'School: X', 'page' => '/start']))->schoolEnquiry());
+    }
+
+    public function test_an_enquiry_says_which_link_brought_the_school(): void
+    {
+        config(['noteshare.operator_secret' => 'op-secret']);
+        // The ref is kept when the page is opened with it, then sent with the form.
+        $this->get('/schools?ref=via-whatsapp')->assertCookie('slipnote_ref', 'via-whatsapp');
+        $this->withCookie('slipnote_ref', 'via-whatsapp')->post('/schools', $this->form());
+        $this->flushHeaders();
+
+        $this->assertSame('via-whatsapp', Suggestion::firstOrFail()->schoolEnquiry()['ref']);
+        $this->withSession(['operator_fp' => hash('sha256', 'op-secret')])
+            ->get(route('operator.dashboard', ['tab' => 'suggestions']))
+            // A channel reads "via whatsapp", not "via via-whatsapp".
+            ->assertSee('<span>via whatsapp</span>', false)
+            ->assertDontSee('via via-')
+            ->assertDontSee('Ref: via-whatsapp');
+    }
+
+    public function test_an_enquiry_without_a_ref_has_none(): void
+    {
+        $this->post('/schools', $this->form());
+
+        $this->assertNull(Suggestion::firstOrFail()->schoolEnquiry()['ref']);
+        $this->assertStringNotContainsString('Ref:', Suggestion::firstOrFail()->message);
     }
 
     public function test_a_school_s_request_lands_with_the_suggestions(): void

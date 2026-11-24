@@ -10,7 +10,24 @@ class Ambassador extends Model
     /** A ref slug: lowercase, digits, hyphens; must start alphanumeric. */
     public const SLUG_PATTERN = '/^[a-z0-9][a-z0-9-]{0,39}$/';
 
+    /**
+     * Refs the operator tags their own outreach with (?ref=via-whatsapp): counted
+     * like an ambassador's, never paid, and no ambassador can take one.
+     */
+    public const CHANNEL_PREFIX = 'via-';
+
     public const NETWORKS = ['mtn' => 'MTN', 'telecel' => 'Telecel', 'airteltigo' => 'AirtelTigo', 'other' => 'Other'];
+
+    public static function isChannel(string $slug): bool
+    {
+        return str_starts_with($slug, self::CHANNEL_PREFIX);
+    }
+
+    /** A ref as it reads after "via": "via whatsapp", not "via via-whatsapp". */
+    public static function refLabel(string $slug): string
+    {
+        return self::isChannel($slug) ? substr($slug, strlen(self::CHANNEL_PREFIX)) : $slug;
+    }
 
     protected $fillable = ['name', 'slug', 'campus', 'phone', 'network'];
 

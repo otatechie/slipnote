@@ -1013,6 +1013,10 @@ function persistOrder() {
                         class="op-press mt-4 inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-full bg-neon px-3 text-[13px] font-semibold text-white">
                         Download QR
                     </button>
+                    <Link :href="'/' + workspace.slug + '/poster'"
+                        class="op-press mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-full border border-sky/50 px-3 text-[13px] font-semibold text-ink transition hover:bg-sky/40">
+                        Print a poster for the classroom
+                    </Link>
                 </div>
             </div>
 

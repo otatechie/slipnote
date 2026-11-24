@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Suggestion;
 use App\Services\TelegramNotifier;
 use App\Support\ClientKey;
+use App\Support\Referral;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -62,10 +63,14 @@ class SchoolInquiryController extends Controller
             return redirect($back)->withInput()->withErrors(['message' => 'Leave out the web links, please.']);
         }
 
+        // The ref that brought them (a channel or an ambassador), so outreach can be judged by enquiries.
+        $ref = Referral::read($request);
+
         $lines = array_filter([
             'School: '.$clean($data['school']),
             filled($data['name'] ?? null) ? 'From: '.$clean($data['name']) : null,
             filled($data['classes'] ?? null) ? 'Classes: '.(int) $data['classes'] : null,
+            $ref !== null ? 'Ref: '.$ref : null,
             filled($data['message'] ?? null) ? "\n".$clean($data['message']) : null,
         ]);
 

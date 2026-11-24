@@ -397,10 +397,12 @@ class OperatorController extends Controller
         $unknown = $stats
             ->reject(fn ($row) => $ambassadors->contains('slug', $row['slug']))
             ->map(fn ($row) => $withDue(['ambassador' => null] + $row));
+        [$channels, $unknown] = $unknown->partition(fn ($row) => Ambassador::isChannel($row['slug']));
 
         $byLive = fn ($r) => [-$r['active'], -$r['seeded'], -$r['boards'], $r['ambassador']?->name ?? $r['slug']];
 
         return $rows->reject(fn ($r) => $r['ambassador']->isRetired())->sortBy($byLive)->values()
+            ->concat($channels->sortBy($byLive)->values())
             ->concat($unknown->sortBy($byLive)->values())
             ->concat($rows->filter(fn ($r) => $r['ambassador']->isRetired())->sortBy(fn ($r) => $r['ambassador']->name)->values());
     }
@@ -441,7 +443,12 @@ class OperatorController extends Controller
 
         $data = $request->validate([
             'name' => 'required|string|max:80',
-            'slug' => ['required', 'string', 'max:40', 'regex:'.Ambassador::SLUG_PATTERN, 'unique:ambassadors,slug'],
+            'slug' => ['required', 'string', 'max:40', 'regex:'.Ambassador::SLUG_PATTERN, 'unique:ambassadors,slug',
+                function ($attr, $value, $fail) {
+                    if (Ambassador::isChannel($value)) {
+                        $fail('Refs starting with “'.Ambassador::CHANNEL_PREFIX.'” are kept for your own channels. Pick another.');
+                    }
+                }],
             'campus' => 'nullable|string|max:80',
             'phone' => 'nullable|string|max:30',
             'network' => 'nullable|in:'.implode(',', array_keys(Ambassador::NETWORKS)),

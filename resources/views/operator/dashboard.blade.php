@@ -153,11 +153,12 @@
         @foreach ($ambassadorRows as $row)
             @php
                 $amb = $row['ambassador'];
-                $thisGroup = $amb === null ? 'unknown' : ($amb->isRetired() ? 'retired' : 'live');
+                $thisGroup = $amb !== null ? ($amb->isRetired() ? 'retired' : 'live')
+                    : (\App\Models\Ambassador::isChannel($row['slug']) ? 'channel' : 'unknown');
             @endphp
             @if ($thisGroup !== $group && $thisGroup !== 'live')
                 <p class="bg-base/60 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
-                    {{ $thisGroup === 'unknown' ? 'Refs nobody owns' : 'Retired' }}
+                    {{ ['channel' => 'Your channels', 'unknown' => 'Refs nobody owns', 'retired' => 'Retired'][$thisGroup] }}
                 </p>
             @endif
             @php
@@ -180,7 +181,9 @@
                     @else
                         <p class="text-[14px] tracking-tight text-ink">
                             <span class="font-mono">{{ $row['slug'] }}</span>
-                            <span class="ml-1 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger" title="No ambassador has this slug — a typo, or someone guessing">unknown ref</span>
+                            @if ($thisGroup === 'unknown')
+                                <span class="ml-1 rounded-full bg-danger/10 px-1.5 py-0.5 text-[11px] font-semibold text-danger" title="No ambassador has this slug — a typo, or someone guessing">unknown ref</span>
+                            @endif
                         </p>
                     @endif
                     <p class="mt-1 text-[12px] tabular-nums text-muted sm:hidden">
@@ -246,6 +249,9 @@
         @endif
     </p>
     @endif
+    <p class="mt-2 text-[13px] text-muted">
+        Your own posts and posters: add a ref starting with <span class="font-mono">{{ \App\Models\Ambassador::CHANNEL_PREFIX }}</span> to any link, e.g. <span class="font-mono wrap-anywhere">{{ route('schools', ['ref' => \App\Models\Ambassador::CHANNEL_PREFIX.'whatsapp']) }}</span>. Boards made through it show under Your channels, never paid, and a school enquiry sent through it says so.
+    </p>
     @endif
 
     @if ($tab === 'visitors')
@@ -356,6 +362,9 @@
                             {{ $ago('', $s->created_at, $s->created_at->toDayDateTimeString()) }}
                             @if ($school)
                                 · <span class="font-semibold text-neon">school enquiry</span>
+                                @if ($school['ref'])
+                                    · <span>via {{ \App\Models\Ambassador::refLabel($school['ref']) }}</span>
+                                @endif
                             @elseif ($s->board)
                                 · from <a href="{{ $s->course ? route('course.show', ['workspace' => $s->board->slug, 'slug' => $s->course->slug]) : route('courses.index', ['workspace' => $s->board->slug]) }}"
                                           class="py-2 font-medium text-ink hover:underline">{{ $s->board->name }}{{ $s->course ? ', '.$s->course->code : '' }}</a>
@@ -488,7 +497,7 @@
                             · <span title="Most visits in 30 days came from here">{{ $ws->top_country }}</span>
                         @endif
                         @if ($ws->referrer)
-                            · <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}" class="relative z-10 hover:underline">via {{ $ws->referrer }}</a>
+                            · <a href="{{ route('operator.dashboard', ['tab' => 'ambassadors']) }}" class="relative z-10 hover:underline">via {{ \App\Models\Ambassador::refLabel($ws->referrer) }}</a>
                         @endif
                         @if (filled($ws->recovery_email))
                             · <span title="The owner set a recovery email">can be emailed</span>
