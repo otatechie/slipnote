@@ -4,6 +4,7 @@ import { Head, Link, useForm, usePage, router } from '@inertiajs/vue3'
 import AppLayout from '@/components/AppLayout.vue'
 import { openSuggest } from '@/components/suggest'
 import { vModalFocus } from '@/components/modalFocus'
+import { useFabVisibility } from '@/components/fabVisibility.js'
 
 const props = defineProps({
     workspace: Object,
@@ -144,6 +145,12 @@ function downloadQr() {
     a.download = props.workspace.slug + '-qr.png'
     a.click()
 }
+
+const { shown: fabShown, onFocus: onFabFocus, onBlur: onFabBlur } = useFabVisibility()
+
+// A cohort name like "… Level 300 Evening Cohort" differs from the next board
+// only at the end, so the whole name shows: smaller type rather than cut off.
+const longName = computed(() => props.workspace.name.length > 32)
 
 const sheet = ref(false)
 const editing = ref(null)
@@ -430,7 +437,8 @@ function persistOrder() {
             </div>
 
             <header class="mb-2.5 flex items-center justify-between gap-4 pt-1 sm:sticky sm:top-0 sm:z-10 sm:bg-base sm:py-3">
-                <h1 class="op-title line-clamp-2 min-w-0 wrap-break-word text-[1.6rem] font-bold text-ink sm:line-clamp-1 sm:text-[1.85rem]">{{ workspace.name }}</h1>
+                <h1 class="op-title min-w-0 text-balance wrap-break-word font-bold text-ink"
+                    :class="longName ? 'text-[1.35rem] sm:text-[1.6rem]' : 'text-[1.6rem] sm:text-[1.85rem]'">{{ workspace.name }}</h1>
                 <button v-if="isOwner && totalCourses > 0" type="button" @click="openCreate"
                     class="op-press hidden h-9 shrink-0 cursor-pointer items-center gap-1 rounded-full bg-neon px-4 text-[13px] font-semibold text-white sm:inline-flex">
                     <span class="text-base leading-none">+</span> New course
@@ -508,11 +516,12 @@ function persistOrder() {
                     <span v-else>Link copied ✓</span>
                 </button>
                 <button type="button" @click="toggleQr"
-                    :aria-expanded="qrOpen" aria-label="Show QR code for this board" title="QR code"
-                    class="op-pill op-press inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-sky/50 bg-surface text-ink transition sm:size-9">
+                    :aria-expanded="qrOpen" aria-haspopup="dialog"
+                    class="op-pill op-press inline-flex h-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-sky/50 bg-surface px-4 text-[13px] font-semibold text-ink transition sm:h-9">
                     <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M3 3h5v5H3V3zm1.5 1.5v2h2v-2h-2zM12 3h5v5h-5V3zm1.5 1.5v2h2v-2h-2zM3 12h5v5H3v-5zm1.5 1.5v2h2v-2h-2zM12 12h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v2h-2v-2zm3 0h2v2h-2v-2z" />
                     </svg>
+                    QR code
                 </button>
             </div>
             <div v-else class="mb-7"></div>
@@ -699,7 +708,9 @@ function persistOrder() {
             </template>
 
             <button v-if="isOwner && totalCourses > 0 && !sheet" type="button" @click="openCreate"
-                class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
+                @focus="onFabFocus" @blur="onFabBlur"
+                :class="fabShown ? '' : 'invisible translate-y-24 opacity-0'"
+                class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition-all duration-200 hover:brightness-125 motion-reduce:transition-none sm:hidden">
                 <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12" /></svg>
                 New course
             </button>

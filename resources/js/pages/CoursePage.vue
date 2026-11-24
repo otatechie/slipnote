@@ -5,6 +5,7 @@ import AppLayout from '@/components/AppLayout.vue'
 import FlashNotice from '@/components/FlashNotice.vue'
 import { shrinkImage } from '@/components/shrinkImage.js'
 import { useSecretFlash } from '@/components/secretFlash'
+import { useFabVisibility } from '@/components/fabVisibility.js'
 
 const props = defineProps({
     workspace: Object,
@@ -157,6 +158,22 @@ const isFiltered = computed(() => localSearch.value.trim() !== '')
 const MAX_FILE_BYTES = 25 * 1024 * 1024
 const maxFileMb = Math.round(MAX_FILE_BYTES / 1048576)
 
+// Names like Week4_Renal_Notes_FINAL_v2 have no spaces, so on a phone they
+// broke mid-word. Offer a wrap after each _ and each . (not "2.1"-style dots).
+function wrapPoints(name) {
+    const parts = []
+    let start = 0
+    for (let i = 1; i < name.length; i++) {
+        const prev = name[i - 1]
+        if (prev === '_' || (prev === '.' && !/\d/.test(name[i]))) {
+            parts.push(name.slice(start, i))
+            start = i
+        }
+    }
+    parts.push(name.slice(start))
+    return parts
+}
+
 function fileSize(bytes) {
     if (bytes < 1024) return bytes + ' B'
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB'
@@ -196,6 +213,8 @@ const batchTooBig = computed(() => batchBytes.value > MAX_BATCH_BYTES)
 // Set when the upload never got an answer the page can show: a dropped
 // connection, or an error page from the proxy in front of the app.
 const uploadProblem = ref('')
+
+const { shown: fabShown, onFocus: onFabFocus, onBlur: onFabBlur } = useFabVisibility()
 
 // Upload form
 const uploadOpen = ref(false)
@@ -688,7 +707,9 @@ watch(() => props.materials, () => { selected.value = [] })
 
                 <template v-else>
                     <button v-if="!uploadOpen && resultCount > 0" type="button" @click="uploadOpen = true"
-                            class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition hover:brightness-125 sm:hidden">
+                            @focus="onFabFocus" @blur="onFabBlur"
+                            :class="fabShown ? '' : 'invisible translate-y-24 opacity-0'"
+                            class="fixed bottom-5 right-5 z-20 inline-flex h-12 cursor-pointer items-center gap-1.5 rounded-full bg-neon pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg transition-all duration-200 hover:brightness-125 motion-reduce:transition-none sm:hidden">
                         <svg aria-hidden="true" class="size-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M10 4v12M4 10h12"/></svg>
                         Add file
                     </button>
@@ -838,20 +859,21 @@ watch(() => props.materials, () => { selected.value = [] })
             </div>
 
             <div v-if="resultCount > 6" class="z-30 -mx-5 mb-5 bg-base/95 px-5 py-3 backdrop-blur sm:sticky sm:top-0">
-                <div class="flex flex-col gap-2 sm:flex-row">
+                <!-- One row on phones too, so the first file isn't pushed below half the screen. -->
+                <div class="flex gap-2">
                     <input type="text" inputmode="search" v-model="localSearch"
-                           :placeholder="`Search ${resultCount} files by name…`"
-                           aria-label="Search files"
+                           :placeholder="isPhone ? `Search ${resultCount} files…` : `Search ${resultCount} files by name…`"
+                           aria-label="Search files by name"
                            class="op-pill box-border w-full min-w-0 flex-1 appearance-none rounded-xl border border-sky bg-surface px-3.5 py-2.5 text-[14px] font-medium text-ink shadow-sm placeholder:font-normal placeholder:text-muted">
-                    <div class="relative w-full sm:w-auto">
+                    <div class="relative shrink-0">
                         <select v-model="localSort" aria-label="Sort files"
-                                class="op-pill box-border w-full appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-10 text-[14px] font-medium text-ink shadow-sm">
+                                class="op-pill box-border appearance-none rounded-xl border border-sky bg-surface py-2.5 pl-3.5 pr-9 text-[14px] font-medium text-ink shadow-sm sm:pr-10">
                             <option v-if="arranged" value="board">Board order</option>
                             <option value="newest">Newest first</option>
                             <option value="oldest">Oldest first</option>
                             <option value="az">A–Z</option>
                         </select>
-                        <svg class="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted sm:right-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
@@ -989,15 +1011,13 @@ watch(() => props.materials, () => { selected.value = [] })
                                        target="_blank" rel="noopener"
                                        :title="`Preview ${material.displayName} (opens in a new tab)`"
                                        class="flex items-center gap-1 text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline">
-                                        <span class="line-clamp-2 wrap-anywhere sm:truncate">{{ material.displayName }}</span>
+                                        <span class="line-clamp-2 wrap-anywhere sm:truncate"><template v-for="(part, i) in wrapPoints(material.displayName)" :key="i"><wbr v-if="i > 0">{{ part }}</template></span>
                                         <svg aria-hidden="true" class="size-3.5 shrink-0 self-start text-muted mt-1" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M8 5H5v10h10v-3M12 4h4v4M16 4l-7 7" />
                                         </svg>
                                     </a>
                                     <a v-else-if="material.download_url" :href="material.download_url"
-                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline sm:block sm:truncate">
-                                        {{ material.displayName }}
-                                    </a>
+                                       class="line-clamp-2 wrap-anywhere text-[15px] font-semibold text-ink decoration-muted/60 underline-offset-4 hover:underline sm:block sm:truncate"><template v-for="(part, i) in wrapPoints(material.displayName)" :key="i"><wbr v-if="i > 0">{{ part }}</template></a>
                                     <span v-else class="block truncate text-[15px] font-semibold text-ink">
                                         {{ material.displayName }}
                                     </span>
@@ -1005,7 +1025,9 @@ watch(() => props.materials, () => { selected.value = [] })
                                     </div>
                                     <div class="mt-0.5 flex min-w-0 items-center gap-1 text-[12px] text-muted">
                                         <span v-if="material.is_new" class="shrink-0 rounded-full bg-neon/10 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.06em] text-neon">New</span>
-                                        <span class="min-w-0 truncate"><template v-if="material.uploader_name">{{ material.uploader_name }} · </template>{{ material.created_at_human }}<template v-if="material.file_size"> · {{ fileSize(material.file_size) }}</template></span>
+                                        <!-- A long name gives way first; the type and size stay readable. -->
+                                        <span v-if="material.uploader_name" class="min-w-0 truncate">{{ material.uploader_name }}</span>
+                                        <span class="shrink-0"><template v-if="material.uploader_name">· </template>{{ material.created_at_human }}<template v-if="material.file_size"> · <span class="sm:hidden">{{ material.fileTypeLabel }}&nbsp;</span>{{ fileSize(material.file_size) }}</template></span>
                                         <button v-if="isOwner && !selecting && !reordering && !material.title" type="button" @click.stop="openEdit(material)"
                                                 class="shrink-0 cursor-pointer font-semibold text-neon hover:underline"
                                                 title="Still named by its file. Give it a name the class will recognise.">· Rename</button>

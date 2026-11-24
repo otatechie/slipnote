@@ -38,8 +38,9 @@
     </x-slot:head>
 
     <div class="lp flex-1">
-        <header class="sticky top-0 z-30 px-3 pt-3 sm:px-6 sm:pt-4">
-            <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 rounded-full bg-surface/90 pl-4 pr-2 shadow-[0_1px_2px_rgba(16,24,40,0.06),0_10px_30px_-12px_rgba(16,24,40,0.18)] ring-1 ring-sky/60 backdrop-blur-md sm:h-16 sm:pl-6 sm:pr-3">
+        {{-- The fade keeps page text from showing in the gap above the floating bar. --}}
+        <header class="sticky top-0 z-30 bg-linear-to-b from-base from-50% to-transparent px-3 pt-3 sm:px-6 sm:pt-4">
+            <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 rounded-full bg-surface pl-4 pr-2 shadow-[0_1px_2px_rgba(16,24,40,0.06),0_10px_30px_-12px_rgba(16,24,40,0.18)] ring-1 ring-sky/60 sm:h-16 sm:pl-6 sm:pr-3">
                 <a href="{{ route('welcome') }}" class="inline-flex items-center gap-1.5 text-[16px] font-bold text-ink">
                     <img src="/logo-mark.png" alt="" class="size-6">
                     SlipNote
@@ -63,7 +64,7 @@
                         <h1 class="text-[30px] font-bold leading-[1.15] tracking-[-0.02em] text-ink sm:text-balance sm:text-[46px]">
                             Share your class’s notes and slides with one link.
                         </h1>
-                        <p class="mt-5 max-w-xl text-[17px] leading-7 text-muted sm:text-[18px] sm:leading-8">
+                        <p class="mt-5 max-w-xl text-balance text-[17px] leading-7 text-muted sm:text-[18px] sm:leading-8">
                             A free board for your class, sorted by course. No account needed.
                         </p>
                         <div class="mt-7 flex flex-wrap items-center gap-x-4 gap-y-3 sm:mt-8">
@@ -154,20 +155,21 @@
                                 </div>
                                 <span class="shrink-0 rounded-full bg-teal/10 px-2 py-0.5 text-[10px] font-semibold text-teal">14 files</span>
                             </div>
-                            {{-- Mirrors a real course page: section order, type badge (tablet up, as there) and who · when · size. --}}
+                            {{-- Mirrors a real course page: section order, type badge (tablet up, as there) and
+                                 who · when · size, with the type before the size on phones, where the badge is hidden. --}}
                             @foreach ([
-                                ['Notes', [['Ama’s notes, weeks 1–3', 'PDF', 'Ama · 2h ago · 640 KB']]],
-                                ['Slides', [['Week 3 — Elasticity', 'PPTX', 'Dr. Owusu · 2d ago · 4.1 MB'], ['Week 2 — Supply and demand', 'PPTX', 'Dr. Owusu · 1w ago · 3.6 MB']]],
-                                ['Past papers', [['2024 end of semester', 'PDF', 'Kofi · 3w ago · 1.2 MB'], ['2023 end of semester', 'PDF', 'Yaw · 1mo ago · 980 KB']]],
+                                ['Notes', [['Ama’s notes, weeks 1–3', 'PDF', 'Ama · 2h ago', '640 KB']]],
+                                ['Slides', [['Week 3 — Elasticity', 'PPTX', 'Dr. Owusu · 2d ago', '4.1 MB'], ['Week 2 — Supply and demand', 'PPTX', 'Dr. Owusu · 1w ago', '3.6 MB']]],
+                                ['Past papers', [['2024 end of semester', 'PDF', 'Kofi · 3w ago', '1.2 MB'], ['2023 end of semester', 'PDF', 'Yaw · 1mo ago', '980 KB']]],
                             ] as [$section, $files])
                                 <div class="border-t border-sky/70">
                                     <p class="px-4 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">{{ $section }}</p>
-                                    @foreach ($files as [$name, $type, $meta])
+                                    @foreach ($files as [$name, $type, $meta, $size])
                                         <div class="flex items-start gap-2.5 px-4 py-1.5">
                                             <span class="mt-[2px] hidden w-9 shrink-0 rounded-[5px] bg-sky/40 py-px text-center text-[9px] font-semibold uppercase leading-4 tracking-wide text-muted sm:inline-block">{{ $type }}</span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="truncate text-[12.5px] font-medium text-ink">{{ $name }}</p>
-                                                <p class="truncate text-[10.5px] tabular-nums text-muted">{{ $meta }}</p>
+                                                <p class="truncate text-[10.5px] tabular-nums text-muted">{{ $meta }} · <span class="sm:hidden">{{ $type }}&nbsp;</span>{{ $size }}</p>
                                             </div>
                                         </div>
                                     @endforeach
@@ -221,8 +223,12 @@
                     ['Let classmates add files without an account', [['yes', null], ['yes', null], ['part', 'Google account']]],
                     ['Keep files organised without anyone tidying', [['no', null], ['yes', null], ['no', null]]],
                 ];
+                // Blue only in SlipNote's column, so that column reads as one stripe; a yes
+                // elsewhere is still a yes, in grey, so it doesn't outweigh the blue.
+                $yesMark = fn (string $tone) => '<svg aria-hidden="true" class="mx-auto size-6 '.$tone.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.25"/><path d="M8.25 12.25l2.5 2.5 5-5.25"/></svg><span class="sr-only">Yes</span>';
                 $marks = [
-                    'yes' => '<svg aria-hidden="true" class="mx-auto size-6 text-neon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.25"/><path d="M8.25 12.25l2.5 2.5 5-5.25"/></svg><span class="sr-only">Yes</span>',
+                    'yes' => $yesMark('text-muted'),
+                    'yes-pick' => $yesMark('text-neon'),
                     'no' => '<svg aria-hidden="true" class="mx-auto size-6 text-muted/45" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9.25"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></svg><span class="sr-only">No</span>',
                     'part' => '<svg aria-hidden="true" class="mx-auto size-6 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.25"/><path d="M8.5 12h7"/></svg><span class="sr-only">Partly</span>',
                 ];
@@ -255,12 +261,17 @@
                                 <tr class="sm:hidden">
                                     <th scope="colgroup" colspan="3" class="px-0 pb-1 pt-5 text-left text-[15px] font-medium leading-6 text-ink">{{ $task }}</th>
                                 </tr>
+                                {{-- A hairline between desktop rows carries the eye from the task to the last column. --}}
+                                @php $rule = $r > 0 ? ' sm:border-t sm:border-sky/70' : ''; @endphp
                                 <tr>
-                                    <th scope="row" class="hidden py-3.5 pr-4 align-top text-[15px] font-normal leading-6 text-ink sm:table-cell">{{ $task }}</th>
+                                    <th scope="row" class="hidden py-3.5 pr-4 align-top text-[15px] font-normal leading-6 text-ink sm:table-cell{{ $rule }}">{{ $task }}</th>
                                     @foreach ($cells as $i => [$state, $note])
                                         @php $pick = $columns[$i]['pick']; @endphp
-                                        <td class="px-2 pb-3 pt-2 text-center align-top sm:px-5 sm:py-3.5 {{ $pick ? $pickCell.($last ? ' sm:rounded-b-2xl sm:pb-7' : '') : '' }}">
-                                            <span class="inline-flex flex-wrap items-center justify-center gap-x-1.5 p-1.5 sm:p-0">{!! $marks[$state] !!}@if ($note)<span class="text-[12px] leading-4 text-muted">{{ $note }}</span>@endif</span>
+                                        <td class="px-2 pb-3 pt-2 text-center align-top sm:px-5 sm:py-3.5{{ $rule }} {{ $pick ? $pickCell.($last ? ' sm:rounded-b-2xl sm:pb-7' : '') : '' }}">
+                                            {{-- A partial answer is its note alone: a bare ⊖ read as "no". The words
+                                                 are centred on the line of the 24px marks beside them; padding does it on
+                                                 phones, so a note that wraps in a narrow column stays tight. --}}
+                                            <span class="inline-flex flex-col items-center gap-1 p-1.5 sm:p-0">@if ($state === 'part' && $note)<span class="py-1 text-[12px] leading-4 text-muted sm:py-0 sm:text-[13px] sm:leading-6"><span class="sr-only">Partly: </span>{{ $note }}</span>@else{!! $marks[$pick && $state === 'yes' ? 'yes-pick' : $state] !!}@if ($note)<span class="text-[12px] leading-4 text-muted">{{ $note }}</span>@endif @endif</span>
                                         </td>
                                     @endforeach
                                 </tr>
@@ -291,26 +302,33 @@
                 $askEmail = is_string($askEmail) && filter_var($askEmail, FILTER_VALIDATE_EMAIL) ? $askEmail : null;
             @endphp
             <section id="faq" class="scroll-mt-24 px-4 py-10 sm:px-6 sm:py-14">
-                <div class="mx-auto max-w-5xl">
-                    <h2 class="text-[26px] font-bold tracking-[-0.02em] text-ink sm:text-[32px]">Questions</h2>
+                {{-- Laid out like "How it works" on desktop: heading and help on the left, questions
+                     on the right. On phones the help line comes after the questions, as read. --}}
+                <div class="mx-auto grid max-w-5xl lg:grid-cols-[0.8fr_1.2fr] lg:grid-rows-[auto_1fr] lg:gap-x-16">
+                    <h2 class="text-[26px] font-bold tracking-[-0.02em] text-ink sm:text-[32px] lg:col-start-1 lg:row-start-1">Questions</h2>
 
-                    <dl class="mt-10 grid gap-x-12 gap-y-9 md:grid-cols-2">
+                    {{-- Folded, so the list is a screen of questions, not six of answers.
+                         The answers stay in the HTML, where search engines read them. --}}
+                    <div class="mt-8 divide-y divide-sky border-y border-sky sm:mt-10 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:self-start">
                         @foreach ($faqs as $faq)
                             @php [$q, $lead, $rest] = $faq; $more = $faq[3] ?? null; @endphp
-                            <div>
-                                <dt class="text-[16px] font-semibold leading-6 text-ink">{{ $q }}</dt>
-                                <dd class="mt-2 max-w-prose text-[15px] leading-6 text-muted">
+                            <details class="group">
+                                <summary class="-mx-2 flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-2 py-3 text-[16px] font-semibold leading-6 text-ink [&::-webkit-details-marker]:hidden">
+                                    {{ $q }}
+                                    <svg aria-hidden="true" class="size-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8l4 4 4-4"/></svg>
+                                </summary>
+                                <p class="max-w-prose pb-5 text-[15px] leading-6 text-muted">
                                     <span class="font-medium text-ink">{{ $lead }}</span> {{ $rest }}
                                     @if ($more)
                                         <a href="{{ $more[1] }}" class="font-medium text-ink underline decoration-muted/50 underline-offset-4 hover:decoration-ink">{{ $more[0] }}</a>
                                     @endif
-                                </dd>
-                            </div>
+                                </p>
+                            </details>
                         @endforeach
-                    </dl>
+                    </div>
 
                     @php $faqLink = 'font-medium text-ink underline decoration-muted/50 underline-offset-4 hover:decoration-ink'; @endphp
-                    <p class="mt-10 text-[15px] leading-6 text-muted">
+                    <p class="mt-10 text-[15px] leading-6 text-muted lg:col-start-1 lg:row-start-2 lg:mt-3 lg:max-w-sm">
                         @if ($askWhatsApp || $askEmail)
                             Didn’t find your answer?
                         @endif
@@ -325,12 +343,13 @@
             </section>
 
             <section class="px-4 pb-12 pt-4 sm:px-6 sm:pb-16 sm:pt-6">
-                <div class="lp-close mx-auto flex max-w-5xl flex-col items-start gap-5 overflow-hidden rounded-2xl py-8 pr-6 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_16px_40px_-24px_rgba(16,24,40,0.3)] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:py-10 sm:pr-10">
+                {{-- py-8 matches the 32px rule spacing in .lp-close, so the text sits on the lines. --}}
+                <div class="lp-close mx-auto flex max-w-5xl flex-col items-start gap-5 overflow-hidden rounded-2xl py-8 pr-6 shadow-[0_1px_2px_rgba(16,24,40,0.05),0_16px_40px_-24px_rgba(16,24,40,0.3)] sm:flex-row sm:items-center sm:justify-between sm:gap-8 sm:pr-10">
                     <div>
                         <h2 class="max-w-xl text-balance text-[22px] font-bold leading-8 tracking-[-0.02em] text-ink sm:text-[26px]">
                             Give your class one link for every file
                         </h2>
-                        <p class="mt-1 max-w-lg text-pretty text-[15px] leading-8 text-muted">
+                        <p class="mt-1 max-w-lg text-pretty text-[15px] leading-8 text-muted sm:max-w-2xl">
                             Set it up once. Classmates open it, find what they need, and add what they have.
                         </p>
                     </div>

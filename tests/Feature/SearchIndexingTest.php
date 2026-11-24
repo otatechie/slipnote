@@ -86,6 +86,16 @@ class SearchIndexingTest extends TestCase
             ->assertSee('property="og:title" content="SlipNote: Never ask', false);
     }
 
+    public function test_the_folded_questions_keep_their_answers_in_the_page(): void
+    {
+        // Folded so a phone isn't six screens of answers; the answer text
+        // must still be in the HTML, not fetched on open, or search loses it.
+        $this->get('/')
+            ->assertOk()
+            ->assertSeeInOrder(['<details', 'Is SlipNote free?', 'there is no limit on how many classmates use it'], false)
+            ->assertSeeInOrder(['What if I lose my owner link?', 'Add a recovery email on the board'], false);
+    }
+
     public function test_a_downloaded_file_carries_the_noindex_header(): void
     {
         // The case a robots <meta> tag can't cover: the response is a PDF,
