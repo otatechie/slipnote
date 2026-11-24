@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\SchoolEnquiry;
 use App\Models\Suggestion;
 use App\Services\TelegramNotifier;
 use App\Support\ClientKey;
+use App\Support\MailBudget;
 use App\Support\Referral;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
+use Throwable;
 
 /** A school asking about SlipNote for all its classes. Lands with the suggestions. */
 class SchoolInquiryController extends Controller
@@ -84,7 +88,35 @@ class SchoolInquiryController extends Controller
         RateLimiter::hit('schools:all', 86400);
 
         dispatch(fn () => app(TelegramNotifier::class)->notifySuggestion($suggestion))->afterResponse();
+        dispatch(fn () => self::emailSupport($suggestion))->afterResponse();
 
         return $sent();
+    }
+
+    /**
+     * A copy to the support inbox: enquiries are rare, and the dashboard may go
+     * unopened for days. Inside the mail budget, so a flood of fake enquiries
+     * sends a handful of emails, not hundreds.
+     */
+    private static function emailSupport(Suggestion $suggestion): void
+    {
+        $to = (string) config('noteshare.contact_email');
+        $mailOn = ! in_array(config('mail.default'), ['log', 'array', null], true);
+        $enquiry = $suggestion->schoolEnquiry();
+
+        if (! $mailOn || $enquiry === null || ! filter_var($to, FILTER_VALIDATE_EMAIL) || ! MailBudget::take($to)) {
+            return;
+        }
+
+        try {
+            Mail::to($to)->send(new SchoolEnquiry(
+                $enquiry,
+                (string) $suggestion->reply_to,
+                route('operator.dashboard', ['tab' => 'suggestions']),
+            ));
+        } catch (Throwable $e) {
+            // It's saved and on the dashboard either way.
+            report($e);
+        }
     }
 }

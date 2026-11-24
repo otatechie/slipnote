@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\SchoolEnquiry;
 use App\Models\Suggestion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class SchoolsPageTest extends TestCase
@@ -29,6 +31,72 @@ class SchoolsPageTest extends TestCase
             'classes' => 12,
             'message' => 'We have three Grade 5 classes on boards already.',
         ];
+    }
+
+    // --- A copy to the support inbox ---
+
+    private function mailOn(): void
+    {
+        config(['mail.default' => 'smtp', 'noteshare.contact_email' => 'support@example.com']);
+        Mail::fake();
+    }
+
+    public function test_an_enquiry_is_emailed_to_the_support_inbox_and_reply_answers_the_school(): void
+    {
+        $this->mailOn();
+
+        $this->post('/schools', $this->form(['contact' => 'asante@stmarys.example', 'website' => '']))
+            ->assertRedirect();
+
+        Mail::assertSent(SchoolEnquiry::class, function (SchoolEnquiry $mail) {
+            $mail->assertTo('support@example.com');
+            $mail->assertHasReplyTo('asante@stmarys.example');
+            $mail->assertHasSubject('School enquiry: St. Mary’s Basic School');
+            $mail->assertSeeInText('Mrs Asante, Head of English');
+            $mail->assertSeeInText('We have three Grade 5 classes on boards already.');
+            // Plain text carries the school's words as typed, not as HTML entities.
+            $mail->assertDontSeeInText('&#');
+
+            return true;
+        });
+        $this->assertSame(1, Suggestion::count());
+    }
+
+    public function test_a_phone_number_is_shown_but_isnt_a_reply_address(): void
+    {
+        $this->mailOn();
+
+        $this->post('/schools', $this->form());
+
+        Mail::assertSent(SchoolEnquiry::class, function (SchoolEnquiry $mail) {
+            $mail->build();
+            $mail->assertSeeInText('+233 20 000 0000');
+
+            return $mail->replyTo === [];
+        });
+    }
+
+    public function test_no_email_for_bots_a_full_mail_budget_mail_off_or_no_inbox(): void
+    {
+        $this->mailOn();
+        // A bot that fills the hidden field: told it worked, nothing kept or sent.
+        $this->post('/schools', $this->form(['website' => 'http://spam.example']));
+        Mail::assertNothingSent();
+
+        // Over the day's mail budget: kept on the dashboard, not emailed.
+        config(['noteshare.mail_daily_limit' => 0]);
+        $this->post('/schools', $this->form());
+        $this->assertSame(1, Suggestion::count());
+        Mail::assertNothingSent();
+
+        // Mail off, or no support address set.
+        config(['noteshare.mail_daily_limit' => 100, 'mail.default' => 'log']);
+        $this->post('/schools', $this->form(['school' => 'Hilltop Academy']));
+        config(['mail.default' => 'smtp', 'noteshare.contact_email' => null]);
+        $this->post('/schools', $this->form(['school' => 'Riverside School']));
+        Mail::assertNothingSent();
+        // Each real enquiry was kept, so none was simply stopped by the form's own limits.
+        $this->assertSame(3, Suggestion::count());
     }
 
     public function test_the_page_explains_schools_and_carries_a_fresh_form(): void
