@@ -14,6 +14,10 @@ return [
     // Public contact for reports (Terms, /lecturers). Empty omits it.
     'contact_email' => env('CONTACT_EMAIL'),
 
+    // Slug of the example board /demo opens (made by `php artisan slipnote:example-board`).
+    // Empty: /demo is a 404 and the schools page doesn't offer it.
+    'demo_board' => env('DEMO_BOARD'),
+
     // Who runs this deployment (footer, /lecturers); empty hides it, as
     // SlipNote is self-hostable. The takedown time is promised publicly:
     // only promise what you keep.

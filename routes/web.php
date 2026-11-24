@@ -47,6 +47,16 @@ Route::view('/lecturers', 'lecturers')->name('lecturers');
 Route::get('/schools', [SchoolInquiryController::class, 'show'])->name('schools');
 Route::post('/schools', [SchoolInquiryController::class, 'store'])->name('schools.store');
 
+// The example board, linked from outreach emails and the schools page. A ?ref
+// on the way in is kept like on any page, so an email's channel still counts.
+Route::get('/demo', function () {
+    $slug = config('noteshare.demo_board');
+    $board = filled($slug) ? Workspace::where('slug', $slug)->whereNull('archived_at')->first() : null;
+    abort_if($board === null, 404);
+
+    return redirect()->route('courses.index', ['workspace' => $board->slug]);
+})->name('demo');
+
 // By the random download_token, never the id, so files can't be enumerated.
 Route::get('/download/{token}', function (Request $request, string $token) {
     $material = Material::where('download_token', $token)->firstOrFail();

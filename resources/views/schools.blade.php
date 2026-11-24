@@ -35,10 +35,17 @@
         <p class="mt-1.5 text-[15px] leading-relaxed text-muted">
             Any teacher can make a board in a minute. Name it after the class, add a course for each subject, and post the link where the class already talks.
         </p>
-        <a href="{{ route('start') }}"
-           class="op-press mt-4 inline-flex min-h-11 items-center rounded-full bg-neon px-5 text-[15px] font-semibold text-white">
-            Create a board
-        </a>
+        <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <a href="{{ route('start') }}"
+               class="op-press inline-flex min-h-11 items-center rounded-full bg-neon px-5 text-[15px] font-semibold text-white">
+                Create a board
+            </a>
+            @if (filled(config('noteshare.demo_board')))
+                <a href="{{ route('demo') }}" class="inline-flex min-h-11 items-center text-[15px] font-semibold text-teal underline-offset-4 hover:underline">
+                    See an example class
+                </a>
+            @endif
+        </div>
     </section>
 
     <section id="ask" class="op-card mt-8 scroll-mt-6 px-5 py-5 sm:px-6">

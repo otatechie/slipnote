@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -41,6 +42,11 @@ class HandleInertiaRequests extends Middleware
             'errors' => fn () => $session->get('errors')
                 ? $session->get('errors')->getBag('default')->getMessages()
                 : (object) [],
+            // On the example board, a banner says so. Lazy: the board is only
+            // known once the route's workspace middleware has run.
+            'exampleBoard' => fn () => filled(config('noteshare.demo_board'))
+                && app(Tenancy::class)->has()
+                && app(Tenancy::class)->current()->slug === config('noteshare.demo_board'),
         ]);
     }
 }

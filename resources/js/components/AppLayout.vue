@@ -10,6 +10,13 @@ defineProps({ fabSpace: { type: Boolean, default: false }, ownNotice: { type: Bo
 <template>
     <div class="flex min-h-screen flex-col">
         <FlashNotice v-if="!ownNotice" />
+        <p v-if="$page.props.exampleBoard" role="note"
+           class="border-b border-sky/60 bg-sky/40 px-4 py-2 text-center text-[13px] leading-relaxed text-ink">
+            This is an example board, to show how SlipNote works.
+            <a href="/start" class="inline-flex min-h-11 items-center font-semibold text-teal hover:underline sm:min-h-0">Make one for your class</a>
+            <span aria-hidden="true" class="mx-1.5 text-muted">·</span>
+            <a href="/schools" class="inline-flex min-h-11 items-center font-semibold text-teal hover:underline sm:min-h-0">For schools</a>
+        </p>
         <slot />
         <footer class="mt-auto border-t border-sky/60 py-6" :class="fabSpace ? 'pb-24 sm:pb-6' : ''">
             <div class="mx-auto flex max-w-3xl flex-col items-center gap-2.5 px-5 text-center">
