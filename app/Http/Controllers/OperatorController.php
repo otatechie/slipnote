@@ -12,6 +12,7 @@ use App\Models\Suggestion;
 use App\Models\Workspace;
 use App\Services\TelegramNotifier;
 use App\Support\ClientKey;
+use App\Support\MailBudget;
 use App\Support\OperatorSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -186,6 +187,8 @@ class OperatorController extends Controller
 
         if (in_array(config('mail.default'), ['log', 'array', null], true)) {
             $warnings[] = 'Mail is off (MAIL_MAILER=log). Owners who lose their link can\'t recover it, and empty boards are removed without a warning email.';
+        } elseif ($fullAt = Cache::get(MailBudget::FULL_KEY)) {
+            $warnings[] = 'The daily mail limit ('.config('noteshare.mail_daily_limit').') was reached '.Carbon::parse($fullAt)->diffForHumans().', so recovery links and board warnings waited a day. If that was real use, raise MAIL_DAILY_LIMIT; if not, look at the boards made just before.';
         }
 
         if (blank(config('noteshare.telegram_bot_token')) || blank(config('noteshare.telegram_chat_id'))) {

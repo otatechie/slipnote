@@ -43,6 +43,11 @@ return [
     'ambassador_reward' => (int) env('AMBASSADOR_REWARD', 12),
     'ambassador_currency' => env('AMBASSADOR_CURRENCY', 'GHS'),
 
+    // Mail the whole site sends a day: recovery links and empty-board
+    // warnings. Keep it under the sending mailbox's own daily limit, which a
+    // flood would otherwise use up. Past it, mail waits for the next day.
+    'mail_daily_limit' => (int) env('MAIL_DAILY_LIMIT', 100),
+
     // "Tell us how" prompt: WhatsApp (digits only) and/or email. Both empty hides it.
     'feedback_whatsapp' => preg_replace('/\D+/', '', (string) env('FEEDBACK_WHATSAPP', '')),
     'feedback_email' => env('FEEDBACK_EMAIL', env('CONTACT_EMAIL')),

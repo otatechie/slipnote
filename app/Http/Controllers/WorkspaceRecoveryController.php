@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\OwnerLinkRecovery;
 use App\Support\ClientKey;
+use App\Support\MailBudget;
 use App\Support\RecentWorkspaces;
 use App\Tenancy\Tenancy;
 use Illuminate\Http\Request;
@@ -46,9 +47,11 @@ class WorkspaceRecoveryController extends Controller
 
         // The board-wide cap counts mails sent, not requests: wrong guesses
         // from anywhere can't use up the owner's own, and the owner's inbox
-        // gets at most a few links an hour however many clients ask.
+        // gets at most a few links an hour however many clients ask. The mail
+        // budget then caps that address across every board it's saved on.
         if ($mailOn && $workspace->recoveryEmailMatches($data['email'])
-            && ! RateLimiter::tooManyAttempts($boardKey, 5)) {
+            && ! RateLimiter::tooManyAttempts($boardKey, 5)
+            && MailBudget::take($workspace->recovery_email)) {
             RateLimiter::hit($boardKey, 3600);
             $nonce = Str::random(40);
             Cache::put(self::redeemKey($nonce), $workspace->id, self::REDEEM_TTL_SECONDS);

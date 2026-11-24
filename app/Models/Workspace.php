@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Mail\AbandonedBoardWarning;
 use App\Services\TelegramNotifier;
+use App\Support\MailBudget;
 use App\Support\OperatorSession;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -116,6 +117,11 @@ class Workspace extends Model
     {
         // Warn first, once, where there is someone to warn.
         if ($mailOn && filled($board->recovery_email) && ! $board->abandon_warned_at) {
+            // Over the mail budget the warning waits for a later run, and the
+            // board with it: none is removed without its warning.
+            if (! MailBudget::take($board->recovery_email)) {
+                return;
+            }
             try {
                 Mail::to($board->recovery_email)->send(new AbandonedBoardWarning(
                     $board->name,

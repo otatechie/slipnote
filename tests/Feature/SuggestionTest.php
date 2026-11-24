@@ -58,6 +58,34 @@ class SuggestionTest extends TestCase
         $this->assertSame(5, Suggestion::count());
     }
 
+    public function test_many_sources_together_are_limited_to_thirty_an_hour(): void
+    {
+        Http::fake();
+
+        for ($i = 0; $i < 30; $i++) {
+            $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.'.$i])
+                ->post('/suggestions', ['message' => "Idea number {$i}"])
+                ->assertSessionHasNoErrors();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => '198.51.100.7'])
+            ->post('/suggestions', ['message' => 'One more idea'])
+            ->assertSessionHasErrors('message');
+        $this->assertSame(30, Suggestion::count());
+    }
+
+    public function test_a_message_stuffed_with_links_is_refused(): void
+    {
+        $this->post('/suggestions', ['message' => 'Deals http://a.example https://b.example http://c.example'])
+            ->assertSessionHasErrors('message');
+        $this->assertSame(0, Suggestion::count());
+
+        // A link or two in a real suggestion is fine.
+        Http::fake();
+        $this->post('/suggestions', ['message' => 'Like this one: https://example.com/board'])->assertSessionHasNoErrors();
+        $this->assertSame(1, Suggestion::count());
+    }
+
     public function test_telegram_is_pinged_when_configured(): void
     {
         config(['noteshare.telegram_bot_token' => 'tok', 'noteshare.telegram_chat_id' => '42']);

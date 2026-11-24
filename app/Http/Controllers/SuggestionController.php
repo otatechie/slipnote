@@ -20,6 +20,11 @@ class SuggestionController extends Controller
         if (RateLimiter::tooManyAttempts($rlKey, 5)) {
             return back()->withErrors(['message' => 'You\'ve sent a few already. Try again in an hour.']);
         }
+        // Bots spread over many addresses each stay under the limit above;
+        // this one holds them all, so a flood can't bury real suggestions.
+        if (RateLimiter::tooManyAttempts('suggestion:all', 30)) {
+            return back()->withErrors(['message' => 'We’ve had a lot of messages just now. Try again in an hour.']);
+        }
 
         $data = $request->validate([
             'message' => 'required|string|min:5|max:1000',
@@ -30,6 +35,10 @@ class SuggestionController extends Controller
             'message.min' => 'Write a line or two first.',
         ]);
 
+        if (preg_match_all('#https?://#i', $data['message']) > 2) {
+            return back()->withErrors(['message' => 'Leave out the web links, please.']);
+        }
+
         $suggestion = Suggestion::create([
             'message' => strip_tags($data['message']),
             'reply_to' => filled($data['reply_to'] ?? null) ? strip_tags($data['reply_to']) : null,
@@ -38,6 +47,7 @@ class SuggestionController extends Controller
         ]);
 
         RateLimiter::hit($rlKey, 3600);
+        RateLimiter::hit('suggestion:all', 3600);
 
         dispatch(fn () => app(TelegramNotifier::class)->notifySuggestion($suggestion))->afterResponse();
 
